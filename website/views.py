@@ -18,7 +18,8 @@ import shutil
 
 def translate(text):
     # Import translations file
-    with open('translations/translations.json', 'r', encoding='utf-8') as f:
+    translations_path = os.path.join(os.path.dirname(__file__), '..', 'translations', 'translations.json')
+    with open(translations_path, 'r', encoding='utf-8') as f:
         translations = json.load(f)
     
     # Get current language from cookie or default to English
@@ -278,22 +279,21 @@ def updateOwnUser():
         print("Error: " + str(e))
 
     # Insert photo of user
-    image = request.files.get('user_photo')  # Using get() instead of direct access
+    image = request.files.get('user_photo')
     if image and image.filename and user_id > 0:
-        path = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/users/'+str(user_id)+'/'
-        pathRelative = 'static\\photos\\users\\'+str(user_id)+'\\'
-        filePath = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/users/'+str(user_id)+'/main.jpg'
+        photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'users', str(user_id))
+        file_path = os.path.join(photos_dir, 'main.jpg')
                 
-        # Check if directory exists, if not, create it.
-        if not os.path.exists(path):
-            os.makedirs(path)  # Using makedirs instead of mkdir
+        # Create directory if it doesn't exist
+        if not os.path.exists(photos_dir):
+            os.makedirs(photos_dir)
             
-        # Check if main.jpg exists, if exists delete it
-        if os.path.exists(filePath):
-            os.remove(filePath)
+        # Remove existing photo if it exists
+        if os.path.exists(file_path):
+            os.remove(file_path)
         
         # Upload image to directory
-        image.save(filePath)
+        image.save(file_path)
 
     return render_template("user_own_info.html", user=current_user)
 
@@ -690,30 +690,31 @@ def create_club():
         db.session.commit()
 
         # register main photo
-        image = request.files.get('club_main_photo')  # Using get() instead of direct access
+        image = request.files.get('club_main_photo')
         if image and image.filename and cl_id > 0:
-            path = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/clubs/'+str(cl_id)+'/'
-            if not os.path.exists(path):
-                os.makedirs(path)  # Using makedirs instead of mkdir
+            photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'clubs', str(cl_id))
+            file_path = os.path.join(photos_dir, 'main.jpg')
             
-            filePath = os.path.join(path, 'main.jpg')
-            if os.path.exists(filePath):
-                os.remove(filePath)
+            if not os.path.exists(photos_dir):
+                os.makedirs(photos_dir)
             
-            image.save(filePath)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            
+            image.save(file_path)
 
         # register secondary photos
         secondary_photos = request.files.getlist('club_secondary_photos')
         if secondary_photos and any(photo.filename for photo in secondary_photos):
-            path = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/clubs/'+str(cl_id)+'/'
-            secondary_path = os.path.join(path, 'secondary')
-            if not os.path.exists(secondary_path):
-                os.makedirs(secondary_path)
+            photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'clubs', str(cl_id))
+            secondary_dir = os.path.join(photos_dir, 'secondary')
             
-            # Save new photos
+            if not os.path.exists(secondary_dir):
+                os.makedirs(secondary_dir)
+            
             for idx, photo in enumerate(secondary_photos, start=1):
                 if photo.filename:
-                    photo_path = os.path.join(secondary_path, f'{idx}.jpg')
+                    photo_path = os.path.join(secondary_dir, f'{idx}.jpg')
                     photo.save(photo_path)
 
         flash(translate('Club created successfully!'), 'success')
@@ -1249,35 +1250,36 @@ def complete_league_creation(league_id):
     
     db.session.commit()
 
-    # Register main photo
-    image = request.files.get('league_photo')  # Using get() instead of direct access
+    # Handle photos
+    photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'leagues', str(league_id))
+    
+    # Handle main photo upload
+    image = request.files.get('league_photo')
     if image and image.filename:
-        path = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/leagues/'+str(league_id)+'/'
-        if not os.path.exists(path):
-            os.makedirs(path)
+        if not os.path.exists(photos_dir):
+            os.makedirs(photos_dir)
             
-        filePath = path + 'main.jpg'
-        if os.path.exists(filePath):
-            os.remove(filePath)
+        file_path = os.path.join(photos_dir, 'main.jpg')
+        if os.path.exists(file_path):
+            os.remove(file_path)
         
-        image.save(filePath)
+        image.save(file_path)
 
-    # Register secondary photos
+    # Handle secondary photos
     secondary_photos = request.files.getlist('league_secondary_photos')
     if secondary_photos and any(photo.filename for photo in secondary_photos):
-        path = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/leagues/'+str(league_id)+'/'
-        secondary_path = os.path.join(path, 'secondary')
-        if not os.path.exists(secondary_path):
-            os.makedirs(secondary_path)
+        secondary_dir = os.path.join(photos_dir, 'secondary')
+        if not os.path.exists(secondary_dir):
+            os.makedirs(secondary_dir)
             
         # Remove existing secondary photos
-        for existing_file in os.listdir(secondary_path) if os.path.exists(secondary_path) else []:
-            os.remove(os.path.join(secondary_path, existing_file))
+        for existing_file in os.listdir(secondary_dir) if os.path.exists(secondary_dir) else []:
+            os.remove(os.path.join(secondary_dir, existing_file))
             
         # Save new photos
         for idx, photo in enumerate(secondary_photos, start=1):
             if photo.filename:
-                photo_path = os.path.join(secondary_path, f'{idx}.jpg')
+                photo_path = os.path.join(secondary_dir, f'{idx}.jpg')
                 photo.save(photo_path)
 
     #Create GameDays for the league using helper function
@@ -1323,6 +1325,39 @@ def update_league_basic(league_id):
     
     db.session.commit()
     flash(translate('Basic league information updated successfully!'), 'success')
+
+    image = request.files.get('league_photo')
+    if image and image.filename:
+        photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'leagues', str(league_id))
+        file_path = os.path.join(photos_dir, 'main.jpg')
+        
+        if not os.path.exists(photos_dir):
+            os.makedirs(photos_dir)
+        
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        image.save(file_path)
+
+    # Register secondary photos
+    secondary_photos = request.files.getlist('league_secondary_photos')
+    if secondary_photos and any(photo.filename for photo in secondary_photos):
+        photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'leagues', str(league_id))
+        secondary_dir = os.path.join(photos_dir, 'secondary')
+        
+        if not os.path.exists(secondary_dir):
+            os.makedirs(secondary_dir)
+            
+        # Remove existing secondary photos
+        for existing_file in os.listdir(secondary_dir) if os.path.exists(secondary_dir) else []:
+            os.remove(os.path.join(secondary_dir, existing_file))
+        
+        # Save new photos
+        for idx, photo in enumerate(secondary_photos, start=1):
+            if photo.filename:
+                photo_path = os.path.join(secondary_dir, f'{idx}.jpg')
+                photo.save(photo_path)
+
     return redirect(url_for('views.edit_league', league_id=league_id) + '#basic-info')
 
 @views.route('/update_league_details/<int:league_id>', methods=['POST'])
@@ -1595,9 +1630,11 @@ def remove_league_player(league_id, user_id):
 # Other routes
 @views.route('/display_user_image/<userID>')
 def display_user_image(userID):
-    filePath = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/users/'+str(userID)+'/main.jpg'
-    if os.path.isfile(filePath):
-        img = func_crop_image_in_memory(filePath)
+    photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'users', str(userID))
+    file_path = os.path.join(photos_dir, 'main.jpg')
+    
+    if os.path.isfile(file_path):
+        img = func_crop_image_in_memory(file_path)
         img_io = BytesIO()
         img.save(img_io, 'JPEG')
         img_io.seek(0)
@@ -1607,9 +1644,11 @@ def display_user_image(userID):
 
 @views.route('/display_club_main_image/<clubID>')
 def display_club_main_image(clubID):
-    filePath = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/clubs/'+str(clubID)+'/main.jpg'
-    if os.path.isfile(filePath):
-        img = func_crop_image_in_memory(filePath)
+    photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'clubs', str(clubID))
+    file_path = os.path.join(photos_dir, 'main.jpg')
+    
+    if os.path.isfile(file_path):
+        img = func_crop_image_in_memory(file_path)
         img_io = BytesIO()
         img.save(img_io, 'JPEG')
         img_io.seek(0)
@@ -1619,9 +1658,11 @@ def display_club_main_image(clubID):
     
 @views.route('/display_club_second_image/<clubID>')
 def display_club_second_image(clubID):
-    filePath = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/clubs/'+str(clubID)+'/secondary/1.jpg'
-    if os.path.isfile(filePath):
-        img = func_crop_image_in_memory(filePath)
+    photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'clubs', str(clubID), 'secondary')
+    file_path = os.path.join(photos_dir, '1.jpg')
+    
+    if os.path.isfile(file_path):
+        img = func_crop_image_in_memory(file_path)
         img_io = BytesIO()
         img.save(img_io, 'JPEG')
         img_io.seek(0)
@@ -1643,9 +1684,11 @@ def display_package_main_image(eventID, packageID):
 
 @views.route('/display_league_main_image/<leagueID>')
 def display_league_main_image(leagueID):
-    filePath = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/leagues/'+str(leagueID)+'/main.jpg'
-    if os.path.isfile(filePath):
-        img = func_crop_image_in_memory(filePath)
+    photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'leagues', str(leagueID))
+    file_path = os.path.join(photos_dir, 'main.jpg')
+    
+    if os.path.isfile(file_path):
+        img = func_crop_image_in_memory(file_path)
         img_io = BytesIO()
         img.save(img_io, 'JPEG')
         img_io.seek(0)
@@ -1655,9 +1698,11 @@ def display_league_main_image(leagueID):
     
 @views.route('/display_league_second_image/<leagueID>')
 def display_league_second_image(leagueID):
-    filePath = str(os.path.abspath(os.path.dirname(__file__)))+'/static/photos/leagues/'+str(leagueID)+'/secondary/1.jpg'
-    if os.path.isfile(filePath):
-        img = func_crop_image_in_memory(filePath)
+    photos_dir = os.path.join(os.path.dirname(__file__), 'static', 'photos', 'leagues', str(leagueID), 'secondary')
+    file_path = os.path.join(photos_dir, '1.jpg')
+    
+    if os.path.isfile(file_path):
+        img = func_crop_image_in_memory(file_path)
         img_io = BytesIO()
         img.save(img_io, 'JPEG')
         img_io.seek(0)
