@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+ 
+
+    <title>{{ config.TITLE }}</title>
+
+    <link href="../static/css/pace.min.css" rel="stylesheet"/>
+    
+    <!--favicon-->
+    <!-- <link rel="icon" href="../static/images/newIcon.ico" type="image/x-icon"> -->
+    <link rel="icon" href="{{ config.FAVICON }}" type="image/x-icon">
+    <!-- Vector CSS -->
+    <link href="../static/plugins/vectormap/jquery-jvectormap-2.0.2.css" rel="stylesheet"/>
+    <!-- simplebar CSS-->
+    <link href="../static/plugins/simplebar/css/simplebar.css" rel="stylesheet"/>
+    <!-- Bootstrap core CSS-->
+    <link href="../static/css/bootstrap.min.css" rel="stylesheet"/>
+    <!-- animate CSS-->
+    <link href="../static/css/animate.css" rel="stylesheet" type="text/css"/>
+    <!-- Icons CSS-->
+    <link href="../static/css/icons.css" rel="stylesheet" type="text/css"/>
+    <!-- Sidebar CSS-->
+    <link href="../static/css/sidebar-menu.css" rel="stylesheet"/>
+
+    <!-- Custom CSS -->
+    <link href="../static/css/custom.css" rel="stylesheet"/>
+
+    <!-- Playtomic -->
+    <link href="../static/css/main.0cce7547.chunk.css" rel="stylesheet"/>
+
+
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <!-- Muda o Estilo-->
+    <link href="../static/css/app-style.css" rel="stylesheet"/>
+    <!-- WPT Style-->
+    <!-- <link href="../static/css/app-min.css" rel="stylesheet"/> -->
+
+    <!-- faz com que fique lento -->
+    <!-- <script src="../static/js/pace.min.js"></script> -->
+    <!-- jquery -->
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+  </head>
+  <body class="bg-theme bg-theme16">
+
+    <!-- Start wrapper-->
+    <div id="wrapper">
+
+      <!--Start sidebar-wrapper-->
+      <div id="sidebar-wrapper" data-simplebar="" data-simplebar-auto-hide="true">
+        <div class="brand-logo">
+        {% if user.is_authenticated %}
+        <a href="/">
+          <img src="{{ config.LOGOICON }}" class="logo-icon" alt="logo icon">
+          <h5 class="logo-text">{{ config.TITLE }}</h5>
+        </a>
+        {% else %}
+        <a href="/">
+          <img src="{{ config.LOGOICON }}" class="logo-icon" alt="logo icon">
+          <h5 class="logo-text">{{ config.TITLE }}</h5>
+        </a>
+        {% endif %}
+      </div>
+      <ul class="sidebar-menu do-nicescrol">
+        <li class="sidebar-header">{{ translate('Navigation') }}</li>
+        <li>
+          <a href="/">
+            <i class="zmdi zmdi-grid"></i> <span>{{ translate('Leagues') }}</span>
+          </a>
+        </li>
+        {% if user.is_authenticated and (user.us_is_manager==1 or user.us_is_admin==1 or user.us_is_superuser==1)%} 
+        <li class="sidebar-header">{{ translate('Management') }}</li>
+          <li>
+            <a href="/managementLeagues">
+              <i class="zmdi zmdi-grid"></i> <span>{{ translate('Manage Leagues') }}</span>
+            </a>
+          </li>
+          <li>
+            <a href="/managementClubs">
+              <i class="zmdi zmdi-home"></i> <span>{{ translate('Manage Clubs') }}</span>
+            </a>
+          </li>
+        {% endif %}
+        {% if user.is_authenticated and user.us_is_admin==1 and user.us_is_superuser==0%} 
+        <li class="sidebar-header">{{ translate('Admin') }}</li>
+          <li>
+            <a href="/managementUsersAdmin">
+              <i class="zmdi zmdi-grid"></i> <span>{{ translate('Manage Users') }}</span>
+            </a>
+          </li>
+        {% endif %}
+        {% if user.is_authenticated and user.us_is_superuser==1 %} 
+        <li class="sidebar-header">{{ translate('SuperUser') }}</li>
+          <li>
+            <a href="/managementUsersSU">
+              <i class="zmdi zmdi-grid"></i> <span>{{ translate('Manage Users') }}</span>
+            </a>
+          </li>
+        {% endif %}
+        
+      </ul>
+      
+      </div>
+      <!--End sidebar-wrapper-->
+
+    <!--Start topbar header-->
+    <header class="topbar-nav">
+      <nav class="navbar navbar-expand fixed-top">
+      <ul class="navbar-nav mr-auto align-items-center">
+        <li class="nav-item">
+          <a class="nav-link toggle-menu" href="javascript:void();">
+            <i class="icon-menu menu-icon"></i>
+          </a>
+        </li>
+        <li class="nav-item d-block d-md-none">
+          <a class="nav-link" data-toggle="collapse" href="#searchBar" role="button" aria-expanded="false" aria-controls="searchBar">
+            <i class="icon-magnifier"></i>
+          </a>
+        </li>
+        <li class="nav-item d-none d-md-block">
+          <form class="search-bar" action="/search" method="get" style="width: 100%;">
+            <input type="text" name="query" class="form-control form-control-rounded" placeholder="{{ translate('Search') }}">
+            <a href="javascript:void();"><i class="icon-magnifier"></i></a>
+          </form>
+        </li>
+      </ul>
+      <div class="collapse" id="searchBar">
+        <form class="search-bar" action="/search" method="get" style="width: 100%;">
+          <input type="text" name="query" class="form-control form-control-rounded" placeholder="{{ translate('Search') }}">
+          <a href="javascript:void();"><i class="icon-magnifier"></i></a>
+        </form>
+      </div>
+
+      <ul class="navbar-nav align-items-center right-nav-link">
+        <li class="nav-item language">
+          <a class="nav-link dropdown-toggle dropdown-toggle-nocaret waves-effect" data-toggle="dropdown" href="javascript:void();"><i class="fa fa-flag"></i></a>
+          <ul class="dropdown-menu dropdown-menu-right">
+              <li class="dropdown-item" onclick="changeLanguage('en')"> <i class="flag-icon flag-icon-gb mr-2"></i> {{ translate('English') }}</li>
+              <li class="dropdown-item" onclick="changeLanguage('pt')"> <i class="flag-icon flag-icon-pt mr-2"></i> {{ translate('Portuguese') }}</li>
+            </ul>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link dropdown-toggle dropdown-toggle-nocaret" data-toggle="dropdown" href="#">
+            {% if user.is_authenticated  %}
+              <span class="user-profile"><img src="{{ url_for('views.display_user_image', userID=user.us_id ) }}" class="img-circle" alt="{{ user.us_name }}"><div class="user-text">{{ user.us_name }}</div></span>
+            {% else %}
+            <span class="user-profile"><img src="{{ url_for('views.display_user_image', userID=0 ) }}" class="img-circle" alt="user avatar"><div class="user-text">{{ translate('Personal Area') }}</div></span>
+            {% endif %}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-right">
+            <li class="dropdown-item user-details">
+            <a href="javaScript:void();">
+                {% if user.is_authenticated %}
+                  <div class="media">
+                    <div class="avatar"><img class="align-self-start mr-3" src="{{ url_for('views.display_user_image', userID=user.us_id ) }}" alt="{{ user.us_name }}"></div>
+                  <div class="media-body">
+                  <h6 class="mt-2 user-title">{{ user.us_name }}</h6>
+                  <p class="user-subtitle">{{ user.us_email }}</p>
+                  </div>
+                  </div>
+                {% else %}
+                <div class="media">
+                  <div class="avatar"><img class="align-self-start mr-3" src="{{ url_for('views.display_user_image', userID=0 ) }}" alt="user avatar"></div>
+                <div class="media-body">
+                <h6 class="mt-2 user-title"></h6>
+                <p class="user-subtitle"></p>
+                </div>
+                </div>
+                {% endif %}
+              </a>
+            </li>
+            {% if user.is_authenticated %}
+            <li class="dropdown-divider"></li>
+            <a id="userOwnInfo" href="/userOwnInfo"><li class="dropdown-item"><i class="zmdi zmdi-face mr-2"></i> {{ translate('User Information') }}</li></a>
+            <li class="dropdown-divider"></li>
+            <a id="logout" href="/logout"><li class="dropdown-item"><i class="icon-power mr-2"></i> {{ translate('Logout') }}</li></a>
+            {% else %}
+            <li class="dropdown-divider"></li>
+            <a id="login" href="/login"><li class="dropdown-item"><i class="zmdi zmdi-lock mr-2"></i> {{ translate('Login') }}</li></a>
+            <li class="dropdown-divider"></li>
+            <a id="signUp" href="/sign-up"><li class="dropdown-item"><i class="zmdi zmdi-account-circle mr-2"></i> {{ translate('Register') }}</li></a>
+            {% endif %}
+          </ul>
+        </li>
+        {% if user.is_authenticated and user.us_is_superuser and unresponded_requests_count>0%}
+        <li class="nav-item">
+          <a class="nav-link" href="/manage_requests">
+            <i class="fa fa-bell  user-requests"></i>
+            <span class="badge-pill badge-danger user-requests-badge">{{ unresponded_requests_count }}</span>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    </header>
+    <!--End topbar header-->
+
+    
+
+    <div class="clearfix"></div>
+    <div class="content-wrapper">
+      <div class="container-fluid">
+
+          <!-- FLASH MESSAGES -->
+          {% with messages = get_flashed_messages(with_categories=true) %} 
+          {% if messages %} 
+            {% for category, message in messages %} 
+              {% if category == 'error' %}
+                <div class="alert alert-danger alter-dismissable fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="close" data-dismiss="alert">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+              {% else %}
+                <div class="alert alert-success alter-dismissable fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="close" data-dismiss="alert">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+              {% endif %} 
+            {% endfor %} 
+          {% endif %} 
+          {% endwith %}
+
+        {% block content %}
+        {% endblock %}
+
+      <!--start overlay-->
+		  <div class="overlay toggle-menu"></div>
+      <!--end overlay-->  
+
+      </div>  
+    </div>
+
+    <!--Start Back To Top Button-->
+    <a href="javaScript:void();" class="back-to-top"><i class="fa fa-angle-double-up"></i> </a>
+    <!--End Back To Top Button-->
+
+    <!--Start footer-->
+      <footer class="footer">
+        <div class="container">
+          <div class="text-center">
+            {{ translate('Copyright © 2025 INVI-X CONSULTING') }}
+          </div>
+        </div>
+      </footer>
+    <!--End footer-->
+
+</div><!--End wrapper-->
+
+    <!-- Bootstrap core JavaScript-->
+    <script src="../static/js/jquery.min.js"></script>
+    <script src="../static/js/popper.min.js"></script>
+    <!-- <script src="static/js/bootstrap.min.js"></script> -->
+    <!-- simplebar js -->
+    <script src="../static/plugins/simplebar/js/simplebar.js"></script>
+    <!-- sidebar-menu js -->
+    <script src="../static/js/sidebar-menu.js"></script>
+    <!-- loader scripts -->
+    <script src="../static/js/jquery.loading-indicator.js"></script>
+    <!-- Custom scripts -->
+    <script src="../static/js/app-script.js"></script>
+
+
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    
+    <!-- Custom JS -->
+    <script src="../static/js/custom.js"></script>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+      integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+      integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+      crossorigin="anonymous"
+    ></script>
+
+
+    {% block javascript %}{% endblock %}
+
+    <!-- JavaScript moved to custom.js -->
+  </body>
+</html>

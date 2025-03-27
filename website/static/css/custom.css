@@ -1,0 +1,343 @@
+.Court {
+    border: 2px solid transparent;
+    border-radius: 5px;
+    margin: 10px;
+    padding: 10px;
+    display: inline-block;
+    text-align: center; /* Center text horizontally */
+}
+.Court img {
+    display: block;
+    margin: 0 auto; /* Center image horizontally */
+}
+.selectedCourt {
+    border-color: blue;
+}
+.hiddenCourt {
+    border-color: green;
+}
+
+/* Court selection styles for league creation */
+.court-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+.court-card.selected {
+    border: 2px solid white;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.league-info-transparent {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 0.25rem;
+    background-color: transparent;
+    color: #fff;
+}
+
+.nameContainer {
+    width: 108px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.nameContainerELO {
+    width: 108px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.user-profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 15px; /* Adjust the margin as needed */
+}
+
+/* Remove the flexbox properties for user-cart and user-text */
+.user-cart, .user-text {
+    display: block;
+    flex-direction: initial;
+    align-items: initial;
+    justify-content: initial;
+}
+
+.user-text {
+    font-size: 12px; /* Adjust the font size as needed */
+    margin-bottom: 10px; /* Add margin to move it up */
+}
+
+/* Add the following CSS for the shopping cart icon */
+.user-cart {
+    font-size: 1.8em;
+    margin-top: 15px; /* Adjust the margin as needed */
+}
+
+.user-cart-container {
+    position: relative;
+    display: inline-block;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-cart-badge {
+    display: inline-block;
+    padding: .25em .4em;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: .25rem;
+	box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);
+    position: absolute;
+    top: +23px;
+    right: 0px;
+    font-size: 35%; 
+    transform: translate(50%, -50%);
+}
+.user-requests {
+    font-size: 1.6em;
+    margin-top: -5px; /* Adjust the margin as needed */
+}
+.user-requests-badge {
+    display: inline-block;
+    padding: .25em .4em;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: .25rem;
+	box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);
+    position: absolute;
+    top: +13px;
+    right: +30px;
+    font-size: 65%; 
+    transform: translate(50%, -50%);
+}
+
+@supports (-webkit-appearance: -apple-pay-button) {
+    .apple-pay-button-with-text {
+        display: inline-block;
+        -apple-pay-button-type: buy;
+    }
+    .apple-pay-button-with-text > * {
+        display: none;
+    }
+    .apple-pay-button-black-with-text {
+        -apple-pay-button-style: black;
+    }
+    .apple-pay-button-white-with-text {
+        -apple-pay-button-style: white;
+    }
+    .apple-pay-button-white-with-line-with-text {
+        -apple-pay-button-style: white-outline;
+    }
+}
+
+
+@supports not (-webkit-appearance: -apple-pay-button) {
+    .apple-pay-button-with-text {
+        display: inline-flex;
+        justify-content: center;
+        font-size: 12px;
+        border-radius: 5px;
+        padding: 0px;
+        box-sizing: border-box;
+        min-width: 200px;
+        min-height: 32px;
+        max-height: 64px;
+    }
+    .apple-pay-button-black-with-text {
+        background-color: black;
+        color: white;
+    }
+    .apple-pay-button-white-with-text {
+        background-color: white;
+        color: black;
+    }
+    .apple-pay-button-white-with-line-with-text {
+        background-color: white;
+        color: black;
+        border: .5px solid black;
+    }
+    .apple-pay-button-with-text.apple-pay-button-black-with-text > .logo {
+        background-image: url('/static/images/gallery/payment/apple-pay-logo-white.svg');
+        background-color: black;
+    }
+    .apple-pay-button-with-text.apple-pay-button-white-with-text > .logo {
+        /* background-image: -webkit-named-image(apple-pay-logo-black); */
+        background-image: url('/static/images/gallery/payment/apple-pay-logo-black.svg');
+        background-color: white;
+    }
+    .apple-pay-button-with-text.apple-pay-button-white-with-line-with-text > .logo {
+        background-image: url('/static/images/gallery/payment/apple-pay-logo-black.svg');
+        background-color: white;
+    }
+    .apple-pay-button-with-text > .text {
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: calc(1em);
+        font-weight: 600;
+        align-self: center;
+        margin-right: calc(2px );
+    }
+    .apple-pay-button-with-text > .logo {
+        width: calc(35px);
+        /* height: 100%; */
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        background-position: 0 50%;
+        margin-left: calc(2px );
+        border: none;
+    }
+}
+
+@supports not (-webkit-appearance: -google-pay-button) {
+    .google-pay-button-with-text {
+        display: inline-flex;
+        justify-content: center;
+        font-size: 12px;
+        border-radius: 5px;
+        padding: 0px;
+        box-sizing: border-box;
+        min-width: 200px;
+        min-height: 32px;
+        max-height: 64px;
+    }
+    .google-pay-button-black-with-text {
+        background-color: black;
+        color: white;
+    }
+    .google-pay-button-white-with-text {
+        background-color: white;
+        color: black;
+    }
+    .google-pay-button-white-with-line-with-text {
+        background-color: white;
+        color: black;
+        border: .5px solid black;
+    }
+    .google-pay-button-with-text.google-pay-button-black-with-text > .logo {
+        background-image: url('/static/images/gallery/payment/googlePay.png');
+        background-color: black;
+    }
+    .google-pay-button-with-text.google-pay-button-white-with-text > .logo {
+        /* background-image: -webkit-named-image(google-pay-logo-black); */
+        background-image: url('/static/images/gallery/payment/googlePay.png');
+        background-color: white;
+    }
+    .google-pay-button-with-text.google-pay-button-white-with-line-with-text > .logo {
+        background-image: url('/static/images/gallery/payment/googlePay.png');
+        background-color: white;
+    }
+    .google-pay-button-with-text > .text {
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: calc(1em);
+        font-weight: 600;
+        align-self: center;
+        margin-right: calc(2px );
+    }
+    .google-pay-button-with-text > .logo {
+        width: calc(35px);
+        background-size: 100% 65%;
+        background-repeat: no-repeat;
+        background-position: 0 50%;
+        margin-left: calc(2px );
+        border: none;
+    }
+}
+
+/* Game card styles */
+.game-card {
+    margin-bottom: 20px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.game-card .card-header {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 10px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.game-content {
+    padding: 15px;
+}
+
+.team-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+}
+
+.team-players {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+}
+
+.player-photos {
+    display: flex;
+    margin-right: 15px;
+}
+
+.player-photos img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: -10px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.player-names {
+    flex-grow: 1;
+}
+
+.score-input {
+    width: 60px;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.score-input:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    outline: none;
+}
+
+.game-time {
+    font-size: 0.9em;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 10px;
+}
+
+.score {
+    font-size: 1.2em;
+    font-weight: bold;
+    width: 60px;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 4px;
+    padding: 5px;
+}
+

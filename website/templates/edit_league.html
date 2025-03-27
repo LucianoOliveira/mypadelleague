@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+{% block title %}{{ translate('Edit League') }} - {{ league.lg_name }}{% endblock %}
+
+{% block content %}
+<!-- Game Days Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h4>{{ translate('Game Days') }}</h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            {% if not gamedays %}
+            <div class="d-flex justify-content-end">
+                <a href="{{ url_for('views.create_gamedays', league_id=league.lg_id) }}" class="btn btn-light px-5"><i class="icon-plus"></i> {{ translate('Create GameDays') }}</a>
+            </div>
+            <br>
+            {% endif %}
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>{{ translate('Name') }}</th>
+                        <th>{{ translate('Date') }}</th>
+                        <th>{{ translate('Status') }}</th>
+                        <th>{{ translate('Winners') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gameday in gamedays %}
+                    <tr onclick="window.location.href='{{ url_for('views.edit_gameday', gameday_id=gameday.gd_id) }}'" style="cursor: pointer;">
+                        <td>{{ gameday.gd_gameDayName }}</td>
+                        <td>{{ gameday.gd_date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            {% if gameday.gd_status == 'active' %}
+                                <span class="badge badge-success">{{ translate('Active') }}</span>
+                            {% elif gameday.gd_status == 'finished' %}
+                                <span class="badge badge-danger">{{ translate('Finished') }}</span>
+                            {% else %}
+                                <span class="badge badge-secondary">{{ translate('Pending') }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if gameday.winner1 and gameday.winner2 %}
+                                <div style="display: inline-flex; align-items: center;">
+                                    <div class="player-photos" style="display: inline-block;">
+                                        <img src="{{ url_for('views.display_user_image', userID=gameday.winner1.us_id) }}" 
+                                             alt="{{ gameday.winner1.us_name }}"
+                                             class="rounded-circle"
+                                             style="width: 30px; height: 30px; margin-right: -10px;">
+                                        <img src="{{ url_for('views.display_user_image', userID=gameday.winner2.us_id) }}"
+                                             alt="{{ gameday.winner2.us_name }}"
+                                             class="rounded-circle"
+                                             style="width: 30px; height: 30px;">
+                                    </div>
+                                    <span style="margin-left: 10px;">
+                                        {{ gameday.winner1.us_name }} / {{ gameday.winner2.us_name }}
+                                    </span>
+                                </div>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- League Classification Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h4>{{ translate('Classification') }}</h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive table-mobile-hide-column">
+            <table class="table table-hover mobile-table">
+                <thead>
+                    <tr>
+                        <th scope="col" class="player-col">{{ translate('Name') }}</th>
+                        <th scope="col" class="points-col">{{ translate('Pts') }}</th>
+                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('MW') }}</th>
+                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('ML') }}</th>
+                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('GW') }}</th>
+                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('GL') }}</th>
+                        <th scope="col" class="diff-col">{{ translate('GD') }}</th>
+                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('Ranking') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for classification in league.league_classifications|sort(attribute='lc_ranking', reverse=True) %}
+                    <tr>
+                        <td class="player-col">
+                            <img src="{{ url_for('views.display_user_image', userID=classification.lc_idPlayer) }}" 
+                                 alt="{{ classification.player.us_name }}" 
+                                 class="user-pic rounded-circle" 
+                                 style="width: 35px; height: 35px; object-fit: cover;">
+                            <span>{{ classification.player.us_name }}</span>
+                        </td>
+                        <td class="points-col">{{ classification.lc_points }}</td>
+                        <td class="d-none d-sm-table-cell">{{ classification.lc_wins }}</td>
+                        <td class="d-none d-sm-table-cell">{{ classification.lc_losses }}</td>
+                        <td class="d-none d-sm-table-cell">{{ classification.lc_gamesFavor }}</td>
+                        <td class="d-none d-sm-table-cell">{{ classification.lc_gamesAgainst }}</td>
+                        <td class="diff-col">{{ classification.lc_gamesDiff }}</td>
+                        <td class="d-none d-sm-table-cell">{{ classification.lc_ranking }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Registered Users Section -->
+<div class="card mt-4">
+    <div class="accordion" id="registeredUsersAccordion">
+        <div class="card">
+            <div class="card-header" id="registeredUsersHeader">
+                <h4 class="mb-0">
+                    <button class="btn btn-link {% if league.lg_registration_end and league.lg_registration_end > now %}show{% else %}collapsed{% endif %}" 
+                            type="button" 
+                            data-toggle="collapse" 
+                            data-target="#registeredUsersContent" 
+                            aria-expanded="{% if league.lg_registration_end and league.lg_registration_end > now %}true{% else %}false{% endif %}" 
+                            aria-controls="registeredUsersContent">
+                        {{ translate('Registered Players in League') }}
+                        <span class="badge badge-info ml-2">{{ registered_users|length if registered_users else 0 }}</span>
+                    </button>
+                </h4>
+            </div>
+            <div id="registeredUsersContent" 
+                 class="collapse {% if league.lg_registration_end and league.lg_registration_end > now %}show{% endif %}" 
+                 aria-labelledby="registeredUsersHeader" 
+                 data-parent="#registeredUsersAccordion">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{{ translate('Name') }}</th>
+                                    <!-- <th>{{ translate('Level') }}</th> -->
+                                    <th>{{ translate('Registration Date') }}</th>
+                                    <th>{{ translate('Registration') }}</th>
+                                    <th>{{ translate('Actions') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in registered_users %}
+                                <tr>
+                                    <td>{{ user.us_name }}</td>
+                                    <!-- <td>{{ user.us_level }}</td> -->
+                                    <td>{{ user.registration_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if user.us_id == user.registered_by_id %}
+                                            <span class="badge badge-success">{{ translate('Self Register') }}</span>
+                                        {% else %}
+                                            <span class="badge badge-info">{{ translate('Club Register') }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form action="{{ url_for('views.remove_league_player', league_id=league.lg_id, user_id=user.us_id) }}" method="POST" style="display: inline;">
+                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('{{ translate('Are you sure you want to remove this player from the league?') }}')">
+                                                <i class="icon-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% if registered_users|length < league.lg_max_players %}
+                                <tr>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>
+                                        <a href="{{ url_for('views.create_and_add_league_player', league_id=league.lg_id) }}?return_url={{ url_for('views.edit_league', league_id=league.lg_id)|urlencode }}" class="btn btn-success btn-sm">
+                                            <i class="icon-plus"></i> {{ translate('Add Player') }}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if not registered_users %}
+                                <tr>
+                                    <td colspan="5" class="text-center">{{ translate('No users registered yet') }}</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit League Section -->
+<div class="accordion" id="editLeagueAccordion">
+    <div class="card">
+        <div class="card-header" id="editLeagueHeader">
+            <h4 class="mb-0">
+                <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#editLeagueContent" aria-expanded="false" aria-controls="editLeagueContent">
+                    {{ translate('Edit League') }} - {{ league.lg_name }}
+                </button>
+            </h4>
+        </div>
+        <div id="editLeagueContent" class="collapse" aria-labelledby="editLeagueHeader" data-parent="#editLeagueAccordion">
+            <div class="card-body">
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-toggle="tab" href="#basic-info" role="tab">{{ translate('Basic Information') }}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#court-details" role="tab">{{ translate('Court Selection & Details') }}</a>
+                    </li>
+                </ul>
+
+                <!-- Tab content -->
+                <div class="tab-content p-3">
+                    <!-- Basic Information Tab -->
+                    <div class="tab-pane fade show active" id="basic-info" role="tabpanel">
+                        <form action="{{ url_for('views.update_league_basic', league_id=league.lg_id) }}" method="post" id="basicInfoForm">
+                            <div class="form-group">
+                                <label for="club_id">{{ translate('Club') }}</label>
+                                <input type="text" class="form-control" value="{{ club.cl_name }}" readonly disabled>
+                                <input type="hidden" name="club_id" value="{{ league.club_id }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="title">{{ translate('League Name') }}</label>
+                                <input type="text" class="form-control" id="title" name="title" value="{{ league.lg_name }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="level">{{ translate('Level') }}</label>
+                                <select class="form-control" id="level" name="level" required>
+                                    {% for level in ['MF1', 'MF2', 'MF3', 'MF4', 'MF5', 'ALL'] %} <option value="{{ level }}" {% if level == league.lg_level %}selected{% endif %}>{{ level }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>{{ translate('Status') }}</label>
+                                <input type="text" class="form-control" value="{{ translate(league.lg_status|title) }}" readonly disabled>
+                                <input type="hidden" name="status" value="{{ league.lg_status }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="nbr_days">{{ translate('Number of Days') }}</label>
+                                <input type="number" class="form-control" id="nbr_days" name="nbr_days" value="{{ league.lg_nbrDays }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="nbr_teams">{{ translate('Number of Teams') }}</label>
+                                <input type="number" class="form-control" id="nbr_teams" name="nbr_teams" value="{{ league.lg_nbrTeams }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="start_date">{{ translate('Start Date') }}</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ league.lg_startDate.strftime('%Y-%m-%d') }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="registration_start">{{ translate('Registration Start') }}</label>
+                                <input type="datetime-local" class="form-control" id="registration_start" name="registration_start" 
+                                       value="{{ league.lg_registration_start.strftime('%Y-%m-%dT%H:%M') if league.lg_registration_start }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="registration_end">{{ translate('Registration End') }}</label>
+                                <input type="datetime-local" class="form-control" id="registration_end" name="registration_end"
+                                       value="{{ league.lg_registration_end.strftime('%Y-%m-%dT%H:%M') if league.lg_registration_end }}" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-light px-5"><i class="icon-save"></i> {{ translate('Save Basic Information') }}</button>
+                        </form>
+                    </div>
+
+                    <!-- Court Selection & Details Tab -->
+                    <div class="tab-pane fade" id="court-details" role="tabpanel">
+                        <form action="{{ url_for('views.update_league_details', league_id=league.lg_id) }}" method="post" enctype="multipart/form-data">
+                            <div id="courts-container" class="form-group">
+                                <label>{{ translate('Select Courts') }}</label>
+                                <div class="row" id="available-courts">
+                                    {% for court in courts %}
+                                    <div class="col-md-4 mb-2">
+                                        <div class="card court-card">
+                                            <div class="card-body">
+                                                <div class="form-check">
+                                                    <input type="checkbox" class="form-check-input court-checkbox" 
+                                                           id="court_{{ court.ct_id }}" 
+                                                           name="selected_courts" 
+                                                           value="{{ court.ct_id }}"
+                                                           {% if court in league.league_courts|map(attribute='court')|list %}checked{% endif %}>
+                                                    <label class="form-check-label" for="court_{{ court.ct_id }}">
+                                                        {{ court.ct_name }} ({{ court.ct_sport }})
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="start_time">{{ translate('Start Time') }}</label>
+                                <input type="time" class="form-control" id="start_time" name="start_time" 
+                                       value="{{ league.lg_startTime.strftime('%H:%M') if league.lg_startTime }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="min_warm_up">{{ translate('Warm Up Minutes') }}</label>
+                                <input type="number" class="form-control" id="min_warm_up" name="min_warm_up" 
+                                       value="{{ league.lg_minWarmUp }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="min_per_game">{{ translate('Minutes per Game') }}</label>
+                                <input type="number" class="form-control" id="min_per_game" name="min_per_game" 
+                                       value="{{ league.lg_minPerGame }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="min_between_games">{{ translate('Minutes Between Games') }}</label>
+                                <input type="number" class="form-control" id="min_between_games" name="min_between_games" 
+                                       value="{{ league.lg_minBetweenGames }}" required
+                                       {% if not league.can_modify_league_settings() %}disabled{% endif %}>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="lg_nbr_substitutes">{{ translate('Number of Substitutes') }} <small class="text-muted">(0-{{ league.max_substitutes }})</small></label>
+                                <input type="number" class="form-control" id="lg_nbr_substitutes" name="lg_nbr_substitutes" 
+                                       min="0" max="{{ league.max_substitutes }}" value="{{ league.lg_nbr_substitutes }}" required
+                                       {% if not league.can_modify_league_settings() %}disabled{% endif %}>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="lg_nbr_auto_substitutes">{{ translate('Number of Auto-Registered Substitutes') }} <small class="text-muted">(0-{{ league.max_substitutes }})</small></label>
+                                <input type="number" class="form-control" id="lg_nbr_auto_substitutes" name="lg_nbr_auto_substitutes" 
+                                       min="0" max="{{ league.max_substitutes }}" value="{{ league.lg_nbr_auto_substitutes }}" required
+                                       {% if not league.can_modify_league_settings() %}disabled{% endif %}>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="lg_presence_points">{{ translate('Points for Presence') }} <small class="text-muted">(0-3)</small></label>
+                                <input type="number" class="form-control" id="lg_presence_points" name="lg_presence_points" 
+                                       min="0" max="3" value="{{ league.lg_presence_points }}" required
+                                       {% if not league.can_modify_league_settings() %}disabled{% endif %}>
+                            </div>
+
+                            {% if not league.can_modify_league_settings() %}
+                            <div class="alert alert-info">
+                                {{ translate('These settings cannot be modified after the league has started.') }}
+                            </div>
+                            {% endif %}
+
+                            <div class="form-group">
+                                <label>{{ translate('League Type') }}</label>
+                                <input type="text" class="form-control" value="Non-Stop League" readonly disabled>
+                                <input type="hidden" name="type_of_league" value="Non-Stop League">
+                            </div>
+
+                            <!-- Hidden fields -->
+                            <input type="hidden" name="max_level" value="0">
+
+                            <div class="form-group">
+                                <label>{{ translate('ELO K Factor') }}</label>
+                                <input type="number" class="form-control" value="{{ league.lg_nbrTeams * 10 }}" readonly disabled>
+                                <input type="hidden" name="elo_k" value="{{ league.lg_nbrTeams * 10 }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="league_photo">{{ translate('Update Main League Photo') }}</label>
+                                <input type="file" class="form-control" id="league_photo" name="league_photo" accept="image/*">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="league_secondary_photos">{{ translate('Update Secondary League Photos') }}</label>
+                                <input type="file" class="form-control" id="league_secondary_photos" name="league_secondary_photos" multiple accept="image/*">
+                            </div>
+
+                            <button type="submit" class="btn btn-light px-5"><i class="icon-save"></i> {{ translate('Save Court Details') }}</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %} {% block title %}{{ config.TITLE }}{% endblock %} 
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ translate('Sign Up') }}</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="fullname">{{ translate('Name') }}</label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="fullname"
+                    name="fullname"
+                    placeholder="{{ translate('Enter name') }}"
+                    required
+                />
+            </div>
+            <div class="form-group">
+                <label for="email">{{ translate('Email Address') }}</label>
+                <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    name="email"
+                    placeholder="{{ translate('Enter email') }}"
+                    required
+                />
+            </div>
+            <div class="form-group">
+                <label for="telephone">{{ translate('Telephone') }}</label>
+                <input
+                    type="tel"
+                    class="form-control"
+                    id="telephone"
+                    name="telephone"
+                    placeholder="{{ translate('Enter telephone number') }}"
+                    required
+                />
+            </div>
+            <div class="form-group">
+                <label for="photo">{{ translate('Profile Photo') }}</label>
+                <input
+                    type="file"
+                    class="form-control"
+                    id="photo"
+                    name="photo"
+                    accept="image/*"
+                />
+            </div>
+            <div class="form-group">
+                <label for="password1">{{ translate('Password') }}</label>
+                <input
+                    type="password"
+                    class="form-control"
+                    id="password1"
+                    name="password1"
+                    placeholder="{{ translate('Enter password') }}"
+                    required
+                />
+            </div>
+            <div class="form-group">
+                <label for="password2">{{ translate('Password (Confirm)') }}</label>
+                <input
+                    type="password"
+                    class="form-control"
+                    id="password2"
+                    name="password2"
+                    placeholder="{{ translate('Confirm password') }}"
+                    required
+                />
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-light px-5">{{ translate('Sign Up') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}{{ gameday.gd_gameDayName }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ gameday.gd_gameDayName }}</h1>
+            {% if gameday.gd_status == 'announced' %}
+                <span class="badge bg-primary">{{ translate('Announced') }}</span>
+            {% elif gameday.gd_status == 'active' %}
+                <span class="badge bg-success">{{ translate('Active') }}</span>
+            {% elif gameday.gd_status == 'finished' %}
+                <span class="badge bg-danger">{{ translate('Finished') }}</span>
+            {% elif gameday.gd_status == 'canceled' %}
+                <span class="badge bg-danger">{{ translate('Canceled') }}</span>
+            {% else %}
+                <span class="badge bg-secondary">{{ translate('Pending') }}</span>
+            {% endif %}
+            
+            <div class="mt-3">
+                <h5>{{ club.cl_name }}</h5>
+                {% if club.cl_address %}
+                <p class="mb-1"><i class="fas fa-map-marker-alt"></i> {{ club.cl_address }}</p>
+                {% endif %}
+                <p class="mb-1"><i class="fas fa-calendar-alt"></i> {{ gameday.gd_date.strftime('%Y-%m-%d') }}</p>
+                
+                <!-- Registration Button -->
+                <div class="mt-3">
+                    {% if current_user.is_authenticated %}
+                        {% if is_league_player %}
+                            {% set current_time = now() %}
+                            {% if registration_start and registration_end %}
+                                {% if current_time < registration_start %}
+                                    <button class="btn btn-primary" disabled>
+                                        {{ translate('Registration opens at') }} {{ registration_start.strftime('%Y-%m-%d %H:%M') }}
+                                    </button>
+                                {% elif current_time >= registration_start and current_time <= registration_end %}
+                                    {% if is_registered %}
+                                        <span class="badge bg-success me-2">
+                                            <i class="fa fa-check"></i> {{ translate('Registered') }}
+                                        </span>
+                                        <form action="{{ url_for('views.unregister_gameday', gameday_id=gameday.gd_id) }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                {{ translate('Unregister') }}
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        {% if gameday.current_player_count >= gameday.max_players %}
+                                            <button class="btn btn-secondary" disabled>{{ translate('Gameday is Full') }}</button>
+                                            <span class="text-muted ms-2">{{ translate('Maximum players reached') }}</span>
+                                        {% else %}
+                                            <a href="{{ url_for('views.register_gameday', gameday_id=gameday.gd_id) }}" class="btn btn-success">
+                                                {{ translate('Register for Gameday') }}
+                                            </a>
+                                            <span class="text-muted ms-2">
+                                                {{ gameday.current_player_count }}/{{ gameday.max_players }} {{ translate('players registered') }}
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% else %}
+                                    <button class="btn btn-secondary" disabled>
+                                        {{ translate('Registration period ended') }}
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <div>
+                                <p class="text-muted mb-2">
+                                    {{ translate('You must be registered in the league to register for gamedays.') }}
+                                </p>
+                                <a href="{{ url_for('views.detail_league', league_id=league.lg_id) }}" class="btn btn-primary">
+                                    {{ translate('Return to League') }}
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registered Players -->
+    {% if gameday.registrations %}
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{ translate('Registered Players') }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>{{ translate('Player') }}</th>
+                                    <th>{{ translate('Registration Time') }}</th>
+                                    <th>{{ translate('Status') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for registration in gameday.registrations|sort(attribute='gdr_registered_at') %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ registration.player.us_name }}</td>
+                                    <td>{{ registration.gdr_registered_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if loop.index <= gameday.league.lg_nbrTeams * 2 %}
+                                            <span class="badge bg-success">{{ translate('Main Player') }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">{{ translate('Substitute') }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- GameDay Classification -->
+    {% if gameday.games and gameday.gd_status == 'finished' %}
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{ translate('Classification') }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive table-mobile-hide-column">
+                        <table class="table table-hover mobile-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="player-col">{{ translate('Name') }}</th>
+                                    <th scope="col" class="points-col">{{ translate('Pts') }}</th>
+                                    <th scope="col" class="d-none d-sm-table-cell">{{ translate('MW') }}</th>
+                                    <th scope="col" class="d-none d-sm-table-cell">{{ translate('ML') }}</th>
+                                    <th scope="col" class="d-none d-sm-table-cell">{{ translate('GW') }}</th>
+                                    <th scope="col" class="d-none d-sm-table-cell">{{ translate('GL') }}</th>
+                                    <th scope="col" class="diff-col">{{ translate('GD') }}</th>
+                                    <th scope="col" class="d-none d-sm-table-cell">{{ translate('Ranking') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for classification in gameday.classifications|sort(attribute='gc_ranking', reverse=True) %}
+                                <tr>
+                                    <td class="player-col">
+                                        <img src="{{ url_for('views.display_user_image', userID=classification.gc_idPlayer) }}" 
+                                             alt="{{ classification.player.us_name }}" 
+                                             class="user-pic rounded-circle" 
+                                             style="width: 35px; height: 35px; object-fit: cover;">
+                                        <span>{{ classification.player.us_name }}</span>
+                                    </td>
+                                    <td class="points-col">{{ classification.gc_points }}</td>
+                                    <td class="d-none d-sm-table-cell">{{ classification.gc_wins }}</td>
+                                    <td class="d-none d-sm-table-cell">{{ classification.gc_losses }}</td>
+                                    <td class="d-none d-sm-table-cell">{{ classification.gc_gamesFavor }}</td>
+                                    <td class="d-none d-sm-table-cell">{{ classification.gc_gamesAgainst }}</td>
+                                    <td class="diff-col">{{ classification.gc_gamesDiff }}</td>
+                                    <td class="d-none d-sm-table-cell">{{ classification.gc_ranking }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Games Section -->
+    {% if gameday.games and gameday.gd_status == 'finished' %}
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{ translate('Games') }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for game in gameday.games %}
+                        <div class="col-lg-6">
+                            <div class="game-card">
+                                <div class="card-header">
+                                    <strong>{{ game.court.ct_name }}</strong>
+                                </div>
+                                <div class="game-content">
+                                    <div class="game-time">
+                                        {{ game.gm_date.strftime('%Y-%m-%d') }} / 
+                                        {{ game.gm_timeStart.strftime('%H:%M') }} - {{ game.gm_timeEnd.strftime('%H:%M') }}
+                                    </div>
+                                    
+                                    <!-- Team A -->
+                                    <div class="team-row">
+                                        <div class="team-players">
+                                            <div class="player-photos">
+                                                <img src="{{ url_for('views.display_user_image', userID=game.gm_idPlayer_A1) if game.gm_idPlayer_A1 else url_for('static', filename='photos/users/nophoto.jpg') }}" alt="">
+                                                <img src="{{ url_for('views.display_user_image', userID=game.gm_idPlayer_A2) if game.gm_idPlayer_A2 else url_for('static', filename='photos/users/nophoto.jpg') }}" alt="">
+                                            </div>
+                                            <div class="player-names">
+                                                {% if game.player_A1 %}
+                                                    {{ game.player_A1.us_name }} / {{ game.player_A2.us_name }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="score">
+                                            {% if game.gm_result_A is not none and game.gm_result_B is not none and (game.gm_result_A > 0 or game.gm_result_B > 0) %}
+                                                {{ game.gm_result_A }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Team B -->
+                                    <div class="team-row">
+                                        <div class="team-players">
+                                            <div class="player-photos">
+                                                <img src="{{ url_for('views.display_user_image', userID=game.gm_idPlayer_B1) if game.gm_idPlayer_B1 else url_for('static', filename='photos/users/nophoto.jpg') }}" alt="">
+                                                <img src="{{ url_for('views.display_user_image', userID=game.gm_idPlayer_B2) if game.gm_idPlayer_B2 else url_for('static', filename='photos/users/nophoto.jpg') }}" alt="">
+                                            </div>
+                                            <div class="player-names">
+                                                {% if game.player_B1 %}
+                                                    {{ game.player_B1.us_name }} / {{ game.player_B2.us_name }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="score">
+                                            {% if game.gm_result_A is not none and game.gm_result_B is not none and (game.gm_result_A > 0 or game.gm_result_B > 0) %}
+                                                {{ game.gm_result_B }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ translate('Create Club') }}</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="club_name">{{ translate('Club Name') }} *</label>
+                <input type="text" class="form-control" id="club_name" name="club_name" required>
+            </div>
+            <div class="form-group">
+                <label for="club_email">{{ translate('Email') }}</label>
+                <input type="email" class="form-control" id="club_email" name="club_email">
+            </div>
+            <div class="form-group">
+                <label for="club_phone">{{ translate('Phone') }}</label>
+                <input type="tel" class="form-control" id="club_phone" name="club_phone">
+            </div>
+            <div class="form-group">
+                <label for="club_address">{{ translate('Address') }}</label>
+                <input type="text" class="form-control" id="club_address" name="club_address">
+            </div>
+            <div class="form-group">
+                <label for="club_main_photo">{{ translate('Main Club Photo') }}</label>
+                <input type="file" class="form-control" id="club_main_photo" name="club_main_photo" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label for="club_secondary_photos">{{ translate('Secondary Club Photos') }}</label>
+                <input type="file" class="form-control" id="club_secondary_photos" name="club_secondary_photos" multiple accept="image/*">
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-light px-5">{{ translate('Create') }}</button>
+                <a href="{{ url_for('views.management_clubs') }}" class="btn btn-outline-light px-5">{{ translate('Cancel') }}</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

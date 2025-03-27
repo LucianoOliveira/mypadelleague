@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ translate('Complete League Creation') }}</h4>
+    </div>
+    <div class="card-body">
+        <!-- Progress bar with increased height -->
+        <div class="mb-4">
+            <div class="progress" style="height: 25px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: 100%; font-size: 16px;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">{{ translate('Step') }} 2/2</div>
+            </div>
+            <div class="d-flex justify-content-between mt-2">
+                <span class="text-muted">{{ translate('Basic Information') }}</span>
+                <span class="text-success font-weight-bold">{{ translate('Court Selection & Details') }}</span>
+            </div>
+        </div>
+
+        <form action="{{ url_for('views.complete_league_creation', league_id=league.lg_id) }}" method="post" enctype="multipart/form-data" id="completeLeagueForm">
+            <input type="hidden" name="league_id" value="{{ league.lg_id }}" data-teams="{{ league.lg_nbrTeams }}">
+            
+            <button type="button" class="btn btn-sm btn-outline-info mb-3" id="toggleLeagueInfo">
+                <i class="icon-info"></i> {{ translate('Show/Hide League Information') }}
+            </button>
+            
+            <div class="league-info-transparent collapse" id="leagueInfoBox">
+                <strong>{{ translate('League Information') }}:</strong><br>
+                {{ translate('Name') }}: {{ league.lg_name }}<br>
+                {{ translate('Club') }}: {{ club_name }}<br>
+                {{ translate('Teams') }}: {{ league.lg_nbrTeams }}<br>
+                {{ translate('Start Date') }}: {{ league.lg_startDate.strftime('%Y-%m-%d') }}
+            </div>
+
+            <div id="courts-container" class="form-group">
+                <label>{{ translate('Select Courts') }} <small class="text-muted" id="courts-required"></small></label>
+                <div class="row" id="available-courts">
+                    {% for court in courts %}
+                    <div class="col-md-4 mb-2">
+                        <div class="card court-card">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input court-checkbox" id="court_{{ court.ct_id }}" name="selected_courts" value="{{ court.ct_id }}">
+                                    <label class="form-check-label" for="court_{{ court.ct_id }}">{{ court.ct_name }} ({{ court.ct_sport }})</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="start_time">{{ translate('Start Time') }}</label>
+                <input type="time" class="form-control" id="start_time" name="start_time" value="{{ league.lg_startTime.strftime('%H:%M') if league.lg_startTime }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="min_warm_up">{{ translate('Warm Up Minutes') }}</label>
+                <input type="number" class="form-control" id="min_warm_up" name="min_warm_up" required>
+            </div>
+
+            <div class="form-group">
+                <label for="min_per_game">{{ translate('Minutes per Game') }}</label>
+                <input type="number" class="form-control" id="min_per_game" name="min_per_game" required>
+            </div>
+
+            <div class="form-group">
+                <label for="min_between_games">{{ translate('Minutes Between Games') }}</label>
+                <input type="number" class="form-control" id="min_between_games" name="min_between_games" required>
+            </div>
+
+            <div class="form-group">
+                <label for="lg_nbr_substitutes">{{ translate('Number of Substitutes') }} <small class="text-muted">(0-{{ league.lg_nbrTeams * 2 }})</small></label>
+                <input type="number" class="form-control" id="lg_nbr_substitutes" name="lg_nbr_substitutes" min="0" max="{{ league.lg_nbrTeams * 2 }}" value="0" required>
+            </div>
+
+            <div class="form-group">
+                <label for="lg_nbr_auto_substitutes">{{ translate('Number of Auto-Registered Substitutes') }} <small class="text-muted">(0-{{ league.lg_nbrTeams * 2 }})</small></label>
+                <input type="number" class="form-control" id="lg_nbr_auto_substitutes" name="lg_nbr_auto_substitutes" min="0" max="{{ league.lg_nbrTeams * 2 }}" value="0" required>
+            </div>
+
+            <div class="form-group">
+                <label for="lg_presence_points">{{ translate('Points for Presence') }} <small class="text-muted">(0-3)</small></label>
+                <input type="number" class="form-control" id="lg_presence_points" name="lg_presence_points" min="0" max="3" value="0" required>
+            </div>
+
+            <!-- Hidden fields with auto-calculated values -->
+            <input type="hidden" name="type_of_league" value="Non-Stop League">
+            <input type="hidden" name="max_level" value="0">
+            <input type="hidden" name="elo_k" value="{{ league.lg_nbrTeams * 10 }}">
+
+            <div class="form-group">
+                <label for="league_photo">{{ translate('Main League Photo') }}</label>
+                <input type="file" class="form-control" id="league_photo" name="league_photo" accept="image/*">
+            </div>
+
+            <div class="form-group">
+                <label for="league_secondary_photos">{{ translate('Secondary League Photos') }}</label>
+                <input type="file" class="form-control" id="league_secondary_photos" name="league_secondary_photos" multiple accept="image/*">
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-light px-5" id="submitButton"><i class="icon-save"></i> {{ translate('Complete League Creation') }}</button>
+                <a href="{{ url_for('views.managementLeagues') }}" class="btn btn-outline-light px-5">{{ translate('Cancel') }}</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

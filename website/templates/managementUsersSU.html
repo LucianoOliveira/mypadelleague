@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ config.TITLE }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ translate('Manage Users (SuperUser)') }}</h4>
+    </div>
+    <div class="card-body">
+        {% if result %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ translate('Name') }}</th>
+                        <th scope="col">{{ translate('Active') }}</th>
+                        <th scope="col">{{ translate('Player') }}</th>
+                        <th scope="col">{{ translate('Manager') }}</th>
+                        <th scope="col">{{ translate('Admin') }}</th>
+                        <th scope="col">{{ translate('SuperUser') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r_user in result %}
+                    <tr onclick="window.location.href='{{ url_for('views.editUser', user_id=r_user.us_id) }}';" style="cursor: pointer;">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('views.display_user_image', userID=r_user.us_id ) }}" 
+                                    alt="{{ r_user.us_name }}" class="rounded-circle mr-2" width="40">    
+                                <span>{{ display_short_name(r_user.us_name) }}</span>
+                            </div>
+                        </td>
+                        <td>{% if r_user.us_is_active %}<span class="badge badge-success">{{ translate('Active') }}</span>{% else %}<span class="badge badge-danger">{{ translate('Inactive') }}</span>{% endif %}</td>
+                        <td>{% if r_user.us_is_player %}<i class="zmdi zmdi-check-square text-success"></i>{% else %}<i class="zmdi zmdi-square-o"></i>{% endif %}</td>
+                        <td>{% if r_user.us_is_manager %}<i class="zmdi zmdi-check-square text-success"></i>{% else %}<i class="zmdi zmdi-square-o"></i>{% endif %}</td>
+                        <td>{% if r_user.us_is_admin %}<i class="zmdi zmdi-check-square text-success"></i>{% else %}<i class="zmdi zmdi-square-o"></i>{% endif %}</td>
+                        <td>{% if r_user.us_is_superuser %}<i class="zmdi zmdi-check-square text-success"></i>{% else %}<i class="zmdi zmdi-square-o"></i>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center">
+            <p>{{ translate('No users found.') }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

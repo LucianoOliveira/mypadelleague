@@ -1,0 +1,35 @@
+{% extends "base.html" %} {% block title %}{{ config.TITLE }}{% endblock %} 
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ translate('Login') }}</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="form-group">
+                <label for="email">{{ translate('Email Address') }}</label>
+                <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    name="email"
+                    placeholder="{{ translate('Enter email') }}"
+                />
+            </div>
+            <div class="form-group">
+                <label for="password">{{ translate('Password') }}</label>
+                <input
+                    type="password"
+                    class="form-control"
+                    id="password"
+                    name="password"
+                    placeholder="{{ translate('Enter password') }}"
+                />
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-light px-5">{{ translate('Login') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

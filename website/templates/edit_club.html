@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>{{ translate('Edit Club') }}</h4>
+            </div>
+            <div class="card-body">
+                <!-- Two forms side by side in a flex container -->
+                <div class="d-flex justify-content-between align-items-end mb-3">
+                    <form method="POST" enctype="multipart/form-data" style="width: 100%;">
+                        <div class="row gutters-sm">
+                            <div class="col-md-4 mb-3">
+                                <div class="text-center">
+                                    <img src="{{ url_for('views.display_club_main_image', clubID=club.cl_id ) }}" alt="{{ club.cl_name }}" class="rounded-circle" width="150" id="club_photo_img">
+                                    <input type="file" class="form-control" id="club_photo" name="club_photo" style="display: none;">
+                                    <div class="mt-3">
+                                        <h4>{{ club.cl_name }}</h4>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="form-group">
+                                    <label for="club_main_photo">{{ translate('Main Club Photo') }}</label>
+                                    <input type="file" class="form-control" id="club_main_photo" name="club_main_photo" accept="image/*">
+                                </div>
+                                <div class="form-group">
+                                    <label for="club_secondary_photos">{{ translate('Secondary Club Photos') }}</label>
+                                    <input type="file" class="form-control" id="club_secondary_photos" name="club_secondary_photos" multiple accept="image/*">
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label>{{ translate('Club Name') }}</label>
+                                    <input type="text" class="form-control" name="club_name" value="{{ club.cl_name }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>{{ translate('Email') }}</label>
+                                    <input type="email" class="form-control" name="club_email" value="{{ club.cl_email }}">
+                                </div>
+                                <div class="form-group">
+                                    <label>{{ translate('Phone') }}</label>
+                                    <input type="text" class="form-control" name="club_phone" value="{{ club.cl_phone }}">
+                                </div>
+                                <div class="form-group">
+                                    <label>{{ translate('Address') }}</label>
+                                    <input type="text" class="form-control" name="club_address" value="{{ club.cl_address }}">
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <button type="submit" class="btn btn-primary">{{ translate('Save Changes') }}</button>
+                                    {% if user.us_is_superuser or user.us_is_admin %}
+                                        {% if club.cl_active %}
+                                        <form action="{{ url_for('views.deactivate_club', club_id=club.cl_id) }}" method="POST" style="display: inline;">
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="icon-lock"></i> {{ translate('Deactivate Club') }}
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <form action="{{ url_for('views.activate_club', club_id=club.cl_id) }}" method="POST" style="display: inline;">
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="icon-lock-open"></i> {{ translate('Activate Club') }}
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Courts Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>{{ translate('Courts') }}</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>{{ translate('Name') }}</th>
+                                <th>{{ translate('Sport') }}</th>
+                                <th>{{ translate('Actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for court in club.courts %}
+                            <tr>
+                                <td>{{ court.ct_name }}</td>
+                                <td>{{ court.ct_sport }}</td>
+                                <td>
+                                    <form action="{{ url_for('views.delete_court', court_id=court.ct_id) }}" method="POST" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="icon-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <form action="{{ url_for('views.add_court', club_id=club.cl_id) }}" method="POST" class="mt-3">
+                        <div class="form-group">
+                            <label>{{ translate('Court Name') }}</label>
+                            <input type="text" class="form-control" name="court_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>{{ translate('Sport') }}</label>
+                            <select class="form-control" name="court_sport" required>
+                                <option value="Padel">Padel</option>
+                                <option value="Tennis">Tennis</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">{{ translate('Add Court') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Authorized Users Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>{{ translate('Authorized Users') }}</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>{{ translate('Name') }}</th>
+                                <th>{{ translate('Email') }}</th>
+                                <th>{{ translate('Actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for auth in club.authorized_users %}
+                            <tr>
+                                <td>{{ auth.user.us_name }}</td>
+                                <td>{{ auth.user.us_email }}</td>
+                                <td>
+                                    {% if (current_user.us_is_superuser) or 
+                                         (current_user.us_is_admin and not auth.user.us_is_admin and not auth.user.us_is_superuser) or
+                                         (current_user.us_is_manager and not auth.user.us_is_admin and not auth.user.us_is_superuser and not auth.user.us_is_manager) %}
+                                    <form action="{{ url_for('views.delete_club_authorization', auth_id=auth.ca_id) }}" method="POST" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="icon-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <form action="{{ url_for('views.add_club_user', club_id=club.cl_id) }}" method="POST" class="mt-3">
+                        <div class="form-group position-relative">
+                            <label>{{ translate('Find User') }}</label>
+                            <input type="text" class="form-control" name="user_email" id="user_email" 
+                                   required autocomplete="off" placeholder="{{ translate('Type name or email...') }}">
+                            <div id="userSuggestions" class="position-absolute w-100 bg-white border rounded-bottom shadow" 
+                                 style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">{{ translate('Add User') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

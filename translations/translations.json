@@ -1,0 +1,874 @@
+{
+  "Navigation": {
+    "en": "Navigation",
+    "pt": "Navegação"
+  },
+  "Events": {
+    "en": "Events",
+    "pt": "Eventos"
+  },
+  "Management": {
+    "en": "Management",
+    "pt": "Gestão"
+  },
+  "Manage Events": {
+    "en": "Manage Events",
+    "pt": "Gerir Eventos"
+  },
+  "Admin": {
+    "en": "Admin",
+    "pt": "Admin"
+  },
+  "Manage Users": {
+    "en": "Manage Users",
+    "pt": "Gerir Utilizadores"
+  },
+  "SuperUser": {
+    "en": "SuperUser",
+    "pt": "SuperUtilizador"
+  },
+  "Search": {
+    "en": "Search",
+    "pt": "Pesquisar"
+  },
+  "English": {
+    "en": "English",
+    "pt": "Inglês"
+  },
+  "Portuguese": {
+    "en": "Portuguese",
+    "pt": "Português"
+  },
+  "Personal Area": {
+    "en": "Personal Area",
+    "pt": "Área Pessoal"
+  },
+  "User Information": {
+    "en": "User Information",
+    "pt": "Informação do Utilizador"
+  },
+  "Logout": {
+    "en": "Logout",
+    "pt": "Sair"
+  },
+  "Login": {
+    "en": "Login",
+    "pt": "Entrar"
+  },
+  "Register": {
+    "en": "Register",
+    "pt": "Registar"
+  },
+  "Cart": {
+    "en": "Cart",
+    "pt": "Carrinho"
+  },
+  "Cart is empty": {
+    "en": "Cart is empty",
+    "pt": "O carrinho está vazio"
+  },
+  "Existing Packages": {
+    "en": "Existing Packages",
+    "pt": "Pacotes Existentes"
+  },
+  "Price": {
+    "en": "Price",
+    "pt": "Preço"
+  },
+  "Allow Requests": {
+    "en": "Allow Requests",
+    "pt": "Permitir Pedidos"
+  },
+  "Yes": {
+    "en": "Yes",
+    "pt": "Sim"
+  },
+  "No": {
+    "en": "No",
+    "pt": "Não"
+  },
+  "Event Details": {
+    "en": "Event Details",
+    "pt": "Detalhes do Evento"
+  },
+  "Secondary Photos": {
+    "en": "Secondary Photos",
+    "pt": "Fotos Secundárias"
+  },
+  "Title": {
+    "en": "Title",
+    "pt": "Título"
+  },
+  "Description": {
+    "en": "Description",
+    "pt": "Descrição"
+  },
+  "Location": {
+    "en": "Location",
+    "pt": "Localização"
+  },
+  "Event Date": {
+    "en": "Event Date",
+    "pt": "Data do Evento"
+  },
+  "Expected Attendance": {
+    "en": "Expected Attendance",
+    "pt": "Assistência Esperada"
+  },
+  "Package Details": {
+    "en": "Package Details",
+    "pt": "Detalhes do Pacote"
+  },
+  "Add to Cart": {
+    "en": "Add to Cart",
+    "pt": "Adicionar ao Carrinho"
+  },
+  "Copyright © 2025 INVI-X CONSULTING": {
+    "en": "Copyright © 2025 INVI-X CONSULTING",
+    "pt": "Direitos de Autor © 2025 INVI-X CONSULTING"
+  },
+  "Manage Requests": {
+    "en": "Manage Requests",
+    "pt": "Gerir Pedidos"
+  },
+  "User": {
+    "en": "User",
+    "pt": "Utilizador"
+  },
+  "Request Type": {
+    "en": "Request Type",
+    "pt": "Tipo de Pedido"
+  },
+  "Request Time": {
+    "en": "Request Time",
+    "pt": "Hora do Pedido"
+  },
+  "Action": {
+    "en": "Action",
+    "pt": "Ação"
+  },
+  "Accept": {
+    "en": "Accept",
+    "pt": "Aceitar"
+  },
+  "Deny": {
+    "en": "Deny",
+    "pt": "Recusar"
+  },
+  "Reason for denial": {
+    "en": "Reason for denial",
+    "pt": "Razão para recusar"
+  },
+  "Management User as SuperUser": {
+    "en": "Management User as SuperUser",
+    "pt": "Gestão de Utilizador como SuperUtilizador"
+  },
+  "Users": {
+    "en": "Users",
+    "pt": "Utilizadores"
+  },
+  "Active": {
+    "en": "Active",
+    "pt": "Ativo"
+  },
+  "Buyer": {
+    "en": "Buyer",
+    "pt": "Comprador"
+  },
+  "Seller": {
+    "en": "Seller",
+    "pt": "Vendedor"
+  },
+  "Age": {
+    "en": "Age",
+    "pt": "Idade"
+  },
+  "Management User as Admin": {
+    "en": "Management User as Admin",
+    "pt": "Gestão de Utilizador como Admin"
+  },
+  "Management Events": {
+    "en": "Management Events",
+    "pt": "Gestão de Eventos"
+  },
+  "Create Event": {
+    "en": "Create Event",
+    "pt": "Criar Evento"
+  },
+  "Date": {
+    "en": "Date",
+    "pt": "Data"
+  },
+  "Attendance": {
+    "en": "Attendance",
+    "pt": "Assistência"
+  },
+  "Sign Up": {
+    "en": "Sign Up",
+    "pt": "Inscrever-se"
+  },
+  "Enter name": {
+    "en": "Enter name",
+    "pt": "Digite o nome"
+  },
+  "Email Address": {
+    "en": "Email Address",
+    "pt": "Endereço de Email"
+  },
+  "Enter email": {
+    "en": "Enter email",
+    "pt": "Digite o email"
+  },
+  "Password": {
+    "en": "Password",
+    "pt": "Senha"
+  },
+  "Enter password": {
+    "en": "Enter password",
+    "pt": "Digite a senha"
+  },
+  "Password (Confirm)": {
+    "en": "Password (Confirm)",
+    "pt": "Senha (Confirmar)"
+  },
+  "Confirm password": {
+    "en": "Confirm password",
+    "pt": "Confirme a senha"
+  },
+  "Submit": {
+    "en": "Submit",
+    "pt": "Enviar"
+  },
+  "Photo": {
+    "en": "Photo",
+    "pt": "Foto"
+  },
+  "Edit User": {
+    "en": "Edit User",
+    "pt": "Editar Utilizador"
+  },
+  "Become a Seller": {
+    "en": "Become a Seller",
+    "pt": "Tornar-se um Vendedor"
+  },
+  "Edit Package": {
+    "en": "Edit Package",
+    "pt": "Editar Pacote"
+  },
+  "Change Main Photo": {
+    "en": "Change Main Photo",
+    "pt": "Alterar Foto Principal"
+  },
+  "Secondary Photo": {
+    "en": "Secondary Photo",
+    "pt": "Foto Secundária"
+  },
+  "Title of Package": {
+    "en": "Title of Package",
+    "pt": "Título do Pacote"
+  },
+  "Description of Package": {
+    "en": "Description of Package",
+    "pt": "Descrição do Pacote"
+  },
+  "Price of Package": {
+    "en": "Price of Package",
+    "pt": "Preço do Pacote"
+  },
+  "Delete Package": {
+    "en": "Delete Package",
+    "pt": "Apagar Pacote"
+  },
+  "Event": {
+    "en": "Event",
+    "pt": "Evento"
+  },
+  "Edit Event": {
+    "en": "Edit Event",
+    "pt": "Editar Evento"
+  },
+  "Title of Event": {
+    "en": "Title of Event",
+    "pt": "Título do Evento"
+  },
+  "Description of Event": {
+    "en": "Description of Event",
+    "pt": "Descrição do Evento"
+  },
+  "Place of Event": {
+    "en": "Place of Event",
+    "pt": "Local do Evento"
+  },
+  "Delete Event": {
+    "en": "Delete Event",
+    "pt": "Excluir Evento"
+  },
+  "Packages": {
+    "en": "Packages",
+    "pt": "Pacotes"
+  },
+  "Manage Packages": {
+    "en": "Manage Packages",
+    "pt": "Gerir Pacotes"
+  },
+  "Create Package": {
+    "en": "Create Package",
+    "pt": "Criar Pacote"
+  },
+  "Main Package Photo": {
+    "en": "Main Package Photo",
+    "pt": "Foto Principal do Pacote"
+  },
+  "Secondary Package Photos": {
+    "en": "Secondary Package Photos",
+    "pt": "Fotos Secundárias do Pacote"
+  },
+  "Main Event Photo": {
+    "en": "Main Event Photo",
+    "pt": "Foto Principal do Evento"
+  },
+  "Secondary Event Photos": {
+    "en": "Secondary Event Photos",
+    "pt": "Fotos Secundárias do Evento"
+  },
+  "Image": {
+    "en": "Image",
+    "pt": "Imagem"
+  },
+  "Product": {
+    "en": "Product",
+    "pt": "Produto"
+  },
+  "Remove": {
+    "en": "Remove",
+    "pt": "Remover"
+  },
+  "Buy with": {
+    "en": "Buy with",
+    "pt": "Comprar com"
+  },
+  "Name": {
+    "en": "Name",
+    "pt": "Nome"
+  },
+  "Birthday": {
+    "en": "Birthday",
+    "pt": "Data Nascimento"
+  },
+  "Step": {
+    "en": "Step",
+    "pt": "Passo"
+  },
+  "Basic Information": {
+    "en": "Basic Information",
+    "pt": "Informação Básica"
+  },
+  "Court Selection & Details": {
+    "en": "Court Selection & Details",
+    "pt": "Seleção de Campos & Detalhes"
+  },
+  "Warning": {
+    "en": "Warning",
+    "pt": "Aviso"
+  },
+  "Club": {
+    "en": "Club",
+    "pt": "Clube"
+  },
+  "League Name": {
+    "en": "League Name",
+    "pt": "Nome da Liga"
+  },
+  "Name of League": {
+    "en": "Name of League",
+    "pt": "Nome da Liga"
+  },
+  "Level": {
+    "en": "Level",
+    "pt": "Nível"
+  },
+  "Number of Days": {
+    "en": "Number of Days",
+    "pt": "Número de Dias"
+  },
+  "Number of Teams": {
+    "en": "Number of Teams",
+    "pt": "Número de Equipas"
+  },
+  "Maximum Players": {
+    "en": "Maximum Players",
+    "pt": "Máximo de Jogadores"
+  },
+  "Must be at least": {
+    "en": "Must be at least",
+    "pt": "Deve ser pelo menos"
+  },
+  "players (number of teams × 2)": {
+    "en": "players (number of teams × 2)",
+    "pt": "jogadores (número de equipas × 2)"
+  },
+  "Start Date": {
+    "en": "Start Date",
+    "pt": "Data de Início"
+  },
+  "Registration Start": {
+    "en": "Registration Start",
+    "pt": "Início das Inscrições"
+  },
+  "Registration End": {
+    "en": "Registration End",
+    "pt": "Fim das Inscrições"
+  },
+  "Continue to Step 2": {
+    "en": "Continue to Step 2",
+    "pt": "Continuar para o Passo 2"
+  },
+  "Cancel": {
+    "en": "Cancel",
+    "pt": "Cancelar"
+  },
+  "Maximum players must be at least": {
+    "en": "Maximum players must be at least",
+    "pt": "O número máximo de jogadores deve ser pelo menos"
+  },
+  "Leagues": {
+    "en": "Leagues",
+    "pt": "Ligas"
+  },
+  "Manage Leagues": {
+    "en": "Manage Leagues",
+    "pt": "Gerir Ligas"
+  },
+  "Manage Clubs": {
+    "en": "Manage Clubs",
+    "pt": "Gerir Clubes"
+  },
+  "Create Club": {
+    "en": "Create Club",
+    "pt": "Criar Clube"
+  },
+  "Club Name": {
+    "en": "Club Name",
+    "pt": "Nome do Clube"
+  },
+  "Email": {
+    "en": "Email",
+    "pt": "Email"
+  },
+  "Phone": {
+    "en": "Phone",
+    "pt": "Telefone"
+  },
+  "Address": {
+    "en": "Address",
+    "pt": "Endereço"
+  },
+  "Main Club Photo": {
+    "en": "Main Club Photo",
+    "pt": "Foto Principal do Clube"
+  },
+  "Secondary Club Photos": {
+    "en": "Secondary Club Photos",
+    "pt": "Fotos Secundárias do Clube"
+  },
+  "Create": {
+    "en": "Create",
+    "pt": "Criar"
+  },
+  "Complete League Creation": {
+    "en": "Complete League Creation",
+    "pt": "Completar Criação da Liga"
+  },
+  "Show/Hide League Information": {
+    "en": "Show/Hide League Information",
+    "pt": "Mostrar/Esconder Informação da Liga"
+  },
+  "League Information": {
+    "en": "League Information",
+    "pt": "Informação da Liga"
+  },
+  "Teams": {
+    "en": "Teams",
+    "pt": "Equipas"
+  },
+  "Select Courts": {
+    "en": "Select Courts",
+    "pt": "Selecionar Campos"
+  },
+  "Start Time": {
+    "en": "Start Time",
+    "pt": "Hora de Início"
+  },
+  "Warm Up Minutes": {
+    "en": "Warm Up Minutes",
+    "pt": "Minutos de Aquecimento"
+  },
+  "Minutes per Game": {
+    "en": "Minutes per Game",
+    "pt": "Minutos por Jogo"
+  },
+  "Minutes Between Games": {
+    "en": "Minutes Between Games",
+    "pt": "Minutos Entre Jogos"
+  },
+  "Number of Substitutes": {
+    "en": "Number of Substitutes",
+    "pt": "Número de Substitutos"
+  },
+  "Number of Auto-Registered Substitutes": {
+    "en": "Number of Auto-Registered Substitutes",
+    "pt": "Número de Substitutos Auto-Registados"
+  },
+  "Points for Presence": {
+    "en": "Points for Presence",
+    "pt": "Pontos por Presença"
+  },
+  "Main League Photo": {
+    "en": "Main League Photo",
+    "pt": "Foto Principal da Liga"
+  },
+  "Secondary League Photos": {
+    "en": "Secondary League Photos",
+    "pt": "Fotos Secundárias da Liga"
+  },
+  "Edit League": {
+    "en": "Edit League",
+    "pt": "Editar Liga"
+  },
+  "Game Days": {
+    "en": "Game Days",
+    "pt": "Dias de Jogo"
+  },
+  "Create GameDays": {
+    "en": "Create GameDays",
+    "pt": "Criar Dias de Jogo"
+  },
+  "Status": {
+    "en": "Status",
+    "pt": "Estado"
+  },
+  "Winners": {
+    "en": "Winners",
+    "pt": "Vencedores"
+  },
+  "Finished": {
+    "en": "Finished",
+    "pt": "Terminado"
+  },
+  "Pending": {
+    "en": "Pending",
+    "pt": "Pendente"
+  },
+  "Classification": {
+    "en": "Classification",
+    "pt": "Classificação"
+  },
+  "Pts": {
+    "en": "Pts",
+    "pt": "Pts"
+  },
+  "MW": {
+    "en": "MW",
+    "pt": "JV"
+  },
+  "ML": {
+    "en": "ML",
+    "pt": "JP"
+  },
+  "GW": {
+    "en": "GW",
+    "pt": "GG"
+  },
+  "GL": {
+    "en": "GL",
+    "pt": "GP"
+  },
+  "GD": {
+    "en": "GD",
+    "pt": "DG"
+  },
+  "Ranking": {
+    "en": "Ranking",
+    "pt": "Ranking"
+  },
+  "Registered Players in League": {
+    "en": "Registered Players in League",
+    "pt": "Jogadores Registados na Liga"
+  },
+  "Registration Date": {
+    "en": "Registration Date",
+    "pt": "Data de Registo"
+  },
+  "Registration": {
+    "en": "Registration",
+    "pt": "Registo"
+  },
+  "Self Register": {
+    "en": "Self Register",
+    "pt": "Auto-Registo"
+  },
+  "Club Register": {
+    "en": "Club Register",
+    "pt": "Registo pelo Clube"
+  },
+  "Are you sure you want to remove this player from the league?": {
+    "en": "Are you sure you want to remove this player from the league?",
+    "pt": "Tem certeza que deseja remover este jogador da liga?"
+  },
+  "Add Player": {
+    "en": "Add Player",
+    "pt": "Adicionar Jogador"
+  },
+  "No users registered yet": {
+    "en": "No users registered yet",
+    "pt": "Ainda não há utilizadores registados"
+  },
+  "Save Basic Information": {
+    "en": "Save Basic Information",
+    "pt": "Guardar Informação Básica"
+  },
+  "Save Court Details": {
+    "en": "Save Court Details",
+    "pt": "Guardar Detalhes dos Campos"
+  },
+  "Update Main League Photo": {
+    "en": "Update Main League Photo",
+    "pt": "Atualizar Foto Principal da Liga"
+  },
+  "Update Secondary League Photos": {
+    "en": "Update Secondary League Photos",
+    "pt": "Atualizar Fotos Secundárias da Liga"
+  },
+  "League Type": {
+    "en": "League Type",
+    "pt": "Tipo de Liga"
+  },
+  "ELO K Factor": {
+    "en": "ELO K Factor",
+    "pt": "Fator K do ELO"
+  },
+  "These settings cannot be modified after the league has started.": {
+    "en": "These settings cannot be modified after the league has started.",
+    "pt": "Estas configurações não podem ser modificadas após o início da liga."
+  },
+  "Announced": {
+    "en": "Announced",
+    "pt": "Anunciado"
+  },
+  "Canceled": {
+    "en": "Canceled",
+    "pt": "Cancelado"
+  },
+  "Registration opens at": {
+    "en": "Registration opens at",
+    "pt": "Inscrições abrem em"
+  },
+  "Registered": {
+    "en": "Registered",
+    "pt": "Registado"
+  },
+  "Unregister": {
+    "en": "Unregister",
+    "pt": "Cancelar Registo"
+  },
+  "Gameday is Full": {
+    "en": "Gameday is Full",
+    "pt": "Dia de Jogo está Cheio"
+  },
+  "Maximum players reached": {
+    "en": "Maximum players reached",
+    "pt": "Máximo de jogadores atingido"
+  },
+  "Register for Gameday": {
+    "en": "Register for Gameday",
+    "pt": "Registar para o Dia de Jogo"
+  },
+  "players registered": {
+    "en": "players registered",
+    "pt": "jogadores registados"
+  },
+  "Registration period ended": {
+    "en": "Registration period ended",
+    "pt": "Período de inscrição terminou"
+  },
+  "You must be registered in the league to register for gamedays.": {
+    "en": "You must be registered in the league to register for gamedays.",
+    "pt": "Deve estar registado na liga para se registar nos dias de jogo."
+  },
+  "Return to League": {
+    "en": "Return to League",
+    "pt": "Voltar à Liga"
+  },
+  "Registered Players": {
+    "en": "Registered Players",
+    "pt": "Jogadores Registados"
+  },
+  "Player": {
+    "en": "Player",
+    "pt": "Jogador"
+  },
+  "Manager": {
+    "en": "Manager",
+    "pt": "Gestor"
+  },
+  "Are you sure you want to delete this user? This action cannot be undone.": {
+    "en": "Are you sure you want to delete this user? This action cannot be undone.",
+    "pt": "Tem certeza que deseja excluir este utilizador? Esta ação não pode ser desfeita."
+  },
+  "Delete User": {
+    "en": "Delete User",
+    "pt": "Excluir Utilizador"
+  },
+  "Registration Time": {
+    "en": "Registration Time",
+    "pt": "Hora do Registo"
+  },
+  "Main Player": {
+    "en": "Main Player",
+    "pt": "Jogador Principal"
+  },
+  "Substitute": {
+    "en": "Substitute",
+    "pt": "Substituto"
+  },
+  "Games": {
+    "en": "Games",
+    "pt": "Jogos"
+  },
+  "Edit Game Day": {
+    "en": "Edit Game Day",
+    "pt": "Editar Dia de Jogo"
+  },
+  "Register Players in GameDay": {
+    "en": "Register Players in GameDay",
+    "pt": "Registar Jogadores no Dia de Jogo"
+  },
+  " -- pick a player -- ": {
+    "en": " -- pick a player -- ",
+    "pt": " -- escolha um jogador -- "
+  },
+  "No players registered in the league": {
+    "en": "No players registered in the league",
+    "pt": "Não há jogadores registados na liga"
+  },
+  "Define Teams": {
+    "en": "Define Teams",
+    "pt": "Definir Equipas"
+  },
+  "By Ranking": {
+    "en": "By Ranking",
+    "pt": "Por Ranking"
+  },
+  "Random": {
+    "en": "Random",
+    "pt": "Aleatório"
+  },
+  "Manual": {
+    "en": "Manual",
+    "pt": "Manual"
+  },
+  "Register Players": {
+    "en": "Register Players",
+    "pt": "Registar Jogadores"
+  },
+  "Team": {
+    "en": "Team",
+    "pt": "Equipa"
+  },
+  "Create Games": {
+    "en": "Create Games",
+    "pt": "Criar Jogos"
+  },
+  "Submit Results": {
+    "en": "Submit Results",
+    "pt": "Submeter Resultados"
+  },
+  "All games must have players assigned before submitting results": {
+    "en": "All games must have players assigned before submitting results",
+    "pt": "Todos os jogos devem ter jogadores atribuídos antes de submeter resultados"
+  },
+  "Game Day Name": {
+    "en": "Game Day Name",
+    "pt": "Nome do Dia de Jogo"
+  },
+  "cancelled": {
+    "en": "cancelled",
+    "pt": "cancelado"
+  },
+  "Search Winner 1": {
+    "en": "Search Winner 1",
+    "pt": "Procurar Vencedor 1"
+  },
+  "Search Winner 2": {
+    "en": "Search Winner 2",
+    "pt": "Procurar Vencedor 2"
+  },
+  "Save Changes": {
+    "en": "Save Changes",
+    "pt": "Guardar Alterações"
+  },
+  "Start": {
+    "en": "Start",
+    "pt": "Início"
+  },
+  "End": {
+    "en": "End",
+    "pt": "Fim"
+  },
+  "Time": {
+    "en": "Time",
+    "pt": "Hora"
+  },
+  "League is Full": {
+    "en": "League is Full",
+    "pt": "Liga está Cheia"
+  },
+  "Register for League": {
+    "en": "Register for League",
+    "pt": "Registar para a Liga"
+  },
+  "No classification data available yet": {
+    "en": "No classification data available yet",
+    "pt": "Ainda não há dados de classificação disponíveis"
+  },
+  "accepting registrations": {
+    "en": "accepting registrations",
+    "pt": "aceitando registos"
+  },
+  "registration complete": {
+    "en": "registration complete",
+    "pt": "registo completo"
+  },
+  "being played": {
+    "en": "being played",
+    "pt": "em andamento"
+  },
+  "Profile Photo": {
+    "en": "Profile Photo",
+    "pt": "Foto de Perfil"
+  },
+  "Telephone": {
+    "en": "Telephone",
+    "pt": "Telefone"
+  },
+  "Enter telephone number": {
+    "en": "Enter telephone number",
+    "pt": "Digite o número de telefone"
+  },
+  "Inactive": {
+    "en": "Inactive",
+    "pt": "Inativo"
+  },
+  "No clubs found. Create your first club!": {
+    "en": "No clubs found. Create your first club!",
+    "pt": "Nenhum clube encontrado. Crie o seu primeiro clube!"
+  },
+  "My Profile": {
+    "en": "My Profile",
+    "pt": "Meu Perfil"
+  },
+  "Become a Manager": {
+    "en": "Become a Manager",
+    "pt": "Tornar-se um Gestor"
+  }
+}

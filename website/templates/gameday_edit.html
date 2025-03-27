@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate('Edit Game Day') }} - {{ gameday.gd_gameDayName }}{% endblock %}
+
+{% block content %}
+
+<!-- Insert Players in GameDay -->
+<!-- teams and players -->
+<div class="row">
+    {% if number_of_teamsGD == 0 %}
+    <!-- Teams Table when number_of_teams is 0 -->
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>{{ translate('Register Players in GameDay') }}</h4>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('views.insert_game_day_players', gameDayID=gameday.gd_id) }}" method="post">
+                    {% for i in range(number_of_teams_league*2) %}
+                    <div class="form-group">
+                        <label for="player{{ i+1 }}">{{ translate('Player') }}</label>
+                        <select class="form-control form-control-rounded" id="player{{ i+1 }}" name="player{{ i+1 }}">
+                            {% if players_data %}
+                            <option class="form-control" disabled selected value>{{ translate(' -- pick a player -- ') }}</option>
+                            {% for player in players_data %}
+                            <option class="form-control" name="playerOne" value="{{ player['us_id'] }}">{{
+                                player['us_name'] }}</option>
+                            {% endfor %}
+                            {% else %}
+                            <option class="form-control" disabled selected value>{{ translate('No players registered in the league') }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    {% endfor %}
+                    <div class="form-group">
+                        <label for="input-7">{{ translate('Define Teams') }}</label>
+                        <select class="form-control form-control-rounded" id="input-7" name="defineTeams">
+                            <option class="form-control" value="ranking" name="defineTeams" selected>{{ translate('By Ranking') }}
+                            </option>
+                            <option class="form-control" value="random" name="defineTeams">{{ translate('Random') }}</option>
+                            <option class="form-control" value="manual" name="defineTeams">{{ translate('Manual') }}</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="leagueId" name="leagueId" value="{{ league_id }}">
+                    <input type="hidden" id="gameDayId" name="gameDayId" value="{{ gameday_id }}">
+                    <div class="form-group">
+                        {% if players_data %}
+                        <button type="submit" class="btn btn-light btn-round px-5"><i class="icon-save"></i> {{ translate('Register Players') }}</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Content to be displayed when number_of_teams is greater than 0 -->
+    <!-- Teams Table -->
+    <div class="col-lg-12">
+        <div id="accordion">
+            <div class="card">
+                <div class="card-header" id="headingTwo">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapseTwo"
+                            aria-expanded="false" aria-controls="collapseTwo">
+                            {{ translate('Player') }}
+                        </button>
+                    </h5>
+                </div>
+                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+                    <div class="card-body">
+                        <div class="card-title">{{ translate('Register Players in GameDay') }}</div>
+                        <hr>
+                        <form action="{{ url_for('views.insert_game_day_players', gameDayID=gameday.gd_id) }}"
+                            method="post">
+                            <!-- for para gameDayPlayers -->
+                            {% for gd_player in gameDayPlayers %}
+                            <div class="form-group">
+                                <label for="player{{ loop.index }}">{{ translate('Player') }}</label>
+                                <select class="form-control form-control-rounded" id="player{{ loop.index }}"
+                                    name="player{{ loop.index }}">
+                                    {% if players_data %}
+                                    <!-- Output selected player -->
+                                    <option class="form-control" name="playerOne" value="{{ gd_player['gp_idPlayer'] }}"
+                                        selected>{{ gd_player.player.us_name }}</option>
+                                    <!-- Output rest of players -->
+                                    {% for player in players_data %}
+                                    <option class="form-control" name="playerOne" value="{{ player['us_id'] }}">{{
+                                        player['us_name'] }}</option>
+                                    {% endfor %}
+                                    {% else %}
+                                    <option class="form-control" disabled selected value>{{ translate('No players registered in the league') }}</option>
+                                    {% endif %}
+                                </select>
+                            </div>
+                            {% endfor %}
+
+                            <div class="form-group">
+                                <label for="input-7">{{ translate('Define Teams') }}</label>
+                                <select class="form-control form-control-rounded" id="input-7" name="defineTeams">
+                                    <option class="form-control" value="ranking" name="defineTeams" selected>{{ translate('By Ranking') }}
+                                    </option>
+                                    <option class="form-control" value="random" name="defineTeams">{{ translate('Random') }}</option>
+                                    <option class="form-control" value="manual" name="defineTeams">{{ translate('Manual') }}</option>
+                                </select>
+                            </div>
+                            <input type="hidden" id="leagueId" name="leagueId" value="{{ league_id }}">
+                            <input type="hidden" id="gameDayId" name="gameDayId" value="{{ gameday_id }}">
+                            <div class="form-group">
+                                {% if players_data %}
+                                <button type="submit" class="btn btn-light btn-round px-5"><i class="icon-save"></i>
+                                    {{ translate('Register Players') }}</button>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div><!--End Row-->
+
+<!-- only show row of teams if there are already teams -->
+{% if number_of_teamsGD > 0 %}
+<!-- Then show the teams already made -->
+<!-- Second Row -->
+<div class="row hidden-xs hidden-m">
+    <!-- Teams Table -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ translate('Teams') }}</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <!-- <th scope="col">#</th> -->
+                                <th scope="col"></th>
+                                <th scope="col"></th>
+                                <th scope="col">{{ translate('Team') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for team, players in teams.items() %}
+                            <tr>
+                                {% for player in players %}
+                                <td>{{ player.player.us_name }}</td>
+                                {% endfor %}
+                                <td>{{ team }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Classification Table -->
+{% if has_game_results %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h4>{{ translate('Classification') }}</h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive table-mobile-hide-column">
+            <table class="table table-hover mobile-table">
+                <thead>
+                    <tr>
+                        <th scope="col" class="player-col">{{ translate('Name') }}</th>
+                        <th scope="col" class="points-col">{{ translate('Pts') }}</th>
+                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('MW') }}</th>
+                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('ML') }}</th>
+                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('GW') }}</th>
+                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('GL') }}</th>
+                        <th scope="col" class="diff-col">{{ translate('GD') }}</th>
+                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('Ranking') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for classification in gameday_classification %}
+                    <tr>
+                        <td class="player-col">
+                            <img src="{{ url_for('views.display_user_image', userID=classification.gc_idPlayer) }}" 
+                                 alt="{{ classification.player.us_name }}" 
+                                 class="user-pic rounded-circle" 
+                                 style="width: 35px; height: 35px; object-fit: cover;">
+                            <span>{{ classification.player.us_name }}</span>
+                        </td>
+                        <td class="points-col">{{ classification.gc_points }}</td>
+                        <td class="d-none d-sm-table-cell">{{ classification.gc_wins }}</td>
+                        <td class="d-none d-sm-table-cell">{{ classification.gc_losses }}</td>
+                        <td class="d-none d-sm-table-cell">{{ classification.gc_gamesFavor }}</td>
+                        <td class="d-none d-sm-table-cell">{{ classification.gc_gamesAgainst }}</td>
+                        <td class="diff-col">{{ classification.gc_gamesDiff }}</td>
+                        <td class="d-none d-sm-table-cell">{{ classification.gc_ranking }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Games Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h4>{{ translate('Games') }}</h4>
+    </div>
+    <div class="card-body">
+        {% if not results %}
+        <div class="d-flex justify-content-end mb-3">
+            <a href="{{ url_for('views.create_gameday_games_route', league_id=league.lg_id, gameday_id=gameday.gd_id) }}" class="btn btn-light px-5">
+                <i class="icon-plus"></i> {{ translate('Create Games') }}
+            </a>
+        </div>
+        {% endif %}
+        <form action="{{ url_for('views.submitResultsGameDay', gameDayID=gameday.gd_id) }}" method="post">
+            <div class="row">
+                {% for data in results %}
+                <div class="col-lg-6">
+                    <div class="game-card">
+                        <div class="card-header">
+                            <strong>{{ data.court.ct_name }}</strong>
+                        </div>
+                        <div class="game-content">
+                            <div class="game-time">
+                                {{ data['gm_date'] }} / 
+                                {{ data['gm_timeStart'].strftime('%H:%M') }} - {{ data['gm_timeEnd'].strftime('%H:%M') }}
+                            </div>
+                            
+                            <!-- Team A -->
+                            <div class="team-row">
+                                <div class="team-players">
+                                    <div class="player-photos">
+                                        <img src="{{ url_for('views.display_user_image', userID=data['gm_idPlayer_A1']) if data['gm_idPlayer_A1'] else url_for('static', filename='photos/users/nophoto.jpg') }}" alt="">
+                                        <img src="{{ url_for('views.display_user_image', userID=data['gm_idPlayer_A2']) if data['gm_idPlayer_A2'] else url_for('static', filename='photos/users/nophoto.jpg') }}" alt="">
+                                    </div>
+                                    <div class="player-names">
+                                        {% if data['gm_idPlayer_A1'] %}
+                                            {{ data.player_A1.us_name }} / {{ data.player_A2.us_name }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <input type="number" 
+                                    class="score-input"
+                                    id="resultGameA{{ data['gm_id'] }}" 
+                                    name="resultGameA{{ data['gm_id'] }}"
+                                    placeholder="{{ data['gm_result_A'] if data['gm_result_A'] is not none else '0' }}">
+                            </div>
+                            
+                            <!-- Team B -->
+                            <div class="team-row">
+                                <div class="team-players">
+                                    <div class="player-photos">
+                                        <img src="{{ url_for('views.display_user_image', userID=data['gm_idPlayer_B1']) if data['gm_idPlayer_B1'] else url_for('static', filename='photos/users/nophoto.jpg') }}" alt="">
+                                        <img src="{{ url_for('views.display_user_image', userID=data['gm_idPlayer_B2']) if data['gm_idPlayer_B2'] else url_for('static', filename='photos/users/nophoto.jpg') }}" alt="">
+                                    </div>
+                                    <div class="player-names">
+                                        {% if data['gm_idPlayer_B1'] %}
+                                            {{ data.player_B1.us_name }} / {{ data.player_B2.us_name }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <input type="number" 
+                                    class="score-input"
+                                    id="resultGameB{{ data['gm_id'] }}" 
+                                    name="resultGameB{{ data['gm_id'] }}"
+                                    placeholder="{{ data['gm_result_B'] if data['gm_result_B'] is not none else '0' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if results %}
+            <div class="form-group text-center mt-4">
+                <button type="submit" 
+                        class="btn btn-light btn-round px-5 submit-results-btn" 
+                        {% if button_disabled %}disabled{% endif %}>
+                    <i class="icon-save"></i> {{ translate('Submit Results') }}
+                </button>
+                {% if button_disabled %}
+                <small class="text-muted d-block mt-2">{{ translate('All games must have players assigned before submitting results') }}</small>
+                {% endif %}
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Edit Game Day -->
+<div class="accordion" id="editLeagueAccordion">
+    <div class="card">
+        <div class="card-header"  id="editLeagueHeader">
+            <h4 class="mb-0">
+                <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#editLeagueContent" aria-expanded="false" aria-controls="editLeagueContent">
+                    {{ translate('Edit Game Day') }} - {{ gameday.gd_gameDayName }}
+                </button>
+            </h4>
+        </div>
+        <div id="editLeagueContent" class="collapse" aria-labelledby="editLeagueHeader" data-parent="#editLeagueAccordion">
+            <div class="card-body">
+                <form action="{{ url_for('views.edit_gameday', gameday_id=gameday.gd_id) }}" method="post" id="editGameDayForm">
+                    <div class="form-group">
+                        <label for="name">{{ translate('Game Day Name') }}</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ gameday.gd_gameDayName }}" disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="date">{{ translate('Date') }}</label>
+                        <input type="date" class="form-control" id="date" name="date" value="{{ gameday.gd_date.strftime('%Y-%m-%d') }}" required>
+                        <input type="hidden" name="original_date" value="{{ gameday.gd_date.strftime('%Y-%m-%d') }}">
+                        <input type="hidden" name="update_subsequent" id="update_subsequent" value="false">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="status">{{ translate('Status') }}</label>
+                        <select class="form-control" id="status" name="status" disabled>
+                            {% for status in ['pending', 'active', 'finished', 'cancelled'] %}
+                            <option value="{{ status }}" {% if status == gameday.gd_status %}selected{% endif %}>
+                                {{ translate(status|title) }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>{{ translate('Winners') }}</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" id="winner1" 
+                                    placeholder="{{ translate('Search Winner 1') }}"
+                                    value="{{ gameday.winner1.us_name if gameday.winner1 else '' }}"
+                                    disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" id="winner2" 
+                                    placeholder="{{ translate('Search Winner 2') }}"
+                                    value="{{ gameday.winner2.us_name if gameday.winner2 else '' }}"
+                                    disabled>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-light px-5"><i class="icon-save"></i> {{ translate('Save Changes') }}</button>
+                    <a href="{{ url_for('views.edit_league', league_id=league.lg_id) }}#gamedays" class="btn btn-outline-light px-5">{{ translate('No') }}</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+{{ super() }}
+{% endblock %}

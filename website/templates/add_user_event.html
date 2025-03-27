@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ title_add_user_event }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ title_add_user_event }}</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" id="user_id" name="user_id" value=""/>
+            <div class="form-group position-relative">
+                <label for="fullname">{{ translate('Name') }}</label>
+                <input type="text" class="form-control" id="fullname" name="fullname" 
+                       placeholder="{{ translate('Enter name') }}" required autocomplete="off"/>
+                <div id="userSuggestions" class="position-absolute w-100 bg-white border rounded-bottom shadow" style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="telephone">{{ translate('Telephone') }}</label>
+                <input type="tel" class="form-control" id="telephone" name="telephone" 
+                       placeholder="{{ translate('Enter telephone number') }}" required/>
+            </div>
+            <div class="form-group">
+                <label for="email">{{ translate('Email Address') }}</label>
+                <input type="email" class="form-control" id="email" name="email" 
+                       placeholder="{{ translate('Enter email') }}"/>
+            </div>
+            <div class="form-group">
+                <label for="birthday">{{ translate('Birthday') }}</label>
+                <input type="date" class="form-control" id="birthday" name="birthday" required/>
+            </div>
+            <div class="form-group">
+                <label for="photo">{{ translate('Profile Photo') }}</label>
+                <input type="file" class="form-control" id="photo" name="photo" accept="image/*"/>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-light px-5">{{ translate('Add Player') }}</button>
+                <button type="button" id="clearButton" class="btn btn-warning px-5" style="display: none;">{{ translate('Clear') }}</button>
+                <a href="{{ return_url }}" class="btn btn-outline-light px-5">{{ translate('Cancel') }}</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

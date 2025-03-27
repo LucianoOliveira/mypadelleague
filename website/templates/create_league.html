@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ translate('Create League') }}</h4>
+    </div>
+    <div class="card-body">
+        <!-- Progress bar with increased height -->
+        <div class="mb-4">
+            <div class="progress" style="height: 25px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: 50%; font-size: 16px;" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">{{ translate('Step') }} 1/2</div>
+            </div>
+            <div class="d-flex justify-content-between mt-2">
+                <span class="text-success font-weight-bold">{{ translate('Basic Information') }}</span>
+                <span class="text-muted">{{ translate('Court Selection & Details') }}</span>
+            </div>
+        </div>
+
+        <!-- Alert for selected club -->
+        <div id="court-warning" class="alert alert-warning" style="display: none;">
+            <strong>{{ translate('Warning') }}!</strong> <span id="court-warning-message"></span>
+        </div>
+
+        <form action="{{ url_for('views.create_league') }}" method="post" id="leagueForm">
+            <div class="form-group">
+                <label for="club_id">{{ translate('Club') }}</label>
+                <select class="form-control" id="club_id" name="club_id" required {% if clubs|length == 1 %}disabled{% endif %}>
+                    {% for club in clubs %}
+                    <option value="{{ club.cl_id }}" 
+                            {% if clubs|length == 1 %}selected{% endif %}
+                            data-courts='{{ club.courts|length if club.courts else 0 }}'>{{ club.cl_name }}</option>
+                    {% endfor %}
+                </select>
+                {% if clubs|length == 1 %}
+                <input type="hidden" name="club_id" value="{{ clubs[0].cl_id }}">
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="title">{{ translate('League Name') }}</label>
+                <input type="text" class="form-control" id="title" placeholder="{{ translate('Name of League') }}" name="title" required>
+            </div>
+
+            <div class="form-group">
+                <label for="level">{{ translate('Level') }}</label>
+                <select class="form-control" id="level" name="level" required>
+                    <option value="MF1">MF1</option>
+                    <option value="MF2">MF2</option>
+                    <option value="MF3">MF3</option>
+                    <option value="MF4">MF4</option>
+                    <option value="MF5">MF5</option>
+                    <option value="ALL">ALL</option>
+                </select>
+            </div>
+
+            <!-- Hidden status field -->
+            <input type="hidden" name="status" value="announced">
+
+            <div class="form-group">
+                <label for="nbr_days">{{ translate('Number of Days') }}</label>
+                <input type="number" class="form-control" id="nbr_days" name="nbr_days" required>
+            </div>
+
+            <div class="form-group">
+                <label for="nbr_teams">{{ translate('Number of Teams') }}</label>
+                <input type="number" class="form-control" id="nbr_teams" name="nbr_teams" required>
+            </div>
+
+            <div class="form-group">
+                <label for="max_players">{{ translate('Maximum Players') }}</label>
+                <input type="number" class="form-control" id="max_players" name="max_players" required>
+                <small class="form-text text-muted">{{ translate('Must be at least') }} <span id="min_players"></span> {{ translate('players (number of teams × 2)') }}</small>
+            </div>
+
+            <div class="form-group">
+                <label for="start_date">{{ translate('Start Date') }}</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" required>
+            </div>
+
+            <div class="form-group">
+                <label for="registration_start">{{ translate('Registration Start') }}</label>
+                <input type="datetime-local" class="form-control" id="registration_start" name="registration_start" required>
+            </div>
+
+            <div class="form-group">
+                <label for="registration_end">{{ translate('Registration End') }}</label>
+                <input type="datetime-local" class="form-control" id="registration_end" name="registration_end" required>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-light px-5" id="submitButton" disabled><i class="icon-save"></i> {{ translate('Continue to Step 2') }}</button>
+                <a href="{{ url_for('views.managementLeagues') }}" class="btn btn-outline-light px-5">{{ translate('Cancel') }}</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const nbrTeamsInput = document.getElementById('nbr_teams');
+        const maxPlayersInput = document.getElementById('max_players');
+        const minPlayersSpan = document.getElementById('min_players');
+        
+        // Function to update max players minimum value
+        function updateMaxPlayersMin() {
+            const nbrTeams = parseInt(nbrTeamsInput.value) || 0;
+            const minPlayers = nbrTeams * 2;
+            minPlayersSpan.textContent = minPlayers;
+            
+            // Set min attribute and default value if not set
+            maxPlayersInput.setAttribute('min', minPlayers);
+            if (!maxPlayersInput.value || parseInt(maxPlayersInput.value) < minPlayers) {
+                maxPlayersInput.value = minPlayers;
+            }
+        }
+        
+        // Update on page load
+        updateMaxPlayersMin();
+        
+        // Update whenever number of teams changes
+        nbrTeamsInput.addEventListener('input', updateMaxPlayersMin);
+        
+        // Validate on form submission
+        document.getElementById('leagueForm').addEventListener('submit', function(e) {
+            const nbrTeams = parseInt(nbrTeamsInput.value) || 0;
+            const maxPlayers = parseInt(maxPlayersInput.value) || 0;
+            const minPlayers = nbrTeams * 2;
+            
+            if (maxPlayers < minPlayers) {
+                e.preventDefault();
+                alert("{{ translate('Maximum players must be at least') }} " + minPlayers);
+                maxPlayersInput.focus();
+            }
+        });
+    });
+</script>
+{% endblock %}
