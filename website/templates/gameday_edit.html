@@ -165,42 +165,88 @@
         <h4>{{ translate('Classification') }}</h4>
     </div>
     <div class="card-body">
-        <div class="table-responsive table-mobile-hide-column">
-            <table class="table table-hover mobile-table">
+        <!-- Desktop version - visible on md and larger screens -->
+        <div class="table-responsive d-none d-md-block">
+            <table class="table desktop-classification">
                 <thead>
                     <tr>
                         <th scope="col" class="player-col">{{ translate('Name') }}</th>
                         <th scope="col" class="points-col">{{ translate('Pts') }}</th>
-                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('MW') }}</th>
-                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('ML') }}</th>
-                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('GW') }}</th>
-                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('GL') }}</th>
+                        <th scope="col">{{ translate('MW') }}</th>
+                        <th scope="col">{{ translate('ML') }}</th>
+                        <th scope="col">{{ translate('GW') }}</th>
+                        <th scope="col">{{ translate('GL') }}</th>
                         <th scope="col" class="diff-col">{{ translate('GD') }}</th>
-                        <th scope="col" class="d-none d-sm-table-cell">{{ translate('Ranking') }}</th>
+                        <th scope="col" class="d-none d-lg-table-cell">{{ translate('Ranking') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for classification in gameday_classification %}
                     <tr>
                         <td class="player-col">
-                            <img src="{{ url_for('views.display_user_image', userID=classification.gc_idPlayer) }}" 
-                                 alt="{{ classification.player.us_name }}" 
-                                 class="user-pic rounded-circle" 
-                                 style="width: 35px; height: 35px; object-fit: cover;">
-                            <span>{{ classification.player.us_name }}</span>
+                            <div class="player-info">
+                                <img src="{{ url_for('views.display_user_image', userID=classification.gc_idPlayer) }}"
+                                     onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                     alt="{{ classification.player.us_name }}"
+                                     class="rounded-circle">
+                                <span>{{ classification.player.us_name }}</span>
+                            </div>
                         </td>
                         <td class="points-col">{{ classification.gc_points }}</td>
-                        <td class="d-none d-sm-table-cell">{{ classification.gc_wins }}</td>
-                        <td class="d-none d-sm-table-cell">{{ classification.gc_losses }}</td>
-                        <td class="d-none d-sm-table-cell">{{ classification.gc_gamesFavor }}</td>
-                        <td class="d-none d-sm-table-cell">{{ classification.gc_gamesAgainst }}</td>
+                        <td>{{ classification.gc_wins }}</td>
+                        <td>{{ classification.gc_losses }}</td>
+                        <td>{{ classification.gc_gamesFavor }}</td>
+                        <td>{{ classification.gc_gamesAgainst }}</td>
                         <td class="diff-col">{{ classification.gc_gamesDiff }}</td>
-                        <td class="d-none d-sm-table-cell">{{ classification.gc_ranking }}</td>
+                        <td class="d-none d-lg-table-cell">{{ classification.gc_ranking }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- Mobile version - visible only on smaller screens -->
+        <div class="d-md-none">
+            <div class="mobile-classification">
+                <!-- Headers row -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="player-info">
+                        <span class="text-muted">{{ translate('Player') }}</span>
+                    </div>
+                    <div class="d-flex stats-container">
+                        <div class="text-center mx-2">
+                            <span class="text-muted">{{ translate('Pts') }}</span>
+                        </div>
+                        <div class="text-center mx-2">
+                            <span class="text-muted">{{ translate('GD') }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {% for classification in gameday_classification %}
+                <div class="player-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex player-info">
+                            <img src="{{ url_for('views.display_user_image', userID=classification.gc_idPlayer) }}"
+                                 onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                 alt="{{ classification.player.us_name }}"
+                                 class="rounded-circle">
+                            <span class="text-truncate">{{ classification.player.us_name }}</span>
+                        </div>
+                        <div class="d-flex align-items-center stats-container">
+                            <div class="text-center mx-2">
+                                <strong>{{ classification.gc_points }}</strong>
+                            </div>
+                            <div class="text-center mx-2">
+                                <strong>{{ classification.gc_gamesDiff }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
     </div>
 </div>
 {% endif %}

@@ -341,3 +341,190 @@
     padding: 5px;
 }
 
+/* Player photo styles */
+.player-col .player-info,
+.player-photos {
+    display: flex;
+    align-items: center;
+}
+
+.player-photos img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: -10px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.player-info img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+/* Clickable table rows */
+tr[onclick] {
+    cursor: pointer;
+}
+
+/* Winner info styles */
+.winner-info {
+    display: inline-flex;
+    align-items: center;
+}
+
+.winner-info .player-photos {
+    display: inline-block;
+}
+
+.winner-info .player-photos img {
+    margin-right: -10px;
+}
+
+.winner-names {
+    margin-left: 10px;
+}
+
+/* League detail page styles */
+@media (max-width: 767.98px) {
+    .mobile-classification {
+        font-size: 0.9rem;
+    }
+    .player-card {
+        padding: 8px 4px;
+    }
+    .stats-container {
+        min-width: 120px;
+    }
+    .stats-container .mx-2 {
+        min-width: 45px;
+    }
+}
+
+.desktop-classification {
+    border: none;
+}
+.desktop-classification thead th {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 12px 8px;
+    background-color: transparent;
+}
+.desktop-classification tbody tr {
+    background-color: transparent;
+}
+.desktop-classification tbody td {
+    border: none;
+    padding: 12px 8px;
+}
+.desktop-classification tbody tr:hover {
+    background-color: rgba(0,0,0,.03);
+}
+
+/* Gameday mobile cards */
+.gameday-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+    border: 1px solid #164c53 !important;
+    color: #fff;
+}
+
+.gameday-card:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border-color: #1d6069 !important;
+}
+
+.gameday-card .text-muted,
+.gameday-card .winners-section small.text-muted {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.gameday-card .winners-section {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.gameday-card .rounded-circle {
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Winner rows in gameday cards */
+.winner-row {
+    background-color: rgba(255, 255, 255, 0.03);
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.winner-row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Adjust spacing for small screens */
+@media (max-width: 389px) {
+    .gameday-card {
+        margin: 0 -0.75rem;
+        border-radius: 0;
+        border-left: none !important;
+        border-right: none !important;
+    }
+    
+    .gameday-card:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* Desktop gamedays table */
+.table.table-hover {
+    margin-bottom: 0;
+}
+
+.table.table-hover th,
+.table.table-hover td {
+    padding: 1rem;
+}
+
+/* Column width optimization */
+.table.table-hover th:nth-child(1),
+.table.table-hover td:nth-child(1) {
+    width: 30%;
+}
+
+.table.table-hover th:nth-child(2),
+.table.table-hover td:nth-child(2) {
+    width: 20%;
+}
+
+.table.table-hover th:nth-child(3),
+.table.table-hover td:nth-child(3) {
+    width: 15%;
+}
+
+.table.table-hover th:nth-child(4),
+.table.table-hover td:nth-child(4) {
+    width: 35%;
+}
+
+/* Winner info in desktop table */
+.table.table-hover .winner-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.table.table-hover .player-photos {
+    flex-shrink: 0;
+}
+
+.table.table-hover .winner-names {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+

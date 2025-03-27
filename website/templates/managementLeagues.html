@@ -1,51 +1,53 @@
 {% extends "base.html" %}
 {% block title %}{{ config.TITLE }}{% endblock %}
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h4>{{ translate('Manage Leagues') }}</h4>
-        <div class="d-flex justify-content-end">
-            <a href="/create_league" class="btn btn-light px-5"><i class="icon-plus"></i> {{ translate('Create League') }}</a>
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4>{{ translate('Manage Leagues') }}</h4>
+            <div class="d-flex justify-content-end">
+                <a href="/create_league" class="btn btn-light px-5"><i class="icon-plus"></i> {{ translate('Create League') }}</a>
+            </div>
         </div>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th scope="col">{{ translate('League Name') }}</th>
-                        <th scope="col">{{ translate('Club') }}</th>
-                        <th scope="col">{{ translate('Start Date') }}</th>
-                        <th scope="col">{{ translate('Status') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for league in result %}
-                    <tr onclick="window.location.href='{{ url_for('views.edit_league', league_id=league.lg_id) }}';" style="cursor: pointer;">
-                        <td><img src="{{ url_for('views.display_league_main_image', leagueID=league.lg_id ) }}" 
-                            alt="{{ league.lg_name }}" class="rounded-circle" width="40">                 
-                            {{ league.lg_name }}</td>
-                        <td>{{ league.club.cl_name }}</td>
-                        <td>{{ league.lg_startDate }}</td>
-                        <td>
-                            {% if league.lg_status == 'announced' %}
-                                <span class="badge badge-primary">{{ translate('Announced') }}</span>
-                                {% elif league.lg_status == 'accepting registrations' %}
-                                <span class="badge badge-success">{{ translate('Accepting Registrations') }}</span>
-                                {% elif league.lg_status == 'registration complete' %}
-                                <span class="badge badge-warning">{{ translate('Registration Complete') }}</span>
-                                {% elif league.lg_status == 'being played' %}
-                                <span class="badge badge-info">{{ translate('Being Played') }}</span>
-                                {% elif league.lg_status == 'canceled' %}
-                                <span class="badge badge-danger">{{ translate('Canceled') }}</span>
-                                {% else %}
-                                <span class="badge badge-secondary">{{ translate('Finished') }}</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ translate('League Name') }}</th>
+                            <th scope="col">{{ translate('Club') }}</th>
+                            <th scope="col">{{ translate('Start Date') }}</th>
+                            <th scope="col">{{ translate('Status') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for league in result %}
+                        <tr onclick="window.location.href='{{ url_for('views.edit_league', league_id=league.lg_id) }}';" style="cursor: pointer;">
+                            <td><img src="{{ url_for('views.display_league_main_image', leagueID=league.lg_id ) }}" 
+                                alt="{{ league.lg_name }}" class="rounded-circle" width="40">                 
+                                {{ league.lg_name }}</td>
+                            <td>{{ league.club.cl_name }}</td>
+                            <td>{{ league.lg_startDate }}</td>
+                            <td>
+                                {% if league.lg_status == 'announced' %}
+                                    <span class="badge badge-primary">{{ translate('Announced') }}</span>
+                                    {% elif league.lg_status == 'accepting registrations' %}
+                                    <span class="badge badge-success">{{ translate('Accepting Registrations') }}</span>
+                                    {% elif league.lg_status == 'registration complete' %}
+                                    <span class="badge badge-warning">{{ translate('Registration Complete') }}</span>
+                                    {% elif league.lg_status == 'being played' %}
+                                    <span class="badge badge-info">{{ translate('Being Played') }}</span>
+                                    {% elif league.lg_status == 'canceled' %}
+                                    <span class="badge badge-danger">{{ translate('Canceled') }}</span>
+                                    {% else %}
+                                    <span class="badge badge-secondary">{{ translate('Finished') }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

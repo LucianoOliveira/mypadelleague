@@ -1,83 +1,85 @@
 {% extends "base.html" %}
 {% block title %}{{ config.TITLE }}{% endblock %}
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h4>{{ translate('My Profile') }}</h4>
-    </div>
-    <div class="card-body">
-        <form action="{{ url_for('views.updateOwnUser') }}" method="post" enctype="multipart/form-data">
-            <div class="row gutters-sm">
-                <div class="col-md-4 mb-3">
-                    <div class="text-center">
-                        <img src="{{ url_for('views.display_user_image', userID=user.us_id ) }}" alt="{{ user.us_name }}" class="rounded-circle" width="150" id="user_photo_img" style="cursor: pointer;">
-                        <input type="file" class="form-control" id="user_photo" name="user_photo" style="display: none;">
-                        <div class="mt-3">
-                            <h4>{{ user.us_name }}</h4>
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4>{{ translate('My Profile') }}</h4>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('views.updateOwnUser') }}" method="post" enctype="multipart/form-data">
+                <div class="row gutters-sm">
+                    <div class="col-md-4 mb-3">
+                        <div class="text-center">
+                            <img src="{{ url_for('views.display_user_image', userID=user.us_id ) }}" alt="{{ user.us_name }}" class="rounded-circle" width="150" id="user_photo_img" style="cursor: pointer;">
+                            <input type="file" class="form-control" id="user_photo" name="user_photo" style="display: none;">
+                            <div class="mt-3">
+                                <h4>{{ user.us_name }}</h4>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="col-md-8">
-                    <div class="form-group">
-                        <label for="user_name">{{ translate('Name') }}</label>
-                        <input type="text" class="form-control" id="user_name" name="user_name" value="{{ user.us_name }}">
-                    </div>
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label for="user_name">{{ translate('Name') }}</label>
+                            <input type="text" class="form-control" id="user_name" name="user_name" value="{{ user.us_name }}">
+                        </div>
 
-                    <div class="form-group">
-                        <label for="user_email">{{ translate('Email') }}</label>
-                        <input type="email" class="form-control" id="us_email" name="user_email" value="{{ user.us_email }}" readonly>
-                    </div>
+                        <div class="form-group">
+                            <label for="user_email">{{ translate('Email') }}</label>
+                            <input type="email" class="form-control" id="us_email" name="user_email" value="{{ user.us_email }}" readonly>
+                        </div>
 
-                    <div class="form-group">
-                        <label for="user_birthday">{{ translate('Birthday') }}</label>
-                        <input type="date" class="form-control" id="user_birthday" name="user_birthday" value="{{ user.us_birthday }}">
-                    </div>
+                        <div class="form-group">
+                            <label for="user_birthday">{{ translate('Birthday') }}</label>
+                            <input type="date" class="form-control" id="user_birthday" name="user_birthday" value="{{ user.us_birthday }}">
+                        </div>
 
-                    {% if user.us_is_admin or user.us_is_superuser %}
-                    <div class="form-group">
-                        <label for="user_active">{{ translate('Active') }}</label>
-                        <div class="icheck-material-white">
+                        {% if user.us_is_admin or user.us_is_superuser %}
+                        <div class="form-group">
+                            <label for="user_active">{{ translate('Active') }}</label>
+                            <div class="icheck-material-white">
+                                <input type="checkbox" id="user_active" name="user_active" {% if user.us_is_active %}checked{% endif %}>
+                                <label for="user_active"></label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="user_player">{{ translate('Player') }}</label>
+                            <div class="icheck-material-white">
+                                <input type="checkbox" id="user_player" name="user_player" {% if user.us_is_player %}checked{% endif %}>
+                                <label for="user_player"></label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="user_manager">{{ translate('Manager') }}</label>
+                            <div class="icheck-material-white">
+                                <input type="checkbox" id="user_manager" name="user_manager" {% if user.us_is_manager %}checked{% endif %}>
+                                <label for="user_manager"></label>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div style="display: none;">
                             <input type="checkbox" id="user_active" name="user_active" {% if user.us_is_active %}checked{% endif %}>
-                            <label for="user_active"></label>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="user_player">{{ translate('Player') }}</label>
-                        <div class="icheck-material-white">
                             <input type="checkbox" id="user_player" name="user_player" {% if user.us_is_player %}checked{% endif %}>
-                            <label for="user_player"></label>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="user_manager">{{ translate('Manager') }}</label>
-                        <div class="icheck-material-white">
                             <input type="checkbox" id="user_manager" name="user_manager" {% if user.us_is_manager %}checked{% endif %}>
-                            <label for="user_manager"></label>
+                            <input type="checkbox" id="user_admin" name="user_admin" {% if user.us_is_admin %}checked{% endif %}>
+                            <input type="checkbox" id="user_superuser" name="user_superuser" {% if user.us_is_superuser %}checked{% endif %}>
                         </div>
-                    </div>
-                    {% else %}
-                    <div style="display: none;">
-                        <input type="checkbox" id="user_active" name="user_active" {% if user.us_is_active %}checked{% endif %}>
-                        <input type="checkbox" id="user_player" name="user_player" {% if user.us_is_player %}checked{% endif %}>
-                        <input type="checkbox" id="user_manager" name="user_manager" {% if user.us_is_manager %}checked{% endif %}>
-                        <input type="checkbox" id="user_admin" name="user_admin" {% if user.us_is_admin %}checked{% endif %}>
-                        <input type="checkbox" id="user_superuser" name="user_superuser" {% if user.us_is_superuser %}checked{% endif %}>
-                    </div>
-                    {% endif %}
-
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-light px-5"><i class="icon-save"></i> {{ translate('Save Changes') }}</button>
-                        {% if not user.us_is_manager and not user.us_is_superuser %}
-                        <button type="submit" formaction="{{ url_for('views.request_manager') }}" formmethod="post" class="btn btn-light px-5">{{ translate('Become a Manager') }}</button>
                         {% endif %}
-                        <a href="{{ url_for('views.home') }}" class="btn btn-outline-light px-5">{{ translate('Cancel') }}</a>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-light px-5"><i class="icon-save"></i> {{ translate('Save Changes') }}</button>
+                            {% if not user.us_is_manager and not user.us_is_superuser %}
+                            <button type="submit" formaction="{{ url_for('views.request_manager') }}" formmethod="post" class="btn btn-light px-5">{{ translate('Become a Manager') }}</button>
+                            {% endif %}
+                            <a href="{{ url_for('views.home') }}" class="btn btn-outline-light px-5">{{ translate('Cancel') }}</a>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}
