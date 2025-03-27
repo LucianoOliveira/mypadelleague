@@ -386,7 +386,7 @@ tr[onclick] {
     margin-left: 10px;
 }
 
-/* League detail page styles */
+/* League detail page and mobile classification styles */
 @media (max-width: 767.98px) {
     .mobile-classification {
         font-size: 0.9rem;
@@ -395,10 +395,27 @@ tr[onclick] {
         padding: 8px 4px;
     }
     .stats-container {
-        min-width: 120px;
+        min-width: 90px;
+        flex-shrink: 0;
     }
     .stats-container .mx-2 {
-        min-width: 45px;
+        min-width: 35px;
+    }
+    .player-info {
+        flex: 1;
+        min-width: 0; /* This is crucial for text-truncate to work */
+        margin-right: 8px;
+    }
+    .player-info img {
+        width: 30px;
+        height: 30px;
+        flex-shrink: 0;
+    }
+    .player-info span {
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        min-width: 0;
     }
 }
 
@@ -409,48 +426,28 @@ tr[onclick] {
     border: none;
     color: #6c757d;
     font-weight: 500;
-    padding: 12px 8px;
-    background-color: transparent;
-}
-.desktop-classification tbody tr {
-    background-color: transparent;
-}
-.desktop-classification tbody td {
-    border: none;
-    padding: 12px 8px;
-}
-.desktop-classification tbody tr:hover {
-    background-color: rgba(0,0,0,.03);
 }
 
-/* Gameday mobile cards */
+/* Gameday cards */
 .gameday-card {
     background-color: rgba(255, 255, 255, 0.05);
-    transition: all 0.2s ease;
-    border: 1px solid #164c53 !important;
-    color: #fff;
+    transition: transform 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .gameday-card:hover {
-    background-color: rgba(255, 255, 255, 0.08);
     transform: translateY(-2px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    border-color: #1d6069 !important;
-}
-
-.gameday-card .text-muted,
-.gameday-card .winners-section small.text-muted {
-    color: rgba(255, 255, 255, 0.7) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .gameday-card .winners-section {
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     padding-top: 0.75rem;
     margin-top: 0.75rem;
 }
 
 .gameday-card .rounded-circle {
-    border: 2px solid rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 

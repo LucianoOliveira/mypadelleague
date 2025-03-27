@@ -3,42 +3,27 @@
 <div class="mt-4">
 
 <!-- testing -->
-<div class="row">
-    <h5 class="card-title">{{ translate('Leagues') }}</h5>    
+<div class="row px-4">
+    <h5 class="card-title mb-3">{{ translate('Leagues') }}</h5>    
 </div>
 <!-- end testing -->
 
 <div class="row justify-content-center">
-     {% for league in result %}
-            <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
-                <a href="{{ url_for('views.detail_league', league_id=league[0].lg_id) }}" class="card h-100">
-                    <div class="card-img-top position-relative">
-                        <img class="img-fluid w-100" src="{{ url_for('views.display_league_main_image', leagueID=league[0].lg_id ) }}" alt="League image">
-                        <img src="{{ url_for('views.display_club_main_image', clubID=league[0].lg_club_id ) }}" alt="League logo" class="position-absolute" style="bottom: -30px; left: 50%; transform: translateX(-50%); width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff;">
-                    </div>
-                    <div class="card-body pt-5 text-center">
-                        <h5 class="card-title">{{ league[0].lg_name }}</h5>
-                        <p class="card-text text-muted mb-1">{{ translate('Date') }}: {{ league[0].lg_startDate.strftime('%Y-%m-%d') if league[0].lg_startDate else 'N/A' }}</p>
-                        <p class="card-text">
-                            {% if league[0].lg_status == 'announced' %}
-                            <span class="badge badge-primary">{{ translate('Announced') }}</span>
-                            {% elif league[0].lg_status == 'accepting registrations' %}
-                            <span class="badge badge-success">{{ translate('Accepting Registrations') }}</span>
-                            {% elif league[0].lg_status == 'registration complete' %}
-                            <span class="badge badge-warning">{{ translate('Registration Complete') }}</span>
-                            {% elif league[0].lg_status == 'being played' %}
-                            <span class="badge badge-info">{{ translate('Being Played') }}</span>
-                            {% elif league[0].lg_status == 'canceled' %}
-                            <span class="badge badge-danger">{{ translate('Canceled') }}</span>
-                            {% else %}
-                            <span class="badge badge-secondary">{{ translate('Finished') }}</span>
-                            {% endif %}
-                        </p>
-                    </div>
-                </a>
-            </div>
-            {% endfor %}
-  </div>
+    {% for league in result %}
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
+            <a href="{{ url_for('views.detail_league', league_id=league[0].lg_id) }}" class="card h-100">
+                <div class="card-img-top position-relative">
+                    <img class="img-fluid w-100" src="{{ url_for('views.display_league_main_image', leagueID=league[0].lg_id ) }}" alt="League image">
+                    <img src="{{ url_for('views.display_club_main_image', clubID=league[0].lg_club_id ) }}" alt="League logo" class="position-absolute" style="bottom: -30px; left: 50%; transform: translateX(-50%); width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff;">
+                </div>
+                <div class="card-body pt-5 text-center">
+                    <h5 class="card-title">{{ league[0].lg_name }}</h5>
+                    <p class="card-text text-muted">{{ league[1] }}</p>
+                </div>
+            </a>
+        </div>
+    {% endfor %}
+</div>
 
 </div>
 {% endblock %}
