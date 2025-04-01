@@ -1,0 +1,87 @@
+{% extends "base.html" %} {% block title %}{{ config.TITLE }}{% endblock %} 
+{% block content %}
+
+{% if user.is_authenticated %}
+<!-- button to calculate full ELO -->
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 text-right">
+            <a href="{{ url_for('views.recalculate_ELO_full') }}" class="btn btn-light btn-round px-5"><i class="icon-calculator"></i> {{ translate('Recalculate ELO') }}</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Classificação ELO</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <!-- <th scope="col">#</th> -->
+                                <th class="" scope="col">Nome</th>
+                                <th class="" scope="col">Ranking ELO</th>
+                                <th class="d-none d-md-table-cell" scope="col">Win %</th>
+                                <th class="d-none d-xl-table-cell" scope="col">Jogos Ganhos</th>
+                                <th class="d-none d-md-table-cell" scope="col">Total Jogos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in result %}
+                            {% if data['pl_totalGames'] > 0 %}
+                            <tr>
+                                <!-- <th scope="row">{{ data['pl_id'] }}</th> -->
+                                {% if data['pl_id'] %}
+                                <td class=""  onclick="window.location.href='{{ url_for('views.player_detail', playerID=data['pl_id']) }}';">
+                                    {% if data['pl_rankingNow']>1300 %}
+                                        <img src="{{ url_for('views.display_user_image', userID=data['pl_id'] ) }}" alt="{{ data['pl_name'] }}" class="rounded-circle-gold" width="40" onclick="window.location.href='{{ url_for('views.player_detail', playerID=data['pl_id']) }}';"> 
+                                    {% else %}
+                                        {% if data['pl_rankingNow']>1100 %}
+                                            <img src="{{ url_for('views.display_user_image', userID=data['pl_id'] ) }}" alt="{{ data['pl_name'] }}" class="rounded-circle-silver" width="40" onclick="window.location.href='{{ url_for('views.player_detail', playerID=data['pl_id']) }}';"> 
+                                        {% else %}
+                                            {% if data['pl_rankingNow']>900 %}
+                                                <img src="{{ url_for('views.display_user_image', userID=data['pl_id'] ) }}" alt="{{ data['pl_name'] }}" class="rounded-circle-brown" width="40" onclick="window.location.href='{{ url_for('views.player_detail', playerID=data['pl_id']) }}';"> 
+                                            {% else %}
+                                                <img src="{{ url_for('views.display_user_image', userID=data['pl_id'] ) }}" alt="{{ data['pl_name'] }}" class="rounded-circle-white" width="40" onclick="window.location.href='{{ url_for('views.player_detail', playerID=data['pl_id']) }}';"> 
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endif %}
+                                    
+                                    <span style="max-width: 50px;"> {{ data['pl_name'] }}</span>
+                                </td>
+                                {% else %}
+                                <td class=""><img src="{{ url_for('views.display_user_image', userID=0 ) }}" alt="Admin" class="rounded-circle" width="40"> {{ data['pl_name'] }}</td>
+                                {% endif %}
+                                <td class="" onclick="window.location.href='{{ url_for('views.player_detail', playerID=data['pl_id']) }}';">{{ data['pl_rankingNow'] }}</td>
+                                <td class="d-none d-md-table-cell" onclick="window.location.href='{{ url_for('views.player_detail', playerID=data['pl_id']) }}';">{{ '%.2f' % ((data['pl_wins'] / data['pl_totalGames']) * 100) }}</td>
+                                <td class="d-none d-xl-table-cell" onclick="window.location.href='{{ url_for('views.player_detail', playerID=data['pl_id']) }}';">{{ data['pl_wins'] }}</td>
+                                <td class="d-none d-md-table-cell" onclick="window.location.href='{{ url_for('views.player_detail', playerID=data['pl_id']) }}';">{{ data['pl_totalGames'] }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div><!--End Row-->
+
+<div class="row">
+    <div class="col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Niveis</h5>
+                <p>1300 a 1500 - M/F 2</p>
+                <p>1100 a 1300 - M/F 3</p>
+                <p>900 a 1100 - M/F 4</p>
+                <p>Menos 900  - M/F 5</p>
+            </div>
+        </div>
+    </div>
+</div><!--End Row-->
+
+
+{% endblock %}

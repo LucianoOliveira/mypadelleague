@@ -1400,3 +1400,246 @@ def func_create_league_gamedays(league_id, league_name, start_date, num_days):
         new_gameday_id = gameday.gd_id
         func_create_gameday_games_full(league_id, new_gameday_id)
         current_date += timedelta(days=7)  # Next week
+
+def func_calculate_ELO_full():
+    #print("Print from beggining of ELO calc")
+    # Delete all rows from tb_ELO_ranking
+    try:
+        db.session.execute(
+            text(f"DELETE FROM tb_ELO_ranking")
+        )
+        db.session.commit()             
+    except Exception as e:
+        print("Error1:", e)
+
+    # Delete all rows from tb_ELO_ranking_hist
+    try:
+        db.session.execute(
+            text(f"DELETE FROM tb_ELO_ranking_hist")
+        )
+        db.session.commit()
+    except Exception as e:
+        print("Error1:", e)
+
+    # Write every player with 1000 points and 0 games
+    try:
+        # Get all users who are players from Users model
+        users = Users.query.filter_by(us_is_player=True).all()
+
+        for user in users:
+            # Create new ELO ranking entry for each player with default values
+            new_elo = ELOranking(
+                pl_id=user.us_id,
+                pl_rankingNow=1000,  # Default ELO rating
+                pl_totalRankingOpo=0,
+                pl_wins=0,
+                pl_losses=0,
+                pl_totalGames=0
+            )
+            db.session.add(new_elo)
+
+        # Commit the transaction
+        db.session.commit()
+    except Exception as e:
+        print("Error2:", e)
+        db.session.rollback()
+
+    # Select every game if league has K higher than 0
+    try:
+        # Query games using SQLAlchemy ORM
+        games = db.session.query(Game).join(
+            League, Game.gm_idLeague == League.lg_id
+        ).filter(
+            League.lg_eloK > 0,
+            League.lg_startDate >= datetime(2024, 1, 1),
+            Game.gm_idPlayer_A1.isnot(None)
+        ).order_by(
+            Game.gm_date.asc(), 
+            Game.gm_timeStart.asc()
+        ).all()
+        
+        for game in games:
+            # Get current ranking for A1
+            A1_ID = game.gm_idPlayer_A1
+            A1_elo = ELOranking.query.get(A1_ID)
+            A1_ranking = A1_elo.pl_rankingNow if A1_elo else 1000
+            
+            # Get current ranking for A2
+            A2_ID = game.gm_idPlayer_A2
+            A2_elo = ELOranking.query.get(A2_ID)
+            A2_ranking = A2_elo.pl_rankingNow if A2_elo else 1000
+            
+            # Get current ranking for B1
+            B1_ID = game.gm_idPlayer_B1
+            B1_elo = ELOranking.query.get(B1_ID)
+            B1_ranking = B1_elo.pl_rankingNow if B1_elo else 1000
+            
+            # Get current ranking for B2
+            B2_ID = game.gm_idPlayer_B2
+            B2_elo = ELOranking.query.get(B2_ID)
+            B2_ranking = B2_elo.pl_rankingNow if B2_elo else 1000
+
+            # Calculate current ELO from teamA and teamB
+            ranking_TeamA = (A1_ranking + A2_ranking) / 2
+            ranking_TeamB = (B1_ranking + B2_ranking) / 2
+
+            # Get league K factor
+            league = League.query.get(game.gm_idLeague)
+            ELO_K = league.lg_eloK
+
+            # Calculate new ratings
+            if game.gm_result_A > game.gm_result_B:
+                # Update ratings for team A
+                # Calculate rating changes for A1
+                delta_A1 = ELO_K * (1 - (1 / (1 + 10 ** ((ranking_TeamB - A1_ranking) / 400))))
+                if A1_elo:
+                    A1_elo.pl_rankingNow += delta_A1
+                    A1_elo.pl_wins += 1
+                    A1_elo.pl_totalGames += 1
+                
+                # Calculate rating changes for A2
+                delta_A2 = ELO_K * (1 - (1 / (1 + 10 ** ((ranking_TeamB - A2_ranking) / 400))))
+                if A2_elo:
+                    A2_elo.pl_rankingNow += delta_A2
+                    A2_elo.pl_wins += 1
+                    A2_elo.pl_totalGames += 1
+                
+                # Update ratings for team B
+                # Calculate rating changes for B1
+                delta_B1 = ELO_K * (0 - (1 / (1 + 10 ** ((ranking_TeamA - B1_ranking) / 400))))
+                if B1_elo:
+                    B1_elo.pl_rankingNow += delta_B1
+                    B1_elo.pl_losses += 1
+                    B1_elo.pl_totalGames += 1
+                
+                # Calculate rating changes for B2
+                delta_B2 = ELO_K * (0 - (1 / (1 + 10 ** ((ranking_TeamA - B2_ranking) / 400))))
+                if B2_elo:
+                    B2_elo.pl_rankingNow += delta_B2
+                    B2_elo.pl_losses += 1
+                    B2_elo.pl_totalGames += 1
+            
+            elif game.gm_result_B > game.gm_result_A:
+                # Update ratings for team A
+                # Calculate rating changes for A1
+                delta_A1 = ELO_K * (0 - (1 / (1 + 10 ** ((ranking_TeamB - A1_ranking) / 400))))
+                if A1_elo:
+                    A1_elo.pl_rankingNow += delta_A1
+                    A1_elo.pl_losses += 1
+                    A1_elo.pl_totalGames += 1
+                
+                # Calculate rating changes for A2
+                delta_A2 = ELO_K * (0 - (1 / (1 + 10 ** ((ranking_TeamB - A2_ranking) / 400))))
+                if A2_elo:
+                    A2_elo.pl_rankingNow += delta_A2
+                    A2_elo.pl_losses += 1
+                    A2_elo.pl_totalGames += 1
+                
+                # Update ratings for team B
+                # Calculate rating changes for B1
+                delta_B1 = ELO_K * (1 - (1 / (1 + 10 ** ((ranking_TeamA - B1_ranking) / 400))))
+                if B1_elo:
+                    B1_elo.pl_rankingNow += delta_B1
+                    B1_elo.pl_wins += 1
+                    B1_elo.pl_totalGames += 1
+                
+                # Calculate rating changes for B2
+                delta_B2 = ELO_K * (1 - (1 / (1 + 10 ** ((ranking_TeamA - B2_ranking) / 400))))
+                if B2_elo:
+                    B2_elo.pl_rankingNow += delta_B2
+                    B2_elo.pl_wins += 1
+                    B2_elo.pl_totalGames += 1
+
+            # Save the updated ELO values
+            db.session.commit()
+
+            # Skip history for games with no score (0-0)
+            if game.gm_result_A == 0 and game.gm_result_B == 0:
+                continue
+            else:
+                # Define data for history records
+                history_entries = [
+                    {
+                        'game_id': game.gm_id,
+                        'player_id': A1_ID,
+                        'date': game.gm_date,
+                        'time_start': game.gm_timeStart,
+                        'teammate_id': A2_ID,
+                        'op1_id': B1_ID,
+                        'op2_id': B2_ID,
+                        'result_team': game.gm_result_A,
+                        'result_op': game.gm_result_B,
+                        'before_rank': A1_ranking
+                    },
+                    {
+                        'game_id': game.gm_id,
+                        'player_id': A2_ID,
+                        'date': game.gm_date,
+                        'time_start': game.gm_timeStart,
+                        'teammate_id': A1_ID,
+                        'op1_id': B1_ID,
+                        'op2_id': B2_ID,
+                        'result_team': game.gm_result_A,
+                        'result_op': game.gm_result_B,
+                        'before_rank': A2_ranking
+                    },
+                    {
+                        'game_id': game.gm_id,
+                        'player_id': B1_ID,
+                        'date': game.gm_date,
+                        'time_start': game.gm_timeStart,
+                        'teammate_id': B2_ID,
+                        'op1_id': A1_ID,
+                        'op2_id': A2_ID,
+                        'result_team': game.gm_result_B,
+                        'result_op': game.gm_result_A,
+                        'before_rank': B1_ranking
+                    },
+                    {
+                        'game_id': game.gm_id,
+                        'player_id': B2_ID,
+                        'date': game.gm_date,
+                        'time_start': game.gm_timeStart,
+                        'teammate_id': B1_ID,
+                        'op1_id': A1_ID,
+                        'op2_id': A2_ID,
+                        'result_team': game.gm_result_B,
+                        'result_op': game.gm_result_A,
+                        'before_rank': B2_ranking
+                    }
+                ]
+                try:
+                    for entry in history_entries:
+                        # Get player and calculate after rank
+                        player_elo = ELOranking.query.get(entry['player_id'])
+                        after_rank = player_elo.pl_rankingNow if player_elo else 1000
+                        
+                        # Create and add history entry
+                        hist_entry = ELOrankingHist(
+                            el_gm_id=entry['game_id'],
+                            el_pl_id=entry['player_id'],
+                            el_date=entry['date'],
+                            el_startTime=entry['time_start'],
+                            el_pl_id_teammate=entry['teammate_id'],
+                            el_pl_id_op1=entry['op1_id'],
+                            el_pl_id_op2=entry['op2_id'],
+                            el_result_team=entry['result_team'],
+                            el_result_op=entry['result_op'],
+                            el_beforeRank=entry['before_rank'],
+                            el_afterRank=after_rank
+                        )
+                        db.session.add(hist_entry)
+                    
+                    # Commit all history entries
+                    db.session.commit()
+
+                except Exception as e:
+                    # Rollback the transaction if an error occurs
+                    print("Error RHIST:", e)
+                    db.session.rollback()
+
+    except Exception as e:
+        print("Error99:", e)
+        db.session.rollback()
+
+    #print("Print from end of ELO calc")

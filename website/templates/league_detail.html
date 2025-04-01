@@ -107,8 +107,8 @@
                             <tbody>
                                 {% for player in players %}
                                 {% if player.ranking > 0 %}
-                                <tr>
-                                    <td class="player-col">
+                                <tr data-href="{{ url_for('views.player_info', user_id=player.us_id) }}">
+                                    <td class="player-col"   onclick="window.location.href='{{ url_for('views.player_info', user_id=player.us_id) }}';">
                                         <div class="player-info">
                                             <img src="{{ url_for('views.display_user_image', userID=player.us_id) }}"
                                                  onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
@@ -117,13 +117,13 @@
                                             <span>{{ player.us_name }}</span>
                                         </div>
                                     </td>
-                                    <td class="points-col">{{ player.points }}</td>
-                                    <td>{{ player.wins }}</td>
-                                    <td>{{ player.losses }}</td>
-                                    <td>{{ player.gamesFavor }}</td>
-                                    <td>{{ player.gamesAgainst }}</td>
-                                    <td class="diff-col">{{ player.gamesDiff }}</td>
-                                    <td class="d-none d-lg-table-cell">{{ player.ranking }}</td>
+                                    <td class="points-col" onclick="window.location.href='{{ url_for('views.player_info', user_id=player.us_id) }}';">{{ player.points }}</td>
+                                    <td onclick="window.location.href='{{ url_for('views.player_info', user_id=player.us_id) }}';">{{ player.wins }}</td>
+                                    <td onclick="window.location.href='{{ url_for('views.player_info', user_id=player.us_id) }}';">{{ player.losses }}</td>
+                                    <td onclick="window.location.href='{{ url_for('views.player_info', user_id=player.us_id) }}';">{{ player.gamesFavor }}</td>
+                                    <td onclick="window.location.href='{{ url_for('views.player_info', user_id=player.us_id) }}';">{{ player.gamesAgainst }}</td>
+                                    <td class="diff-col" onclick="window.location.href='{{ url_for('views.player_info', user_id=player.us_id) }}';">{{ player.gamesDiff }}</td>
+                                    <td class="d-none d-lg-table-cell" onclick="window.location.href='{{ url_for('views.player_info', user_id=player.us_id) }}';">{{ player.ranking }}</td>
                                 </tr>
                                 {% endif %}
                                 {% endfor %}
@@ -156,7 +156,7 @@
                             
                             {% for player in players %}
                             {% if player.ranking > 0 %}
-                            <div class="player-card">
+                            <div class="player-card" onclick="window.location.href='{{ url_for('views.player_info', user_id=player.us_id) }}'" style="cursor: pointer;">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div class="d-flex align-items-center player-info">
                                         <img src="{{ url_for('views.display_user_image', userID=player.us_id) }}"
