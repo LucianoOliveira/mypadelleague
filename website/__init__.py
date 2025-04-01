@@ -1,7 +1,7 @@
 import logging
 from flask import Flask, request, g
 from flask_sqlalchemy import SQLAlchemy
-from os import path
+# from os import path
 from flask_login import LoginManager
 import re
 from flask_migrate import Migrate
@@ -121,7 +121,7 @@ def create_app():
 
     # Start background tasks differently based on environment
     from .tasks import start_background_tasks, update_league_statuses
-    import os
+    # import os
     
     # Check if running on PythonAnywhere
     if 'PYTHONANYWHERE_DOMAIN' in os.environ:
