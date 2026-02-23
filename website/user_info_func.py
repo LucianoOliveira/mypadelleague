@@ -11,6 +11,7 @@ def ext_home():
             .all()
     except Exception as e:
         print(f"Error: {e}")
+        result_data = []  # Set default empty list if query fails
     return render_template("index.html", user=current_user, result=result_data)
 
 def ext_userInfo(p_user_id):

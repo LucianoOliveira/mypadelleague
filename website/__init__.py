@@ -21,29 +21,25 @@ def create_app():
     except OSError:
         pass
 
-    # Enhanced logging configuration
-    logging.basicConfig(level=logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    app.logger.addHandler(handler)
-    app.logger.setLevel(logging.DEBUG)
-
-    app.logger.debug('Starting application configuration...')
+    # Configure logging for production
+    if not app.debug:
+        logging.basicConfig(level=logging.INFO)
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        app.logger.addHandler(handler)
+        app.logger.setLevel(logging.INFO)
 
 
     from .config import Config
-    app.logger.debug(f'Database path: {Config.DB_NAME}')
 
     # Load configuration
     app.config.from_object(Config)
-    app.logger.debug('Configuration loaded')
 
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{Config.DB_NAME}'
     db.init_app(app)
     migrate = Migrate(app, db)
-    app.logger.debug('Database initialized')
 
     # Configure available languages
     LANGUAGES = {
@@ -81,7 +77,6 @@ def create_app():
     with app.app_context():
         try:
             db.create_all()
-            app.logger.debug('Database tables created successfully')
         except Exception as e:
             app.logger.error(f'Error creating database tables: {str(e)}')
 
@@ -132,30 +127,30 @@ def create_app():
         # For local development, use the background thread
         start_background_tasks(app)
 
-    @app.route('/debug')
-    def debug_route():
-        app.logger.debug('Debug route accessed')
-        info = {}
-        try:
-            # Check instance path
-            info['instance_path'] = app.instance_path
-            info['instance_exists'] = os.path.exists(app.instance_path)
+    # Debug route only available in debug mode
+    if app.debug:
+        @app.route('/debug')
+        def debug_route():
+            info = {}
+            try:
+                # Check instance path
+                info['instance_path'] = app.instance_path
+                info['instance_exists'] = os.path.exists(app.instance_path)
 
-            # Check database
-            from .config import Config
-            info['db_path'] = Config.DB_NAME
-            info['db_exists'] = os.path.exists(Config.DB_NAME)
-            info['db_uri'] = app.config['SQLALCHEMY_DATABASE_URI']
+                # Check database
+                from .config import Config
+                info['db_path'] = Config.DB_NAME
+                info['db_exists'] = os.path.exists(Config.DB_NAME)
+                info['db_uri'] = app.config['SQLALCHEMY_DATABASE_URI']
 
-            # Check folders
-            info['static_folder'] = app.static_folder
-            info['template_folder'] = app.template_folder
+                # Check folders
+                info['static_folder'] = app.static_folder
+                info['template_folder'] = app.template_folder
 
-            return info
-        except Exception as e:
-            app.logger.error(f'Debug route error: {str(e)}')
-            return {'status': 'error', 'message': str(e)}
-
+                return info
+            except Exception as e:
+                app.logger.error(f'Debug route error: {str(e)}')
+                return {'status': 'error', 'message': str(e)}
 
 
     return app

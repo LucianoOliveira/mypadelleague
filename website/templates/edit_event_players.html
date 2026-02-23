@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}{{ translate('Edit Event Players') }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4>{{ translate('Substitute Players') }}: {{ event.ev_title }}</h4>
+            <p class="mb-0 text-muted">{{ translate('Edit the player list for this event. Changing players will recreate all games.') }}</p>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('views.edit_event_players', event_id=event.ev_id) }}" method="post" id="editPlayersForm">
+                
+                <!-- Warning Alert -->
+                <div class="alert alert-warning">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    <strong>{{ translate('Warning') }}:</strong> 
+                    {{ translate('Changing the player list will delete all existing games and create new ones based on the updated player list and pairing settings.') }}
+                </div>
+
+                <!-- Event Information -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <p><strong>{{ translate('Event Date') }}:</strong> {{ event.ev_date.strftime('%Y-%m-%d') }}</p>
+                        <p><strong>{{ translate('Event Type') }}:</strong> 
+                            {% if event.ev_type == 'NonStop' %}{{ translate('Non-Stop') }}
+                            {% elif event.ev_type == 'Americano' %}{{ translate('Americano') }}
+                            {% elif event.ev_type == 'Mexicano' %}{{ translate('Mexicano') }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>{{ translate('Max Players') }}:</strong> {{ event.ev_max_players }}</p>
+                        <p><strong>{{ translate('Current Pairing Type') }}:</strong> 
+                            {% if event.ev_pairing_type == 'Random' %}{{ translate('Random') }}
+                            {% elif event.ev_pairing_type == 'Manual' %}{{ translate('Manual') }}
+                            {% elif event.ev_pairing_type == 'L&R Random' %}{{ translate('L&R Random') }}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Pairing Type Configuration -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>{{ translate('Pairing Configuration') }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="pairing_type">{{ translate('Pairing Type') }}</label>
+                            <select class="form-control" id="pairing_type" name="pairing_type" required>
+                                <option value="Random" {% if event.ev_pairing_type == 'Random' %}selected{% endif %}>{{ translate('Random') }}</option>
+                                <option value="Manual" {% if event.ev_pairing_type == 'Manual' %}selected{% endif %}>{{ translate('Manual') }}</option>
+                                <option value="L&R Random" {% if event.ev_pairing_type == 'L&R Random' %}selected{% endif %}>{{ translate('L&R Random') }}</option>
+                            </select>
+                        </div>
+                        
+                        <div class="alert alert-info" id="pairingDescription">
+                            <!-- Pairing descriptions will be updated via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player List Configuration -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>{{ translate('Player List') }}</h5>
+                        <p class="mb-0 text-muted">{{ translate('Enter the names of players for this event') }}</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="player_count">{{ translate('Number of Players') }}</label>
+                            <input type="number" class="form-control" id="player_count" name="player_count" 
+                                   value="{{ current_players|length }}" min="4" max="{{ event.ev_max_players }}" step="2" required>
+                        </div>
+                        
+                        <div id="playersContainer">
+                            <!-- Players will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual Pairing Configuration (shown only for Manual pairing) -->
+                <div class="card mb-4" id="manualPairingCard" style="display: none;">
+                    <div class="card-header">
+                        <h5>{{ translate('Manual Team Assignment') }}</h5>
+                        <p class="mb-0 text-muted">{{ translate('Assign team letters to players (teams will play together)') }}</p>
+                    </div>
+                    <div class="card-body">
+                        <div id="teamAssignmentContainer">
+                            <!-- Team assignments will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- L&R Random Configuration (shown only for L&R Random) -->
+                <div class="card mb-4" id="lrRandomCard" style="display: none;">
+                    <div class="card-header">
+                        <h5>{{ translate('Left/Right Preference Assignment') }}</h5>
+                        <p class="mb-0 text-muted">{{ translate('Assign left/right court preferences to players') }}</p>
+                    </div>
+                    <div class="card-body">
+                        <div id="lrAssignmentContainer">
+                            <!-- L/R assignments will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation buttons -->
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('views.detail_event', event_id=event.ev_id) }}" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> {{ translate('Back to Event') }}
+                    </a>
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ translate('Are you sure you want to update the player list? This will delete all existing games and recreate them.') }}')">
+                        <i class="fa fa-save"></i> {{ translate('Update Players & Recreate Games') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Current player data from server
+const currentPlayers = {{ current_players | tojson }};
+
+// Update pairing descriptions based on event type
+function updatePairingDescription() {
+    const eventType = '{{ event.ev_type }}';
+    const pairingType = document.getElementById('pairing_type').value;
+    const descriptionDiv = document.getElementById('pairingDescription');
+    
+    let description = '';
+    
+    if (eventType === 'NonStop') {
+        if (pairingType === 'Random') {
+            description = '{{ translate("Teams are formed randomly and stay fixed throughout the event") }}';
+        } else if (pairingType === 'Manual') {
+            description = '{{ translate("You manually assign fixed teams for the entire event") }}';
+        } else if (pairingType === 'L&R Random') {
+            description = '{{ translate("Players choose left/right preference, then random teams are formed and stay fixed") }}';
+        }
+    } else if (eventType === 'Americano') {
+        description = '{{ translate("Players rotate partners to play with everyone. Pairing type determines initial team formation, but teams change each round to maximize player mixing") }}';
+    } else if (eventType === 'Mexicano') {
+        description = '{{ translate("Players are ranked by performance and paired accordingly each round. Higher-performing players play together") }}';
+    }
+    
+    descriptionDiv.innerHTML = description;
+    
+    // Show/hide manual pairing cards
+    const manualCard = document.getElementById('manualPairingCard');
+    const lrCard = document.getElementById('lrRandomCard');
+    
+    if (pairingType === 'Manual') {
+        manualCard.style.display = 'block';
+        lrCard.style.display = 'none';
+        updateTeamAssignments();
+    } else if (pairingType === 'L&R Random') {
+        manualCard.style.display = 'none';
+        lrCard.style.display = 'block';
+        updateLRAssignments();
+    } else {
+        manualCard.style.display = 'none';
+        lrCard.style.display = 'none';
+    }
+}
+
+// Update players list
+function updatePlayers() {
+    const playerCount = parseInt(document.getElementById('player_count').value);
+    const container = document.getElementById('playersContainer');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < playerCount; i++) {
+        const playerRow = document.createElement('div');
+        playerRow.className = 'row mb-2';
+        
+        const currentPlayerName = i < currentPlayers.length ? currentPlayers[i].name : '';
+        
+        playerRow.innerHTML = `
+            <div class="col-md-6">
+                <label for="player_${i}">{{ translate('Player') }} ${i + 1}</label>
+                <input type="text" class="form-control" id="player_${i}" name="player_${i}" 
+                       value="${currentPlayerName}" required>
+            </div>
+        `;
+        container.appendChild(playerRow);
+    }
+    
+    // Update team assignments if manual pairing is selected
+    if (document.getElementById('pairing_type').value === 'Manual') {
+        updateTeamAssignments();
+    } else if (document.getElementById('pairing_type').value === 'L&R Random') {
+        updateLRAssignments();
+    }
+}
+
+// Update team assignments for manual pairing
+function updateTeamAssignments() {
+    const playerCount = parseInt(document.getElementById('player_count').value);
+    const container = document.getElementById('teamAssignmentContainer');
+    container.innerHTML = '';
+    
+    const teamsNeeded = Math.ceil(playerCount / 2);
+    const teamLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    
+    for (let i = 0; i < playerCount; i++) {
+        const assignmentRow = document.createElement('div');
+        assignmentRow.className = 'row mb-2';
+        
+        const currentPlayerName = i < currentPlayers.length ? currentPlayers[i].name : '';
+        const currentTeam = i < currentPlayers.length && currentPlayers[i].team ? currentPlayers[i].team : teamLetters[Math.floor(i / 2)];
+        const currentPosition = i < currentPlayers.length && currentPlayers[i].position ? currentPlayers[i].position : (i % 2) + 1;
+        
+        let teamOptions = '';
+        for (let j = 0; j < teamsNeeded; j++) {
+            const selected = currentTeam === teamLetters[j] ? 'selected' : '';
+            teamOptions += `<option value="${teamLetters[j]}" ${selected}>${teamLetters[j]}</option>`;
+        }
+        
+        assignmentRow.innerHTML = `
+            <div class="col-md-4">
+                <label>{{ translate('Player') }} ${i + 1}</label>
+                <input type="text" class="form-control" value="${currentPlayerName}" readonly>
+            </div>
+            <div class="col-md-4">
+                <label for="team_${i}">{{ translate('Team') }}</label>
+                <select class="form-control" id="team_${i}" name="team_${i}" required>
+                    ${teamOptions}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="position_${i}">{{ translate('Position') }}</label>
+                <select class="form-control" id="position_${i}" name="position_${i}" required>
+                    <option value="1" ${currentPosition == 1 ? 'selected' : ''}>1</option>
+                    <option value="2" ${currentPosition == 2 ? 'selected' : ''}>2</option>
+                </select>
+            </div>
+        `;
+        container.appendChild(assignmentRow);
+    }
+}
+
+// Update L&R assignments
+function updateLRAssignments() {
+    const playerCount = parseInt(document.getElementById('player_count').value);
+    const container = document.getElementById('lrAssignmentContainer');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < playerCount; i++) {
+        const assignmentRow = document.createElement('div');
+        assignmentRow.className = 'row mb-2';
+        
+        const currentPlayerName = i < currentPlayers.length ? currentPlayers[i].name : '';
+        const currentLR = i < currentPlayers.length && currentPlayers[i].lr_preference ? currentPlayers[i].lr_preference : 'left';
+        
+        assignmentRow.innerHTML = `
+            <div class="col-md-6">
+                <label>{{ translate('Player') }} ${i + 1}</label>
+                <input type="text" class="form-control" value="${currentPlayerName}" readonly>
+            </div>
+            <div class="col-md-6">
+                <label for="lr_${i}">{{ translate('Court Preference') }}</label>
+                <select class="form-control" id="lr_${i}" name="lr_${i}" required>
+                    <option value="left" ${currentLR === 'left' ? 'selected' : ''}>{{ translate('Left') }}</option>
+                    <option value="right" ${currentLR === 'right' ? 'selected' : ''}>{{ translate('Right') }}</option>
+                </select>
+            </div>
+        `;
+        container.appendChild(assignmentRow);
+    }
+}
+
+// Initialize
+updatePairingDescription();
+updatePlayers();
+
+// Event listeners
+document.getElementById('pairing_type').addEventListener('change', updatePairingDescription);
+document.getElementById('player_count').addEventListener('change', updatePlayers);
+</script>
+{% endblock %}

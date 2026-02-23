@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ translate('Complete Event Creation') }}</h4>
+    </div>
+    <div class="card-body">
+        <!-- Progress bar -->
+        <div class="mb-4">
+            <div class="progress" style="height: 25px;">
+                <div class="progress-bar bg-primary" role="progressbar" style="width: 67%; font-size: 16px;" aria-valuenow="67" aria-valuemin="0" aria-valuemax="100">{{ translate('Step') }} 2/3</div>
+            </div>
+            <div class="d-flex justify-content-between mt-2">
+                <span class="text-muted">{{ translate('Basic Information') }}</span>
+                <span class="text-primary font-weight-bold">{{ translate('Courts & Game Settings') }}</span>
+                <span class="text-muted">{{ translate('Player Registration') }}</span>
+            </div>
+        </div>
+
+        <form action="{{ url_for('views.process_event_step2', event_id=event.ev_id) }}" method="post" id="completeEventForm">
+            
+            <button type="button" class="btn btn-sm btn-outline-info mb-3" id="toggleEventInfo">
+                <i class="icon-info"></i> {{ translate('Show/Hide Event Information') }}
+            </button>
+            
+            <div class="event-info-transparent collapse" id="eventInfoBox">
+                <div class="alert alert-info">
+                    <strong>{{ translate('Event Information') }}:</strong><br>
+                    {{ translate('Title') }}: {{ event.ev_title }}<br>
+                    {{ translate('Club') }}: {{ club_name }}<br>
+                    {{ translate('Type') }}: {{ event.ev_type }}<br>
+                    {{ translate('Max Players') }}: {{ event.ev_max_players }}<br>
+                    {{ translate('Date') }}: {{ event.ev_date.strftime('%Y-%m-%d') }}<br>
+                    {{ translate('Time') }}: {{ event.ev_start_time.strftime('%H:%M') }}<br>
+                    {{ translate('Location') }}: {{ event.ev_location }}
+                </div>
+            </div>
+
+            <!-- Court Names Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>{{ translate('Court Names') }}</h5>
+                    <p class="mb-0 text-muted">{{ translate('Based on') }} {{ event.ev_max_players }} {{ translate('players, you need') }} {{ courts_needed }} {{ translate('courts') }}</p>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="courtNamesContainer">
+                        {% for i in range(courts_needed) %}
+                        <div class="col-md-6 mb-3">
+                            <label for="court_name_{{ i }}" class="form-label">
+                                {{ translate('Court') }} {{ i + 1 }} {{ translate('Name') }} <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="court_name_{{ i }}" 
+                                   name="court_name_{{ i }}" 
+                                   placeholder="{{ translate('Enter court name') }}" 
+                                   value="Court {{ i + 1 }}"
+                                   required>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pairing Type Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>{{ translate('Pairing Settings') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="pairing_type">{{ translate('Pairing Type') }} <span class="text-danger">*</span></label>
+                        <select class="form-control" id="pairing_type" name="pairing_type" required>
+                            <option value="Random" selected>{{ translate('Random') }}</option>
+                            <option value="Manual">{{ translate('Manual') }}</option>
+                            <option value="L&R Random">{{ translate('L&R Random') }}</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            <strong>{{ translate('Random') }}:</strong> {{ translate('Players are paired completely randomly') }}<br>
+                            <strong>{{ translate('Manual') }}:</strong> {{ translate('Organizer manually assigns all pairs') }}<br>
+                            <strong>{{ translate('L&R Random') }}:</strong> {{ translate('Players choose left/right side, then random pairing within each side') }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation buttons -->
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('views.managementEvents') }}" class="btn btn-secondary">
+                    <i class="icon-arrow-left"></i> {{ translate('Cancel') }}
+                </a>
+                <button type="submit" class="btn btn-success">
+                    {{ translate('Next: Player Registration') }} <i class="icon-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle event info
+    document.getElementById('toggleEventInfo').addEventListener('click', function() {
+        const infoBox = document.getElementById('eventInfoBox');
+        infoBox.classList.toggle('show');
+    });
+    
+    // Form validation
+    document.getElementById('completeEventForm').addEventListener('submit', function(e) {
+        const courtInputs = document.querySelectorAll('[name^="court_name_"]');
+        let allFilled = true;
+        
+        courtInputs.forEach(input => {
+            if (!input.value.trim()) {
+                allFilled = false;
+                input.classList.add('is-invalid');
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!allFilled) {
+            e.preventDefault();
+            alert('{{ translate("Please fill in all court names") }}');
+            return false;
+        }
+        
+        const pairingType = document.getElementById('pairing_type').value;
+        if (!pairingType) {
+            e.preventDefault();
+            alert('{{ translate("Please select a pairing type") }}');
+            return false;
+        }
+    });
+});
+</script>
+
+<style>
+.event-info-transparent {
+    background: rgba(217, 237, 247, 0.3);
+    border: 1px solid #bee5eb;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.card-header h5 {
+    margin-bottom: 0.5rem;
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+</style>
+{% endblock %}

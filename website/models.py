@@ -48,6 +48,94 @@ class Messages(db.Model):
     sender = db.relationship('Users', foreign_keys=[msg_sender_id], backref=db.backref('sent_messages', lazy=True))
     receiver = db.relationship('Users', foreign_keys=[msg_receiver_id], backref=db.backref('received_messages', lazy=True))
 
+class EventType(db.Model):
+    __tablename__ = 'tb_event_types'
+    et_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    et_name = db.Column(db.String(50), nullable=False, unique=True)
+    et_description = db.Column(db.Text)
+    et_order = db.Column(db.Integer, default=1)
+    et_has_config = db.Column(db.Boolean, default=False)
+    et_is_active = db.Column(db.Boolean, default=True)
+    et_created_at = db.Column(db.DateTime(timezone=True), default=func.now())
+
+    def __repr__(self):
+        return f'<EventType {self.et_name}>'
+
+class MexicanConfig(db.Model):
+    __tablename__ = 'tb_mexican_config'
+    mc_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    mc_event_type_id = db.Column(db.Integer, db.ForeignKey('tb_event_types.et_id'), nullable=True)
+    mc_event_id = db.Column(db.Integer, db.ForeignKey('tb_event.ev_id'), nullable=True)
+    mc_name = db.Column(db.String(100), nullable=False)
+    mc_description = db.Column(db.Text)
+    mc_max_points = db.Column(db.Integer, nullable=False, default=16)
+    mc_allow_draws = db.Column(db.Boolean, nullable=False, default=True)
+    mc_overtime_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    mc_point_win = db.Column(db.Integer, nullable=False, default=3)
+    mc_point_draw = db.Column(db.Integer, nullable=False, default=1)
+    mc_point_loss = db.Column(db.Integer, nullable=False, default=0)
+    mc_is_default = db.Column(db.Boolean, default=False)
+    mc_is_active = db.Column(db.Boolean, default=True)
+    mc_created_at = db.Column(db.DateTime(timezone=True), default=func.now())
+
+    # Relationships
+    event_type = db.relationship('EventType', backref=db.backref('mexican_configs', lazy=True))
+    event = db.relationship('Event', backref=db.backref('mexican_config', uselist=False, lazy=True))
+
+    def validate_game_result(self, result_a, result_b):
+        """
+        Validate if game result is allowed according to Mexican configuration
+        Returns: (is_valid, error_message)
+        """
+        # Allow 0-0 (indicates unplayed game)
+        if result_a == 0 and result_b == 0:
+            return True, None
+            
+        total_points = result_a + result_b
+        max_points = self.mc_max_points
+        
+        # Check if draws are allowed
+        if result_a == result_b and not self.mc_allow_draws:
+            # Exception: tied games at max points can go +1 to break tie if overtime enabled
+            if self.mc_overtime_enabled and total_points == max_points + 1 and abs(result_a - result_b) == 1:
+                return True, None
+            return False, "Draws are not allowed for this event"
+        
+        # Check valid point totals
+        valid_totals = [max_points]
+        if self.mc_overtime_enabled:
+            # Allow overtime point for tie-breaking
+            valid_totals.append(max_points + 1)
+            
+        if total_points not in valid_totals:
+            return False, f"Invalid point total. Must sum to {max_points}" + (
+                f" or {max_points + 1} (overtime)" if self.mc_overtime_enabled else ""
+            )
+            
+        return True, None
+
+    def calculate_player_points(self, result_a, result_b, player_is_team_a):
+        """
+        Calculate points awarded to a player based on game result
+        """
+        if result_a == 0 and result_b == 0:
+            return 0  # Unplayed game
+        
+        if player_is_team_a:
+            player_result, opponent_result = result_a, result_b
+        else:
+            player_result, opponent_result = result_b, result_a
+            
+        if player_result > opponent_result:
+            return self.mc_point_win
+        elif player_result == opponent_result:
+            return self.mc_point_draw
+        else:
+            return self.mc_point_loss
+
+    def __repr__(self):
+        return f'<MexicanConfig {self.mc_name}>'
+
 class Club(db.Model):
     __tablename__ = 'tb_club'
     cl_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -261,8 +349,9 @@ class GameDayRegistration(db.Model):
 class Game(db.Model):
     __tablename__ = 'tb_game'
     gm_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    gm_idLeague = db.Column(db.Integer, db.ForeignKey('tb_league.lg_id'), nullable=False)
-    gm_idGameDay = db.Column(db.Integer, db.ForeignKey('tb_gameday.gd_id'), nullable=False)
+    gm_idLeague = db.Column(db.Integer, db.ForeignKey('tb_league.lg_id'), nullable=True)  # Nullable for event games
+    gm_idGameDay = db.Column(db.Integer, db.ForeignKey('tb_gameday.gd_id'), nullable=True)  # Nullable for event games
+    gm_idEvent = db.Column(db.Integer, db.ForeignKey('tb_event.ev_id'), nullable=True)  # For event games
     gm_date = db.Column(db.Date)
     gm_timeStart = db.Column(db.Time)
     gm_timeEnd = db.Column(db.Time)
@@ -271,19 +360,38 @@ class Game(db.Model):
     gm_idPlayer_A2 = db.Column(db.Integer, db.ForeignKey('tb_users.us_id'))
     gm_idPlayer_B1 = db.Column(db.Integer, db.ForeignKey('tb_users.us_id'))
     gm_idPlayer_B2 = db.Column(db.Integer, db.ForeignKey('tb_users.us_id'))
-    gm_result_A = db.Column(db.Integer)
-    gm_result_B = db.Column(db.Integer)
-    gm_teamA = db.Column(db.String(1))
-    gm_teamB = db.Column(db.String(1))
+    gm_result_A = db.Column(db.Integer, nullable=True)  # Null indicates game not played yet
+    gm_result_B = db.Column(db.Integer, nullable=True)  # Null indicates game not played yet
+    gm_teamA = db.Column(db.String(10))  # Increased length for event team names
+    gm_teamB = db.Column(db.String(10))  # Increased length for event team names
 
     # Relationships
     league = db.relationship('League', backref=db.backref('games', lazy=True))
     gameday = db.relationship('GameDay', backref=db.backref('games', lazy=True))
+    event = db.relationship('Event', backref=db.backref('games', lazy=True))
     court = db.relationship('Court', backref=db.backref('games', lazy=True))
     player_A1 = db.relationship('Users', foreign_keys=[gm_idPlayer_A1])
     player_A2 = db.relationship('Users', foreign_keys=[gm_idPlayer_A2])
     player_B1 = db.relationship('Users', foreign_keys=[gm_idPlayer_B1])
     player_B2 = db.relationship('Users', foreign_keys=[gm_idPlayer_B2])
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Validate that either league/gameday OR event is set, but not both
+        if self.gm_idLeague and self.gm_idEvent:
+            raise ValueError("Game cannot belong to both a league and an event")
+        if not self.gm_idLeague and not self.gm_idEvent:
+            raise ValueError("Game must belong to either a league or an event")
+
+    @property
+    def is_league_game(self):
+        """Check if this is a league game"""
+        return self.gm_idLeague is not None
+
+    @property
+    def is_event_game(self):
+        """Check if this is an event game"""
+        return self.gm_idEvent is not None
 
 class LeagueCourts(db.Model):
     __tablename__ = 'tb_league_courts'
@@ -392,3 +500,219 @@ class LeaguePlayers(db.Model):
     registered_by = db.relationship('Users', foreign_keys=[lp_registered_by_id], backref=db.backref('player_registrations_made', lazy=True))
 
     __table_args__ = (db.UniqueConstraint('lp_league_id', 'lp_player_id', name='uq_league_player'),)
+
+class Event(db.Model):
+    __tablename__ = 'tb_event'
+    ev_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    ev_club_id = db.Column(db.Integer, db.ForeignKey('tb_club.cl_id'), nullable=True)
+    ev_title = db.Column(db.String(100), nullable=False)
+    ev_location = db.Column(db.String(200))
+    ev_date = db.Column(db.Date, nullable=False)
+    ev_start_time = db.Column(db.Time, nullable=False)
+    ev_type_id = db.Column(db.Integer, db.ForeignKey('tb_event_types.et_id'), nullable=False)
+    ev_max_players = db.Column(db.Integer, nullable=False)
+    ev_registration_start = db.Column(db.DateTime(timezone=True))
+    ev_registration_end = db.Column(db.DateTime(timezone=True))
+    ev_nbr_substitutes = db.Column(db.Integer, default=0)
+    ev_pairing_type = db.Column(db.String(20), default='Random')  # Random, Manual, L&R Random
+    ev_status = db.Column(db.String(20), default='announced')  # announced, registration_started, registration_ended, event_started, event_ended
+    ev_winner1_id = db.Column(db.Integer, db.ForeignKey('tb_users.us_id', name='fk_event_winner1'), nullable=True)
+    ev_winner2_id = db.Column(db.Integer, db.ForeignKey('tb_users.us_id', name='fk_event_winner2'), nullable=True)
+    ev_created_by_id = db.Column(db.Integer, db.ForeignKey('tb_users.us_id', name='fk_event_created_by'), nullable=False)
+    ev_created_at = db.Column(db.DateTime(timezone=True), default=func.now())
+
+    # Relationships
+    club = db.relationship('Club', backref=db.backref('events', lazy=True))
+    event_type = db.relationship('EventType', backref=db.backref('events', lazy=True))
+    winner1 = db.relationship('Users', foreign_keys=[ev_winner1_id], backref=db.backref('event_wins_first', lazy=True))
+    winner2 = db.relationship('Users', foreign_keys=[ev_winner2_id], backref=db.backref('event_wins_second', lazy=True))
+    created_by = db.relationship('Users', foreign_keys=[ev_created_by_id], backref=db.backref('events_created', lazy=True))
+
+    @property
+    def current_player_count(self):
+        return EventRegistration.query.filter_by(er_event_id=self.ev_id, er_is_substitute=False).count()
+
+    @property
+    def current_substitute_count(self):
+        return EventRegistration.query.filter_by(er_event_id=self.ev_id, er_is_substitute=True).count()
+
+    @property
+    def event_datetime(self):
+        """Combine date and time into a single datetime object"""
+        from datetime import datetime, timezone
+        return datetime.combine(self.ev_date, self.ev_start_time).replace(tzinfo=timezone.utc)
+
+    @property
+    def registration_start_utc(self):
+        if self.ev_registration_start and self.ev_registration_start.tzinfo is None:
+            return self.ev_registration_start.replace(tzinfo=timezone.utc)
+        return self.ev_registration_start
+
+    @property
+    def registration_end_utc(self):
+        if self.ev_registration_end and self.ev_registration_end.tzinfo is None:
+            return self.ev_registration_end.replace(tzinfo=timezone.utc)
+        return self.ev_registration_end
+
+    def should_update_status(self):
+        now = datetime.now(timezone.utc)
+        event_datetime = datetime.combine(self.ev_date, self.ev_start_time).replace(tzinfo=timezone.utc)
+        
+        if self.ev_status == "announced":
+            if self.registration_start_utc and now >= self.registration_start_utc:
+                return True
+        elif self.ev_status == "registration_started":
+            if (self.registration_end_utc and now > self.registration_end_utc) or self.current_player_count >= self.ev_max_players:
+                return True
+        elif self.ev_status == "registration_ended":
+            if now >= event_datetime:
+                return True
+        elif self.ev_status == "event_started":
+            # Event ends after 4 hours by default (can be customized later)
+            if now >= event_datetime + timedelta(hours=4):
+                return True
+                
+        return False
+
+    def update_status(self):
+        if not self.should_update_status():
+            return
+
+        now = datetime.now(timezone.utc)
+        event_datetime = datetime.combine(self.ev_date, self.ev_start_time).replace(tzinfo=timezone.utc)
+        
+        if self.ev_status == "announced" and self.registration_start_utc and now >= self.registration_start_utc:
+            self.ev_status = "registration_started"
+        
+        elif self.ev_status == "registration_started":
+            if self.current_player_count >= self.ev_max_players:
+                self.ev_status = "registration_ended"
+            elif self.registration_end_utc and now > self.registration_end_utc:
+                self.ev_status = "registration_ended"
+        
+        elif self.ev_status == "registration_ended" and now >= event_datetime:
+            self.ev_status = "event_started"
+        
+        elif self.ev_status == "event_started" and now >= event_datetime + timedelta(hours=4):
+            self.ev_status = "event_ended"
+
+    def can_register(self):
+        """Check if users can still register for the event"""
+        return self.ev_status == "registration_started"
+
+    def is_registration_open(self):
+        """Check if registration is currently open for the event"""
+        return self.ev_status == "registration_started"
+
+    @property
+    def is_mexicano(self):
+        """Check if this is a Mexican format event"""
+        return self.event_type and self.event_type.et_name == 'Mexicano'
+    
+    @property
+    def ev_type(self):
+        """Backward compatibility property to get event type name"""
+        return self.event_type.et_name if self.event_type else None
+    
+    def validate_event_type(self):
+        """Validate event type exists and is active"""
+        # Query the event type directly instead of relying on the relationship
+        # which might not be loaded when the object is first created
+        if self.ev_type_id:
+            event_type = EventType.query.filter_by(et_id=self.ev_type_id, et_is_active=True).first()
+            if not event_type:
+                raise ValueError("Invalid or inactive event type")
+        else:
+            raise ValueError("Invalid or inactive event type")
+
+    def validate_player_limits(self):
+        """Validate player and substitute limits"""
+        if self.ev_max_players < 4:
+            raise ValueError("Event must allow at least 4 players")
+        if self.ev_nbr_substitutes < 0:
+            raise ValueError("Number of substitutes cannot be negative")
+        if self.ev_nbr_substitutes > self.ev_max_players:
+            raise ValueError("Number of substitutes cannot exceed max players")
+
+    def __init__(self, *args, **kwargs):
+        # Set default values
+        if 'ev_nbr_substitutes' not in kwargs or kwargs['ev_nbr_substitutes'] is None:
+            kwargs['ev_nbr_substitutes'] = 0
+        if 'ev_status' not in kwargs or kwargs['ev_status'] is None:
+            kwargs['ev_status'] = 'announced'
+            
+        super().__init__(*args, **kwargs)
+        
+        # Validate after initialization
+        if self.ev_type_id:
+            self.validate_event_type()
+        if self.ev_max_players:
+            self.validate_player_limits()
+
+class EventRegistration(db.Model):
+    __tablename__ = 'tb_event_registration'
+    er_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    er_event_id = db.Column(db.Integer, db.ForeignKey('tb_event.ev_id'), nullable=False)
+    er_player_id = db.Column(db.Integer, db.ForeignKey('tb_users.us_id'), nullable=False)
+    er_registered_by_id = db.Column(db.Integer, db.ForeignKey('tb_users.us_id'), nullable=False)
+    er_registered_at = db.Column(db.DateTime(timezone=True), default=func.now())
+    er_is_substitute = db.Column(db.Boolean, default=False)
+
+    # Relationships
+    event = db.relationship('Event', backref=db.backref('registrations', lazy=True))
+    player = db.relationship('Users', foreign_keys=[er_player_id], backref=db.backref('event_registrations', lazy=True))
+    registered_by = db.relationship('Users', foreign_keys=[er_registered_by_id], backref=db.backref('event_registrations_made', lazy=True))
+
+    __table_args__ = (db.UniqueConstraint('er_event_id', 'er_player_id', name='uq_event_player_registration'),)
+
+
+
+class EventClassification(db.Model):
+    __tablename__ = 'tb_event_classification'
+    ec_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    ec_event_id = db.Column(db.Integer, db.ForeignKey('tb_event.ev_id'), nullable=False)
+    ec_player_id = db.Column(db.Integer, db.ForeignKey('tb_users.us_id'), nullable=False)
+    ec_points = db.Column(db.Integer, default=0)
+    ec_wins = db.Column(db.Integer, default=0)
+    ec_losses = db.Column(db.Integer, default=0)
+    ec_games_favor = db.Column(db.Integer, default=0)
+    ec_games_against = db.Column(db.Integer, default=0)
+    ec_games_diff = db.Column(db.Integer, default=0)
+    ec_ranking = db.Column(db.Float, default=0.0)
+
+    # Relationships
+    event = db.relationship('Event', backref=db.backref('classifications', lazy=True))
+    player = db.relationship('Users', backref=db.backref('event_classifications', lazy=True))
+
+    __table_args__ = (db.UniqueConstraint('ec_event_id', 'ec_player_id', name='uq_event_player_classification'),)
+
+class EventCourts(db.Model):
+    __tablename__ = 'tb_event_courts'
+    evc_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    evc_event_id = db.Column(db.Integer, db.ForeignKey('tb_event.ev_id'), nullable=False)
+    evc_court_id = db.Column(db.Integer, db.ForeignKey('tb_court.ct_id'), nullable=False)
+
+    # Relationships
+    event = db.relationship('Event', backref=db.backref('event_courts', lazy=True))
+    court = db.relationship('Court', backref=db.backref('event_courts', lazy=True))
+
+    __table_args__ = (db.UniqueConstraint('evc_event_id', 'evc_court_id', name='uq_event_court'),)
+
+class EventPlayerNames(db.Model):
+    __tablename__ = 'tb_event_player_names'
+    epn_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    epn_event_id = db.Column(db.Integer, db.ForeignKey('tb_event.ev_id'), nullable=False)
+    epn_player_name = db.Column(db.String(100), nullable=False)
+    epn_position_type = db.Column(db.String(20), nullable=False)  # 'random', 'team', 'left', 'right'
+    epn_position_index = db.Column(db.Integer, nullable=False)  # Order/index within the position type
+    epn_team_identifier = db.Column(db.String(10), nullable=True)  # For manual pairing: 'A', 'B', 'C', etc.
+    epn_team_position = db.Column(db.Integer, nullable=True)  # For manual pairing: 1 or 2 (first or second player in team)
+    epn_created_by_id = db.Column(db.Integer, db.ForeignKey('tb_users.us_id'), nullable=False)
+    epn_created_at = db.Column(db.DateTime(timezone=True), default=func.now())
+
+    # Relationships
+    event = db.relationship('Event', backref=db.backref('player_names', lazy=True))
+    created_by = db.relationship('Users', backref=db.backref('event_player_names_created', lazy=True))
+
+    def __repr__(self):
+        return f'<EventPlayerNames {self.epn_player_name} for event {self.epn_event_id}>'

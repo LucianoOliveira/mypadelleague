@@ -7,22 +7,49 @@
     <h5 class="card-title mb-3">{{ translate('Leagues') }}</h5>    
 </div>
 <!-- end testing -->
-
 <div class="row justify-content-center">
-    {% for league in result %}
-        <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
-            <a href="{{ url_for('views.detail_league', league_id=league[0].lg_id) }}" class="card h-100">
-                <div class="card-img-top position-relative">
-                    <img class="img-fluid w-100" src="{{ url_for('views.display_league_main_image', leagueID=league[0].lg_id ) }}" alt="League image">
-                    <img src="{{ url_for('views.display_club_main_image', clubID=league[0].lg_club_id ) }}" alt="League logo" class="position-absolute" style="bottom: -30px; left: 50%; transform: translateX(-50%); width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff;">
+    {% if result %}
+        {% for league in result %}
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
+                <a href="{{ url_for('views.detail_league', league_id=league[0].lg_id) }}" class="card h-100">
+                    <div class="card-img-top position-relative">
+                        <img class="img-fluid w-100" src="{{ url_for('views.display_league_main_image', leagueID=league[0].lg_id ) }}" alt="League image">
+                        <img src="{{ url_for('views.display_club_main_image', clubID=league[0].lg_club_id ) }}" alt="League logo" class="position-absolute" style="bottom: -30px; left: 50%; transform: translateX(-50%); width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff;">
+                    </div>
+                    <div class="card-body pt-5 text-center">
+                        <h5 class="card-title">{{ league[0].lg_name }}</h5>
+                        <p class="card-text text-muted">{{ league[1] }}</p>
+                    </div>
+                </a>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="zmdi zmdi-format-list-bulleted zmdi-hc-5x text-muted mb-4"></i>
+                    <h4 class="text-muted">{{ translate('No leagues available') }}</h4>
+                    <p class="text-muted">{{ translate('Check back later for upcoming padel leagues and tournaments') }}</p>
+                    {% if current_user.is_authenticated and (current_user.us_is_admin or current_user.us_is_superuser) %}
+                    <a href="/create_league" class="btn btn-primary mt-3">
+                        <i class="zmdi zmdi-plus"></i> {{ translate('Create First League') }}
+                    </a>
+                    {% endif %}
                 </div>
-                <div class="card-body pt-5 text-center">
-                    <h5 class="card-title">{{ league[0].lg_name }}</h5>
-                    <p class="card-text text-muted">{{ league[1] }}</p>
-                </div>
-            </a>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="zmdi zmdi-format-list-bulleted zmdi-hc-5x text-muted mb-4"></i>
+                <h4 class="text-muted">{{ translate('No leagues available') }}</h4>
+                <p class="text-muted">{{ translate('Check back later for upcoming padel leagues and tournaments') }}</p>
+                {% if current_user.is_authenticated and (current_user.us_is_admin or current_user.us_is_superuser) %}
+                <a href="/create_league" class="btn btn-primary mt-3">
+                    <i class="zmdi zmdi-plus"></i> {{ translate('Create First League') }}
+                </a>
+                {% endif %}
+            </div>
         </div>
-    {% endfor %}
+    {% endif %}
 </div>
 
 </div>

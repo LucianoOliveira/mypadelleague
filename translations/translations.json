@@ -123,9 +123,9 @@
     "en": "Add to Cart",
     "pt": "Adicionar ao Carrinho"
   },
-  "Copyright © 2025 INVI-X CONSULTING": {
-    "en": "Copyright © 2025 INVI-X CONSULTING",
-    "pt": "Direitos de Autor © 2025 INVI-X CONSULTING"
+  "Copyright © 2026 INVI-X CONSULTING": {
+    "en": "Copyright © 2026 INVI-X CONSULTING",
+    "pt": "Direitos de Autor © 2026 INVI-X CONSULTING"
   },
   "Manage Requests": {
     "en": "Manage Requests",
@@ -870,5 +870,369 @@
   "Become a Manager": {
     "en": "Become a Manager",
     "pt": "Tornar-se um Gestor"
+  },
+  "Create Event": {
+    "en": "Create Event",
+    "pt": "Criar Evento"
+  },
+  "Event Title": {
+    "en": "Event Title",
+    "pt": "Título do Evento"
+  },
+  "Event Date": {
+    "en": "Event Date",
+    "pt": "Data do Evento"
+  },
+  "Event Time": {
+    "en": "Event Time",
+    "pt": "Hora do Evento"
+  },
+  "Event Type": {
+    "en": "Event Type",
+    "pt": "Tipo de Evento"
+  },
+  "Maximum Players": {
+    "en": "Maximum Players",
+    "pt": "Máximo de Jogadores"
+  },
+  "Registration Opens": {
+    "en": "Registration Opens",
+    "pt": "Inscrições Abrem"
+  },
+  "Registration Closes": {
+    "en": "Registration Closes",
+    "pt": "Inscrições Fecham"
+  },
+  "Registration Period": {
+    "en": "Registration Period",
+    "pt": "Período de Inscrições"
+  },
+  "Optional": {
+    "en": "Optional",
+    "pt": "Opcional"
+  },
+  "Select event type": {
+    "en": "Select event type",
+    "pt": "Selecione o tipo de evento"
+  },
+  "Non-Stop": {
+    "en": "Non-Stop",
+    "pt": "Non-Stop"
+  },
+  "Americano": {
+    "en": "Americano",
+    "pt": "Americano"
+  },
+  "Mexicano": {
+    "en": "Mexicano",
+    "pt": "Mexicano"
+  },
+  "Enter event title": {
+    "en": "Enter event title",
+    "pt": "Digite o título do evento"
+  },
+  "Event location or address": {
+    "en": "Event location or address",
+    "pt": "Local ou endereço do evento"
+  },
+  "Must be a multiple of 4": {
+    "en": "Must be a multiple of 4",
+    "pt": "Deve ser múltiplo de 4"
+  },
+  "Maximum players must be a multiple of 4": {
+    "en": "Maximum players must be a multiple of 4",
+    "pt": "O máximo de jogadores deve ser múltiplo de 4"
+  },
+  "Registration end must be after registration start": {
+    "en": "Registration end must be after registration start",
+    "pt": "O fim das inscrições deve ser após o início"
+  },
+  "Event date and time must be in the future": {
+    "en": "Event date and time must be in the future",
+    "pt": "Data e hora do evento devem ser no futuro"
+  },
+  "No events found": {
+    "en": "No events found",
+    "pt": "Nenhum evento encontrado"
+  },
+  "Create your first event to get started": {
+    "en": "Create your first event to get started",
+    "pt": "Crie seu primeiro evento para começar"
+  },
+  "Draft": {
+    "en": "Draft",
+    "pt": "Rascunho"
+  },
+  "Published": {
+    "en": "Published",
+    "pt": "Publicado"
+  },
+  "Registration Open": {
+    "en": "Registration Open",
+    "pt": "Inscrições Abertas"
+  },
+  "Registration Closed": {
+    "en": "Registration Closed",
+    "pt": "Inscrições Fechadas"
+  },
+  "In Progress": {
+    "en": "In Progress",
+    "pt": "Em Andamento"
+  },
+  "Completed": {
+    "en": "Completed",
+    "pt": "Concluído"
+  },
+  "Cancelled": {
+    "en": "Cancelled",
+    "pt": "Cancelado"
+  },
+  "Edit Event": {
+    "en": "Edit Event",
+    "pt": "Editar Evento"
+  },
+  "Register for Event": {
+    "en": "Register for Event",
+    "pt": "Inscrever-se no Evento"
+  },
+  "Register as Substitute": {
+    "en": "Register as Substitute",
+    "pt": "Inscrever-se como Suplente"
+  },
+  "Registered": {
+    "en": "Registered",
+    "pt": "Inscrito"
+  },
+  "Registered as Substitute": {
+    "en": "Registered as Substitute",
+    "pt": "Inscrito como Suplente"
+  },
+  "Unregister": {
+    "en": "Unregister",
+    "pt": "Cancelar Inscrição"
+  },
+  "Registration not open": {
+    "en": "Registration not open",
+    "pt": "Inscrições não abertas"
+  },
+  "substitutes": {
+    "en": "substitutes",
+    "pt": "suplentes"
+  },
+  "Substitutes": {
+    "en": "Substitutes",
+    "pt": "Suplentes"
+  },
+  "Registered Players": {
+    "en": "Registered Players",
+    "pt": "Jogadores Inscritos"
+  },
+  "Registration Date": {
+    "en": "Registration Date",
+    "pt": "Data de Inscrição"
+  },
+  "No players registered yet": {
+    "en": "No players registered yet",
+    "pt": "Nenhum jogador inscrito ainda"
+  },
+  "No substitutes": {
+    "en": "No substitutes",
+    "pt": "Nenhum suplente"
+  },
+  "Event Matches": {
+    "en": "Event Matches",
+    "pt": "Jogos do Evento"
+  },
+  "Final Rankings": {
+    "en": "Final Rankings",
+    "pt": "Classificação Final"
+  },
+  "Position": {
+    "en": "Position",
+    "pt": "Posição"
+  },
+  "Update Event": {
+    "en": "Update Event",
+    "pt": "Atualizar Evento"
+  },
+  "Event Status": {
+    "en": "Event Status",
+    "pt": "Estado do Evento"
+  },
+  "Are you sure you want to unregister from this event?": {
+    "en": "Are you sure you want to unregister from this event?",
+    "pt": "Tem certeza que deseja cancelar a inscrição neste evento?"
+  },
+  "Please fill in all required fields!": {
+    "en": "Please fill in all required fields!",
+    "pt": "Por favor preencha todos os campos obrigatórios!"
+  },
+  "You are not authorized to create events for this club!": {
+    "en": "You are not authorized to create events for this club!",
+    "pt": "Não tem autorização para criar eventos neste clube!"
+  },
+  "Event created successfully!": {
+    "en": "Event created successfully!",
+    "pt": "Evento criado com sucesso!"
+  },
+  "Error creating event!": {
+    "en": "Error creating event!",
+    "pt": "Erro ao criar evento!"
+  },
+  "Invalid date/time format!": {
+    "en": "Invalid date/time format!",
+    "pt": "Formato de data/hora inválido!"
+  },
+  "Registration for this event is not currently open!": {
+    "en": "Registration for this event is not currently open!",
+    "pt": "As inscrições para este evento não estão abertas!"
+  },
+  "You are already registered for this event!": {
+    "en": "You are already registered for this event!",
+    "pt": "Já está inscrito neste evento!"
+  },
+  "You have been registered as a substitute!": {
+    "en": "You have been registered as a substitute!",
+    "pt": "Foi inscrito como suplente!"
+  },
+  "You have been registered for the event!": {
+    "en": "You have been registered for the event!",
+    "pt": "Foi inscrito no evento!"
+  },
+  "Error registering for event!": {
+    "en": "Error registering for event!",
+    "pt": "Erro ao inscrever-se no evento!"
+  },
+  "You are not registered for this event!": {
+    "en": "You are not registered for this event!",
+    "pt": "Não está inscrito neste evento!"
+  },
+  "Cannot unregister - event starts soon!": {
+    "en": "Cannot unregister - event starts soon!",
+    "pt": "Não é possível cancelar - evento começa em breve!"
+  },
+  "You have been unregistered. A substitute has been promoted!": {
+    "en": "You have been unregistered. A substitute has been promoted!",
+    "pt": "Inscrição cancelada. Um suplente foi promovido!"
+  },
+  "You have been unregistered from the event!": {
+    "en": "You have been unregistered from the event!",
+    "pt": "Inscrição cancelada do evento!"
+  },
+  "Error unregistering from event!": {
+    "en": "Error unregistering from event!",
+    "pt": "Erro ao cancelar inscrição do evento!"
+  },
+  "You are not authorized to edit this event!": {
+    "en": "You are not authorized to edit this event!",
+    "pt": "Não tem autorização para editar este evento!"
+  },
+  "Event updated successfully!": {
+    "en": "Event updated successfully!",
+    "pt": "Evento atualizado com sucesso!"
+  },
+  "Error updating event!": {
+    "en": "Error updating event!",
+    "pt": "Erro ao atualizar evento!"
+  },
+  "Announced": {
+    "en": "Announced",
+    "pt": "Anunciado"
+  },
+  "Danger Zone": {
+    "en": "Danger Zone",
+    "pt": "Zona de Perigo"
+  },
+  "Delete League": {
+    "en": "Delete League",
+    "pt": "Excluir Liga"
+  },
+  "Delete Event": {
+    "en": "Delete Event",
+    "pt": "Excluir Evento"
+  },
+  "Hide League": {
+    "en": "Hide League",
+    "pt": "Ocultar Liga"
+  },
+  "Hide Event": {
+    "en": "Hide Event",
+    "pt": "Ocultar Evento"
+  },
+  "Permanently delete this league. Only possible if no players are registered and no games have been played.": {
+    "en": "Permanently delete this league. Only possible if no players are registered and no games have been played.",
+    "pt": "Excluir permanentemente esta liga. Só é possível se nenhum jogador estiver registrado e nenhum jogo tiver sido jogado."
+  },
+  "Permanently delete this event. Only possible if no players are registered and no games have been played.": {
+    "en": "Permanently delete this event. Only possible if no players are registered and no games have been played.",
+    "pt": "Excluir permanentemente este evento. Só é possível se nenhum jogador estiver registrado e nenhum jogo tiver sido jogado."
+  },
+  "Hide this league from players (marks as canceled). Can be undone by changing status back.": {
+    "en": "Hide this league from players (marks as canceled). Can be undone by changing status back.",
+    "pt": "Ocultar esta liga dos jogadores (marca como cancelada). Pode ser desfeito alterando o status de volta."
+  },
+  "Hide this event from players (marks as canceled). Can be undone by changing status back.": {
+    "en": "Hide this event from players (marks as canceled). Can be undone by changing status back.",
+    "pt": "Ocultar este evento dos jogadores (marca como cancelado). Pode ser desfeito alterando o status de volta."
+  },
+  "Are you sure you want to permanently delete this league? This action cannot be undone!": {
+    "en": "Are you sure you want to permanently delete this league? This action cannot be undone!",
+    "pt": "Tem certeza que deseja excluir permanentemente esta liga? Esta ação não pode ser desfeita!"
+  },
+  "Are you sure you want to permanently delete this event? This action cannot be undone!": {
+    "en": "Are you sure you want to permanently delete this event? This action cannot be undone!",
+    "pt": "Tem certeza que deseja excluir permanentemente este evento? Esta ação não pode ser desfeita!"
+  },
+  "Are you sure you want to hide this league? Players will no longer see it.": {
+    "en": "Are you sure you want to hide this league? Players will no longer see it.",
+    "pt": "Tem certeza que deseja ocultar esta liga? Os jogadores não a verão mais."
+  },
+  "Are you sure you want to hide this event? Players will no longer see it.": {
+    "en": "Are you sure you want to hide this event? Players will no longer see it.",
+    "pt": "Tem certeza que deseja ocultar este evento? Os jogadores não o verão mais."
+  },
+  "You are not authorized to delete this league!": {
+    "en": "You are not authorized to delete this league!",
+    "pt": "Não tem autorização para excluir esta liga!"
+  },
+  "You are not authorized to delete this event!": {
+    "en": "You are not authorized to delete this event!",
+    "pt": "Não tem autorização para excluir este evento!"
+  },
+  "You are not authorized to modify this league!": {
+    "en": "You are not authorized to modify this league!",
+    "pt": "Não tem autorização para modificar esta liga!"
+  },
+  "League deleted successfully!": {
+    "en": "League deleted successfully!",
+    "pt": "Liga excluída com sucesso!"
+  },
+  "Event deleted successfully!": {
+    "en": "Event deleted successfully!",
+    "pt": "Evento excluído com sucesso!"
+  },
+  "Error deleting league!": {
+    "en": "Error deleting league!",
+    "pt": "Erro ao excluir liga!"
+  },
+  "Error deleting event!": {
+    "en": "Error deleting event!",
+    "pt": "Erro ao excluir evento!"
+  },
+  "League has been hidden (marked as canceled)!": {
+    "en": "League has been hidden (marked as canceled)!",
+    "pt": "Liga foi ocultada (marcada como cancelada)!"
+  },
+  "Event has been hidden (marked as canceled)!": {
+    "en": "Event has been hidden (marked as canceled)!",
+    "pt": "Evento foi ocultado (marcado como cancelado)!"
+  },
+  "Error hiding league!": {
+    "en": "Error hiding league!",
+    "pt": "Erro ao ocultar liga!"
+  },
+  "Error hiding event!": {
+    "en": "Error hiding event!",
+    "pt": "Erro ao ocultar evento!"
   }
 }

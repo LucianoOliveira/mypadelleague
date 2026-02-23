@@ -72,11 +72,21 @@
             <i class="zmdi zmdi-grid"></i> <span>{{ translate('Leagues') }}</span>
           </a>
         </li>
+        <li>
+            <a href="/Events">
+              <i class="zmdi zmdi-calendar"></i> <span>{{ translate('Events') }}</span>
+            </a>
+          </li>
         {% if user.is_authenticated and (user.us_is_manager==1 or user.us_is_admin==1 or user.us_is_superuser==1)%} 
         <li class="sidebar-header">{{ translate('Management') }}</li>
           <li>
             <a href="/managementLeagues">
               <i class="zmdi zmdi-grid"></i> <span>{{ translate('Manage Leagues') }}</span>
+            </a>
+          </li>
+          <li>
+            <a href="/managementEvents">
+              <i class="zmdi zmdi-calendar"></i> <span>{{ translate('Manage Events') }}</span>
             </a>
           </li>
           <li>
@@ -246,7 +256,7 @@
       <footer class="footer">
         <div>
           <div class="text-center">
-            {{ translate('Copyright © 2025 INVI-X CONSULTING') }}
+            {{ translate('Copyright © 2026 INVI-X CONSULTING') }}
           </div>
         </div>
       </footer>

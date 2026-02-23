@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_, func, cast, String, text, desc, case, literal_column
 from flask import render_template, Blueprint
 from website import db
-from website.models import League, Club, Users, GameDay, GameDayPlayer, Game, LeagueClassification, GameDayClassification, ELOranking, ELOrankingHist, LeagueCourts
+from website.models import League, Club, Users, GameDay, GameDayPlayer, Game, LeagueClassification, GameDayClassification, ELOranking, ELOrankingHist, LeagueCourts, Event, EventClassification, EventRegistration
 from PIL import Image
 from datetime import datetime, date, timedelta
 
@@ -396,6 +396,235 @@ def func_calculateGameDayClassification(gameDayID):
     # Commit the changes
     db.session.commit()
     #print("Ended Finally")
+
+def func_calculateEventClassification(eventID):
+    """
+    Calculate classification for an event similar to GameDay classification.
+    Uses alphabetical order instead of player ranking and age for tie-breaking.
+    """
+    # Get the event
+    event = Event.query.filter_by(ev_id=eventID).first()
+    if not event:
+        print(f"Event with ID {eventID} not found")
+        return
+    
+    try:
+        # Clear existing event classification
+        EventClassification.query.filter_by(ec_event_id=eventID).delete()
+        db.session.commit()
+
+        # Get all players who participated in the event (from registrations or games)
+        players_from_registrations = db.session.query(EventRegistration.er_player_id).filter(
+            EventRegistration.er_event_id == eventID,
+            EventRegistration.er_is_substitute == False
+        ).subquery()
+        
+        players_from_games = db.session.query(
+            Game.gm_idPlayer_A1.label('player_id')
+        ).filter(Game.gm_idEvent == eventID, Game.gm_idPlayer_A1.isnot(None)).union(
+            db.session.query(Game.gm_idPlayer_A2.label('player_id'))
+            .filter(Game.gm_idEvent == eventID, Game.gm_idPlayer_A2.isnot(None))
+        ).union(
+            db.session.query(Game.gm_idPlayer_B1.label('player_id'))
+            .filter(Game.gm_idEvent == eventID, Game.gm_idPlayer_B1.isnot(None))
+        ).union(
+            db.session.query(Game.gm_idPlayer_B2.label('player_id'))
+            .filter(Game.gm_idEvent == eventID, Game.gm_idPlayer_B2.isnot(None))
+        ).subquery()
+
+        # Get all unique player IDs from both sources
+        all_player_ids = db.session.query(players_from_registrations.c.er_player_id.label('player_id')).union(
+            db.session.query(players_from_games.c.player_id)
+        ).distinct()
+        
+        players_query = Users.query.filter(Users.us_id.in_(all_player_ids))
+        players_data = players_query.all()
+
+        for player in players_data:
+            id_player = player.us_id
+            player_name = player.us_name
+
+            # Check if player has any games in this event
+            games_info_query = Game.query.filter(
+                Game.gm_idEvent == eventID, 
+                ((Game.gm_idPlayer_A1 == id_player) | (Game.gm_idPlayer_A2 == id_player) | 
+                 (Game.gm_idPlayer_B1 == id_player) | (Game.gm_idPlayer_B2 == id_player)),
+                ((Game.gm_result_A.isnot(None)) | (Game.gm_result_B.isnot(None)))
+            )
+            games_info = games_info_query.first()
+
+            if games_info:
+                # Player has played games - calculate statistics
+                subquery = (
+                    db.session.query(
+                        case(
+                            (and_(Game.gm_idPlayer_A1 == id_player, Game.gm_result_A > Game.gm_result_B), literal_column("3")),
+                            (and_(Game.gm_idPlayer_A2 == id_player, Game.gm_result_A > Game.gm_result_B), literal_column("3")),
+                            (and_(Game.gm_idPlayer_A1 == id_player, Game.gm_result_A == Game.gm_result_B), literal_column("1")),
+                            (and_(Game.gm_idPlayer_A2 == id_player, Game.gm_result_A == Game.gm_result_B), literal_column("1")),
+                            (and_(Game.gm_idPlayer_A1 == id_player, Game.gm_result_A < Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_A2 == id_player, Game.gm_result_A < Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_B1 == id_player, Game.gm_result_A > Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_B2 == id_player, Game.gm_result_A > Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_B1 == id_player, Game.gm_result_A == Game.gm_result_B), literal_column("1")),
+                            (and_(Game.gm_idPlayer_B2 == id_player, Game.gm_result_A == Game.gm_result_B), literal_column("1")),
+                            (and_(Game.gm_idPlayer_B1 == id_player, Game.gm_result_A < Game.gm_result_B), literal_column("3")),
+                            (and_(Game.gm_idPlayer_B2 == id_player, Game.gm_result_A < Game.gm_result_B), literal_column("3")),
+                            else_=None
+                        ).label("POINTS"),
+                        case(
+                            (and_(Game.gm_idPlayer_A1 == id_player), Game.gm_result_A),
+                            (and_(Game.gm_idPlayer_A2 == id_player), Game.gm_result_A),
+                            (and_(Game.gm_idPlayer_B1 == id_player), Game.gm_result_B),
+                            (and_(Game.gm_idPlayer_B2 == id_player), Game.gm_result_B),
+                            else_=None
+                        ).label("GAMESFAVOR"),
+                        case(
+                            (and_(Game.gm_idPlayer_A1 == id_player), Game.gm_result_B),
+                            (and_(Game.gm_idPlayer_A2 == id_player), Game.gm_result_B),
+                            (and_(Game.gm_idPlayer_B1 == id_player), Game.gm_result_A),
+                            (and_(Game.gm_idPlayer_B2 == id_player), Game.gm_result_A),
+                            else_=None
+                        ).label("GAMESAGAINST"),
+                        literal_column("1").label("GAMES"),
+                        case(
+                            (and_(Game.gm_idPlayer_A1 == id_player, Game.gm_result_A > Game.gm_result_B), literal_column("1")),
+                            (and_(Game.gm_idPlayer_A2 == id_player, Game.gm_result_A > Game.gm_result_B), literal_column("1")),
+                            (and_(Game.gm_idPlayer_A1 == id_player, Game.gm_result_A == Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_A2 == id_player, Game.gm_result_A == Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_A1 == id_player, Game.gm_result_A < Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_A2 == id_player, Game.gm_result_A < Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_B1 == id_player, Game.gm_result_A > Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_B2 == id_player, Game.gm_result_A > Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_B1 == id_player, Game.gm_result_A == Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_B2 == id_player, Game.gm_result_A == Game.gm_result_B), literal_column("0")),
+                            (and_(Game.gm_idPlayer_B1 == id_player, Game.gm_result_A < Game.gm_result_B), literal_column("1")),
+                            (and_(Game.gm_idPlayer_B2 == id_player, Game.gm_result_A < Game.gm_result_B), literal_column("1")),
+                            else_=None
+                        ).label("WINS"),
+                        case(
+                            (and_(Game.gm_idPlayer_A1 == id_player, Game.gm_result_A < Game.gm_result_B), literal_column("1")),
+                            (and_(Game.gm_idPlayer_A2 == id_player, Game.gm_result_A < Game.gm_result_B), literal_column("1")),
+                            (and_(Game.gm_idPlayer_B1 == id_player, Game.gm_result_A > Game.gm_result_B), literal_column("1")),
+                            (and_(Game.gm_idPlayer_B2 == id_player, Game.gm_result_A > Game.gm_result_B), literal_column("1")),
+                            else_=literal_column("0")
+                        ).label("LOSSES")
+                    )
+                    .filter(
+                        Game.gm_idEvent == eventID, 
+                        (Game.gm_idPlayer_A1 == id_player) | (Game.gm_idPlayer_A2 == id_player) | 
+                        (Game.gm_idPlayer_B1 == id_player) | (Game.gm_idPlayer_B2 == id_player)
+                    )
+                    .subquery("TOTALS")
+                )
+                
+                # Create alphabetical sort value for tie-breaking (lower = better alphabetically)
+                alphabetical_sort = ord(player_name[0].upper()) if player_name else 999
+                
+                query = (
+                    db.session.query(
+                        literal_column(str(eventID)).label("EVENTID"),
+                        literal_column(str(id_player)).label("PLAYERID"),
+                        literal_column(f"'{player_name}'").label("PLAYERNAME"), 
+                        func.sum(subquery.c.POINTS).label("POINTS"),
+                        func.sum(subquery.c.WINS).label("WINS"),
+                        func.sum(subquery.c.LOSSES).label("LOSSES"),
+                        func.sum(subquery.c.GAMESFAVOR).label("GAMESFAVOR"),
+                        func.sum(subquery.c.GAMESAGAINST).label("GAMESAGAINST"),
+                        (func.sum(subquery.c.GAMESFAVOR) - func.sum(subquery.c.GAMESAGAINST)).label("GAMESDIFFERENCE"),
+                        (
+                            (func.sum(subquery.c.POINTS) * 100000) +
+                            (func.sum(subquery.c.WINS) * 10000) +
+                            (func.sum(subquery.c.GAMES) * 1000) +
+                            ((func.sum(subquery.c.GAMESFAVOR) - func.sum(subquery.c.GAMESAGAINST)) * 100) +
+                            # Use negative alphabetical sort so A comes before Z in ranking
+                            (-alphabetical_sort)
+                        ).label("RANKING")
+                    )
+                    .select_from(subquery)
+                    .group_by("EVENTID", "PLAYERID", "PLAYERNAME")
+                )
+                
+                result = query.all()
+
+                for r2 in result:
+                    # Write Classification
+                    classification = EventClassification(
+                        ec_event_id=eventID,
+                        ec_player_id=r2.PLAYERID,
+                        ec_points=r2.POINTS or 0,
+                        ec_wins=r2.WINS or 0,
+                        ec_losses=r2.LOSSES or 0,
+                        ec_games_favor=r2.GAMESFAVOR or 0,
+                        ec_games_against=r2.GAMESAGAINST or 0,
+                        ec_games_diff=r2.GAMESDIFFERENCE or 0,
+                        ec_ranking=r2.RANKING or 0,
+                    )
+                    db.session.add(classification)
+
+            else:
+                # Player registered but didn't play any games
+                alphabetical_sort = ord(player_name[0].upper()) if player_name else 999
+                classification = EventClassification(
+                    ec_event_id=eventID,
+                    ec_player_id=id_player,
+                    ec_points=0,
+                    ec_wins=0,
+                    ec_losses=0,
+                    ec_games_favor=0,
+                    ec_games_against=0,
+                    ec_games_diff=0,
+                    ec_ranking=-alphabetical_sort,  # Negative for proper sorting
+                )
+                db.session.add(classification)
+
+        # Commit all classifications
+        db.session.commit()
+
+        # Update event winners
+        winners_query = (
+            db.session.query(
+                EventClassification.ec_player_id.label('idPlayer'),
+                Users.us_name.label('namePlayer')
+            )
+            .join(Users, EventClassification.ec_player_id == Users.us_id)
+            .filter(EventClassification.ec_event_id == eventID)
+            .order_by(EventClassification.ec_ranking.desc())
+            .limit(2)
+            .subquery()
+        )
+
+        # Fetch the first winner
+        winner1 = (
+            db.session.query(winners_query.c.idPlayer, winners_query.c.namePlayer)
+            .order_by(winners_query.c.idPlayer.asc())
+            .first()
+        )
+
+        # Fetch the second winner (if exists)
+        winner2 = (
+            db.session.query(winners_query.c.idPlayer, winners_query.c.namePlayer)
+            .order_by(winners_query.c.idPlayer.desc())
+            .first()
+        )
+
+        # Update event winners
+        update_data = {}
+        if winner1:
+            update_data[Event.ev_winner1_id] = winner1.idPlayer
+        if winner2 and winner2.idPlayer != (winner1.idPlayer if winner1 else None):
+            update_data[Event.ev_winner2_id] = winner2.idPlayer
+
+        if update_data:
+            db.session.query(Event).filter(Event.ev_id == eventID).update(update_data)
+
+        # Final commit
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error calculating event classification: {e}")
+        # Handle the error, maybe log it or display a message to the user
 
 def func_calculate_ELO_parcial():
     # Check if tb_ELO_ranking has any entries
