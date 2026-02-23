@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ event.ev_title }}</h4>
+                <div>
+                    {% if event.ev_status == 'announced' %}
+                        <span class="badge badge-secondary">{{ translate('Announced') }}</span>
+                    {% elif event.ev_status == 'registration_started' %}
+                        <span class="badge badge-success">{{ translate('Registration Open') }}</span>
+                    {% elif event.ev_status == 'registration_ended' %}
+                        <span class="badge badge-warning">{{ translate('Registration Closed') }}</span>
+                    {% elif event.ev_status == 'event_started' %}
+                        <span class="badge badge-info">{{ translate('In Progress') }}</span>
+                    {% elif event.ev_status == 'event_ended' %}
+                        <span class="badge badge-dark">{{ translate('Completed') }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <h5>{{ translate('Event Details') }}</h5>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-3"><strong>{{ translate('Date') }}:</strong></div>
+                        <div class="col-sm-9">{{ event.ev_date.strftime('%B %d, %Y') }}</div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-3"><strong>{{ translate('Time') }}:</strong></div>
+                        <div class="col-sm-9">{{ event.ev_start_time.strftime('%H:%M') }}</div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-3"><strong>{{ translate('Location') }}:</strong></div>
+                        <div class="col-sm-9">{{ event.ev_location }}</div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-3"><strong>{{ translate('Event Type') }}:</strong></div>
+                        <div class="col-sm-9">{{ translate(event.event_type.et_name) if event.event_type else 'N/A' }}</div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-3"><strong>{{ translate('Max Players') }}:</strong></div>
+                        <div class="col-sm-9">{{ event.ev_max_players }}</div>
+                    </div>
+                    
+                    {% if club %}
+                    <div class="row mb-3">
+                        <div class="col-sm-3"><strong>{{ translate('Club') }}:</strong></div>
+                        <div class="col-sm-9">{{ club.cl_name }}</div>
+                    </div>
+                    {% else %}
+                    <div class="row mb-3">
+                        <div class="col-sm-3"><strong>{{ translate('Type') }}:</strong></div>
+                        <div class="col-sm-9">
+                            <span class="badge badge-info">{{ translate('Independent Event') }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-3"><strong>{{ translate('Organizer') }}:</strong></div>
+                        <div class="col-sm-9">{{ event.created_by.us_name if event.created_by else 'N/A' }}</div>
+                    </div>
+
+                    {% if event.ev_registration_start or event.ev_registration_end %}
+                    <hr>
+                    <h5>{{ translate('Registration Period') }}</h5>
+                    
+                    {% if event.ev_registration_start %}
+                    <div class="row mb-3">
+                        <div class="col-sm-3"><strong>{{ translate('Opens') }}:</strong></div>
+                        <div class="col-sm-9">{{ event.ev_registration_start.strftime('%B %d, %Y at %H:%M') }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if event.ev_registration_end %}
+                    <div class="row mb-3">
+                        <div class="col-sm-3"><strong>{{ translate('Closes') }}:</strong></div>
+                        <div class="col-sm-9">{{ event.ev_registration_end.strftime('%B %d, %Y at %H:%M') }}</div>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">{{ translate('Registration') }}</h6>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <h3>{{ event.current_player_count }}/{{ event.ev_max_players }}</h3>
+                                <small class="text-muted">{{ translate('Players registered') }}</small>
+                            </div>
+                            
+                            {% if user.is_authenticated %}
+                                {% if is_registered %}
+                                    <div class="alert alert-success">
+                                        <i class="zmdi zmdi-check-circle"></i> {{ translate('You are registered') }}
+                                    </div>
+                                {% else %}
+                                    <button class="btn btn-primary btn-block" disabled>
+                                        {{ translate('Registration not yet implemented') }}
+                                    </button>
+                                {% endif %}
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="zmdi zmdi-info"></i> 
+                                    {{ translate('Login required to register') }}
+                                </div>
+                                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-block">
+                                    {{ translate('Login to Register') }}
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if event.current_player_count > 0 %}
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">{{ translate('Registered Players') }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <small class="text-muted">{{ translate('Player list will be shown here') }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-footer">
+            <a href="{{ url_for('views.events') }}" class="btn btn-secondary">
+                <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Events') }}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

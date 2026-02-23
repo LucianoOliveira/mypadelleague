@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4>{{ translate('Create Event') }}</h4>
+        </div>
+        <div class="card-body">
+            <!-- Progress bar -->
+            <div class="mb-4">
+                <div class="progress" style="height: 25px;">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: 33%; font-size: 16px;" aria-valuenow="33" aria-valuemin="0" aria-valuemax="100">{{ translate('Step') }} 1/3</div>
+                </div>
+                <div class="d-flex justify-content-between mt-2">
+                    <span class="text-primary font-weight-bold">{{ translate('Basic Information') }}</span>
+                    <span class="text-muted">{{ translate('Courts & Game Settings') }}</span>
+                    <span class="text-muted">{{ translate('Player Registration') }}</span>
+                </div>
+            </div>
+
+            <form action="{{ url_for('views.create_event') }}" method="post" id="eventForm">
+                <div class="form-group">
+                    <label for="club_id">{{ translate('Club') }} <span class="text-muted">({{ translate('Optional') }})</span></label>
+                    <select class="form-control" id="club_id" name="club_id">
+                        <option value="">{{ translate('No Club - Independent Event') }}</option>
+                        {% for club in clubs %}
+                        <option value="{{ club.cl_id }}">{{ club.cl_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">{{ translate('Select a club if this event is associated with one of your clubs, or leave as independent') }}</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="title">{{ translate('Event Title') }} <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="title" placeholder="{{ translate('Enter event title') }}" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">{{ translate('Location') }} <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="location" placeholder="{{ translate('Event location or address') }}" name="location" required>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="event_date">{{ translate('Event Date') }} <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="event_date" name="event_date" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="event_time">{{ translate('Event Time') }} <span class="text-danger">*</span></label>
+                            <input type="time" class="form-control" id="event_time" name="event_time" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="event_type_id">{{ translate('Event Type') }} <span class="text-danger">*</span></label>
+                            <select class="form-control" id="event_type_id" name="event_type_id" required>
+                                <option value="">{{ translate('Select event type') }}...</option>
+                                {% for event_type in event_types %}
+                                <option value="{{ event_type.et_id }}">{{ translate(event_type.et_name) }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="max_players">{{ translate('Maximum Players') }} <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="max_players" name="max_players" min="4" max="64" step="4" placeholder="8" required>
+                            <small class="form-text text-muted">{{ translate('Must be a multiple of 4') }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+                <h5>{{ translate('Registration Period') }} <span class="text-muted">({{ translate('Optional') }})</span></h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="registration_start">{{ translate('Registration Opens') }}</label>
+                            <input type="datetime-local" class="form-control" id="registration_start" name="registration_start">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="registration_end">{{ translate('Registration Closes') }}</label>
+                            <input type="datetime-local" class="form-control" id="registration_end" name="registration_end">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group text-center">
+                    <button type="submit" class="btn btn-success px-5">
+                        <i class="icon-plus"></i> {{ translate('Create Event') }}
+                    </button>
+                    <a href="{{ url_for('views.managementEvents') }}" class="btn btn-secondary ml-3 px-5">
+                        <i class="icon-arrow-left"></i> {{ translate('Cancel') }}
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('eventForm').addEventListener('submit', function(e) {
+    const maxPlayers = parseInt(document.getElementById('max_players').value);
+    if (maxPlayers % 4 !== 0) {
+        e.preventDefault();
+        alert('{{ translate("Maximum players must be a multiple of 4") }}');
+        return false;
+    }
+    
+    const regStart = document.getElementById('registration_start').value;
+    const regEnd = document.getElementById('registration_end').value;
+    
+    if (regStart && regEnd && regStart >= regEnd) {
+        e.preventDefault();
+        alert('{{ translate("Registration end must be after registration start") }}');
+        return false;
+    }
+    
+    const eventDate = document.getElementById('event_date').value;
+    const eventTime = document.getElementById('event_time').value;
+    const eventDateTime = new Date(eventDate + 'T' + eventTime);
+    const now = new Date();
+    
+    if (eventDateTime <= now) {
+        e.preventDefault();
+        alert('{{ translate("Event date and time must be in the future") }}');
+        return false;
+    }
+});
+
+// Set minimum date to today
+document.getElementById('event_date').min = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}

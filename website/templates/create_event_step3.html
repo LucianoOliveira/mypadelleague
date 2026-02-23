@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ translate('Event Player Registration') }}</h4>
+    </div>
+    <div class="card-body">
+        <!-- Progress bar -->
+        <div class="mb-4">
+            <div class="progress" style="height: 25px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: 100%; font-size: 16px;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">{{ translate('Step') }} 3/3</div>
+            </div>
+            <div class="d-flex justify-content-between mt-2">
+                <span class="text-muted">{{ translate('Basic Information') }}</span>
+                <span class="text-muted">{{ translate('Courts & Game Settings') }}</span>
+                <span class="text-success font-weight-bold">{{ translate('Player Registration') }}</span>
+            </div>
+        </div>
+
+        <form action="{{ url_for('views.complete_event_creation', event_id=event.ev_id) }}" method="post" id="playerRegistrationForm">
+            
+            <button type="button" class="btn btn-sm btn-outline-info mb-3" id="toggleEventInfo">
+                <i class="fas fa-info-circle"></i> {{ translate('Show Event Summary') }}
+            </button>
+
+            <!-- Event Summary (initially hidden) -->
+            <div id="eventSummary" class="alert alert-info mb-3" style="display: none;">
+                <h6><strong>{{ translate('Event Summary') }}</strong></h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>{{ translate('Title') }}:</strong> {{ event.ev_title }}</p>
+                        <p><strong>{{ translate('Club') }}:</strong> {{ club_name }}</p>
+                        <p><strong>{{ translate('Date') }}:</strong> {{ event.ev_date.strftime('%d/%m/%Y') }}</p>
+                        <p><strong>{{ translate('Time') }}:</strong> {{ event.ev_start_time.strftime('%H:%M') }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>{{ translate('Type') }}:</strong> {{ event.ev_type }}</p>
+                        <p><strong>{{ translate('Max Players') }}:</strong> {{ event.ev_max_players }}</p>
+                        <p><strong>{{ translate('Pairing Type') }}:</strong> {{ pairing_type }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Player Registration Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>{{ translate('Player Registration') }} - {{ pairing_type }} {{ translate('Pairing') }}</h5>
+                </div>
+                <div class="card-body">
+                    
+                    {% if pairing_type == 'Random' %}
+                        <!-- Random Pairing - Single column of players -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-random"></i> 
+                            {{ translate('Random pairing: Players will be randomly assigned to teams during the event.') }}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {% for i in range(max_players) %}
+                                    <div class="form-group mb-2">
+                                        <label for="player_{{ i }}" class="form-label">
+                                            {{ translate('Player') }} {{ i + 1 }}:
+                                        </label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="player_{{ i }}" 
+                                               name="player_{{ i }}" 
+                                               placeholder="{{ translate('Enter player name') }}"
+                                               value="{{ player_data.get('player_' + i|string, '') }}"
+                                               {% if i < 4 %}required{% endif %}>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-light">
+                                    <h6><i class="fas fa-info-circle"></i> {{ translate('Random Pairing by Event Type') }}</h6>
+                                    <ul class="mb-0">
+                                        <li><strong>{{ translate('NonStop') }}:</strong> {{ translate('Players randomly assigned to fixed teams for entire event') }}</li>
+                                        <li><strong>{{ translate('Americano') }}:</strong> {{ translate('Teams shuffle randomly each round to maximize player interactions') }}</li>
+                                        <li><strong>{{ translate('Mexicano') }}:</strong> {{ translate('Random initial pairing, then ranking-based re-pairing each round') }}</li>
+                                        <li>{{ translate('First 4 players are required, others optional') }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                    {% elif pairing_type == 'Manual' %}
+                        <!-- Manual Pairing - Team-based registration -->
+                        <div class="alert alert-warning">
+                            <i class="fas fa-users"></i> 
+                            {{ translate('Manual pairing: Players are pre-assigned to fixed teams.') }}
+                        </div>
+                        
+                        <div class="row">
+                            {% for team_letter in team_letters %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0">
+                                                <i class="fas fa-users"></i> {{ translate('Team') }} {{ team_letter }}
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row align-items-center">
+                                                <div class="col-5">
+                                                    <input type="text" 
+                                                           class="form-control" 
+                                                           name="team_{{ team_letter }}_player1" 
+                                                           placeholder="{{ translate('Player 1') }}"
+                                                           value="{{ player_data.get('team_' + team_letter + '_player1', '') }}"
+                                                           {% if loop.index0 < 2 %}required{% endif %}>
+                                                </div>
+                                                <div class="col-2 text-center">
+                                                    <span class="fw-bold">/</span>
+                                                </div>
+                                                <div class="col-5">
+                                                    <input type="text" 
+                                                           class="form-control" 
+                                                           name="team_{{ team_letter }}_player2" 
+                                                           placeholder="{{ translate('Player 2') }}"
+                                                           value="{{ player_data.get('team_' + team_letter + '_player2', '') }}"
+                                                           {% if loop.index0 < 2 %}required{% endif %}>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if loop.index % 2 == 0 %}
+                                    <div class="w-100"></div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="alert alert-light">
+                            <h6><i class="fas fa-info-circle"></i> {{ translate('Manual Pairing by Event Type') }}</h6>
+                            <ul class="mb-0">
+                                <li><strong>{{ translate('NonStop') }}:</strong> {{ translate('Teams stay fixed throughout the entire event - each team plays against every other team') }}</li>
+                                <li><strong>{{ translate('Americano') }}:</strong> {{ translate('Initial teams are shuffled to ensure each player pairs with and plays against everyone else') }}</li>
+                                <li><strong>{{ translate('Mexicano') }}:</strong> {{ translate('Teams are re-paired each round based on rankings (1st+4th vs 2nd+3rd, 5th+8th vs 6th+7th, etc.)') }}</li>
+                            </ul>
+                        </div>
+
+                    {% elif pairing_type == 'L&R Random' %}
+                        <!-- L&R Random Pairing - Left and Right columns -->
+                        <div class="alert alert-success">
+                            <i class="fas fa-arrows-alt-h"></i> 
+                            {{ translate('L&R Random pairing: Left and right players are randomly paired together.') }}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-arrow-left"></i> {{ translate('Left Players') }}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% for i in range(max_players // 2) %}
+                                            <div class="form-group mb-2">
+                                                <label for="left_player_{{ i }}" class="form-label">
+                                                    {{ translate('Left Player') }} {{ i + 1 }}:
+                                                </label>
+                                                <input type="text" 
+                                                       class="form-control" 
+                                                       id="left_player_{{ i }}" 
+                                                       name="left_player_{{ i }}" 
+                                                       placeholder="{{ translate('Enter left player name') }}"
+                                                       value="{{ player_data.get('left_player_' + i|string, '') }}"
+                                                       {% if i < 2 %}required{% endif %}>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-warning text-dark">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-arrow-right"></i> {{ translate('Right Players') }}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% for i in range(max_players // 2) %}
+                                            <div class="form-group mb-2">
+                                                <label for="right_player_{{ i }}" class="form-label">
+                                                    {{ translate('Right Player') }} {{ i + 1 }}:
+                                                </label>
+                                                <input type="text" 
+                                                       class="form-control" 
+                                                       id="right_player_{{ i }}" 
+                                                       name="right_player_{{ i }}" 
+                                                       placeholder="{{ translate('Enter right player name') }}"
+                                                       value="{{ player_data.get('right_player_' + i|string, '') }}"
+                                                       {% if i < 2 %}required{% endif %}>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-light mt-3">
+                            <h6><i class="fas fa-info-circle"></i> {{ translate('L&R Random Pairing by Event Type') }}</h6>
+                            <ul class="mb-0">
+                                <li><strong>{{ translate('NonStop') }}:</strong> {{ translate('Left/right players randomly paired once and stay together for entire event') }}</li>
+                                <li><strong>{{ translate('Americano') }}:</strong> {{ translate('Random left-right pairing changes each round to maximize interactions') }}</li>
+                                <li><strong>{{ translate('Mexicano') }}:</strong> {{ translate('Left-right pools maintained, but pairings based on rankings each round') }}</li>
+                                <li>{{ translate('First 2 players in each column are required') }}</li>
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('views.create_event_step2', event_id=event.ev_id) }}" 
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> {{ translate('Back to Courts') }}
+                </a>
+                
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="fas fa-check-circle"></i> {{ translate('Complete Event Creation') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle event info visibility
+    const toggleButton = document.getElementById('toggleEventInfo');
+    const eventSummary = document.getElementById('eventSummary');
+    
+    if (toggleButton && eventSummary) {
+        toggleButton.addEventListener('click', function() {
+            if (eventSummary.style.display === 'none') {
+                eventSummary.style.display = 'block';
+                toggleButton.innerHTML = '<i class="fas fa-info-circle"></i> {{ translate("Hide Event Summary") }}';
+            } else {
+                eventSummary.style.display = 'none';
+                toggleButton.innerHTML = '<i class="fas fa-info-circle"></i> {{ translate("Show Event Summary") }}';
+            }
+        });
+    }
+
+    // Form validation
+    const form = document.getElementById('playerRegistrationForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const requiredInputs = form.querySelectorAll('input[required]');
+            let hasError = false;
+            
+            requiredInputs.forEach(function(input) {
+                if (!input.value.trim()) {
+                    input.classList.add('is-invalid');
+                    hasError = true;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+            
+            if (hasError) {
+                e.preventDefault();
+                alert('{{ translate("Please fill in all required player names.") }}');
+            }
+        });
+        
+        // Remove invalid class on input
+        const inputs = form.querySelectorAll('input[type="text"]');
+        inputs.forEach(function(input) {
+            input.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    this.classList.remove('is-invalid');
+                }
+            });
+        });
+    }
+});
+</script>
+
+<style>
+.card-header {
+    position: relative;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.alert ul {
+    font-size: 0.9rem;
+    padding-left: 1.2rem;
+}
+
+.card .card-header h6 {
+    margin-bottom: 0;
+}
+</style>
+
+{% endblock %}
