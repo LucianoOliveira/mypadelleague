@@ -21,29 +21,32 @@ def create_app():
     except OSError:
         pass
 
-    # Enhanced logging configuration
-    logging.basicConfig(level=logging.DEBUG)
+    # Enhanced logging configuration - reduced verbosity for production
+    logging.basicConfig(level=logging.WARNING)
     handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
+    handler.setLevel(logging.WARNING)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     app.logger.addHandler(handler)
-    app.logger.setLevel(logging.DEBUG)
+    app.logger.setLevel(logging.WARNING)
+    
+    # Keep Werkzeug INFO messages (like "Running on http://127.0.0.1:5000") but hide debug
+    logging.getLogger('werkzeug').setLevel(logging.INFO)
 
-    app.logger.debug('Starting application configuration...')
+    # Removed debug message for cleaner startup
 
 
     from .config import Config
-    app.logger.debug(f'Database path: {Config.DB_NAME}')
+    # Database path: {Config.DB_NAME} - removed debug message
 
     # Load configuration
     app.config.from_object(Config)
-    app.logger.debug('Configuration loaded')
+    # Configuration loaded - removed debug message
 
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{Config.DB_NAME}'
     db.init_app(app)
     migrate = Migrate(app, db)
-    app.logger.debug('Database initialized')
+    # Database initialized - removed debug message
 
     # Configure available languages
     LANGUAGES = {
@@ -81,7 +84,7 @@ def create_app():
     with app.app_context():
         try:
             db.create_all()
-            app.logger.debug('Database tables created successfully')
+            # Database tables created successfully - removed debug message
         except Exception as e:
             app.logger.error(f'Error creating database tables: {str(e)}')
 

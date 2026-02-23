@@ -52,17 +52,16 @@ def start_background_tasks(app):
     # Register shutdown handler
     atexit.register(stop_background_tasks)
     
-    # Log that we started tasks
-    logging.info("Background league status update task started")
+    # Background tasks started silently - removed log message for cleaner startup
 
 def stop_background_tasks():
     global _should_stop, _update_thread
     
     if _update_thread and _update_thread.is_alive():
-        logging.info("Stopping background tasks...")
+        # Stopping background tasks silently - removed log message
         _should_stop = True
         _update_thread.join(timeout=5)  # Wait up to 5 seconds for thread to end
-        logging.info("Background tasks stopped")
+        # Background tasks stopped silently - removed log message
 
 # For PythonAnywhere - this function can be called from a scheduled task
 def scheduled_task(app):

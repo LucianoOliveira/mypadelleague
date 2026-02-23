@@ -19,14 +19,6 @@
 
         <form action="{{ url_for('views.edit_event_step3', event_id=event.ev_id) }}" method="post" id="editPlayersForm">
             
-            <!-- Event Info Box -->
-            <div class="alert alert-info mb-4">
-                <strong>{{ translate('Event Information') }}:</strong><br>
-                {{ translate('Type') }}: {{ event.ev_type }} | 
-                {{ translate('Max Players') }}: {{ event.ev_max_players }} | 
-                {{ translate('Pairing') }}: {{ event.ev_pairing_type }}
-            </div>
-
             <!-- Pairing Type Description -->
             <div class="card mb-4">
                 <div class="card-header">

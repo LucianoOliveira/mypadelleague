@@ -4,7 +4,9 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import (Users, UserRequests, Messages, League, Club, ClubAuthorization, 
                     Court, GameDay, LeagueCourts, Game, GameDayPlayer, GameDayClassification, 
-                    LeagueClassification, ELOranking, ELOrankingHist, LeaguePlayers, GameDayRegistration)
+                    LeagueClassification, ELOranking, ELOrankingHist, LeaguePlayers, GameDayRegistration,
+                    Event, EventRegistration, EventClassification, EventCourts, EventPlayerNames,
+                    EventType, MexicanConfig)
 from . import db
 import json, os, threading
 from datetime import datetime, date, timedelta, timezone
@@ -1052,65 +1054,736 @@ def edit_league(league_id):
                            now=datetime.utcnow())
 
 # Event management routes
+@views.route('/event/<int:event_id>', methods=['GET'])
+def public_event_detail(event_id):
+    """Public event detail page"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Check if user is registered for this event
+    is_registered = False
+    if current_user.is_authenticated:
+        is_registered = EventRegistration.query.filter_by(
+            er_event_id=event_id,
+            er_player_id=current_user.us_id
+        ).first() is not None
+    
+    # Get club info if event has a club
+    club = None
+    if event.ev_club_id:
+        club = Club.query.get(event.ev_club_id)
+    
+    return render_template('event_detail_public.html', 
+                         event=event,
+                         club=club,
+                         user=current_user,
+                         is_registered=is_registered)
+
+@views.route('/detail_event/<int:event_id>', methods=['GET'])  
+def detail_event(event_id):
+    """Event detail page - alias for template compatibility"""
+    return public_event_detail(event_id)
+
+# Events public page
+@views.route('/Events', methods=['GET'])
 @views.route('/events', methods=['GET'])
 def events():
-    """Main events page displaying all public events"""
-    from .models import Event
-    events_data = Event.query.filter_by(ev_is_active=True).order_by(Event.ev_date.desc()).all()
-    return render_template("events.html", user=current_user, result=events_data)
+    """Public page to display all events"""
+    # Get all active events ordered by date (exclude canceled events)
+    # Include events with and without clubs
+    events_data = Event.query\
+        .outerjoin(Club, Event.ev_club_id == Club.cl_id)\
+        .filter(Event.ev_status != 'canceled')\
+        .filter(or_(Event.ev_club_id.is_(None), Club.cl_active == True))\
+        .order_by(Event.ev_date.desc())\
+        .all()
+    
+    return render_template("events.html", user=current_user, events_data=events_data)
 
 @views.route('/managementEvents', methods=['GET'])
 @login_required
 def managementEvents():
     """Events management page for authorized users"""
-    from .models import Event, Club, ClubAuthorization
-    
-    # Get events from clubs the user is authorized for
-    events_data = Event.query\
+    # Get events from clubs the user is authorized for AND public events created by user
+    club_events = Event.query\
         .join(Club, Event.ev_club_id == Club.cl_id)\
         .join(ClubAuthorization, Club.cl_id == ClubAuthorization.ca_club_id)\
         .filter(ClubAuthorization.ca_user_id == current_user.us_id)\
-        .order_by(Event.ev_date.desc())\
         .all()
     
-    return render_template("managementEvents.html", user=current_user, result=events_data, 
-                         translate=session.get('translate', {}))
+    # Get public events created by this user (no club association)
+    public_events = Event.query\
+        .filter(Event.ev_club_id.is_(None))\
+        .filter(Event.ev_created_by_id == current_user.us_id)\
+        .all()
+    
+    # Combine both types of events
+    all_events = club_events + public_events
+    all_events.sort(key=lambda x: x.ev_date, reverse=True)
+    
+    return render_template("managementEvents.html", user=current_user, result=all_events)
+
+@views.route('/display_event_main_image/<int:eventID>/<int:packageID>', methods=['GET'])
+def display_event_main_image(eventID, packageID):
+    """Display the main image for an event package"""
+    try:
+        # Construct the path to the image
+        image_path = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), 
+            'static', 'photos', 'events', str(eventID), str(packageID), 'main.jpg'
+        )
+        
+        # Check if the image exists
+        if os.path.exists(image_path):
+            return send_file(image_path, mimetype='image/jpeg')
+        else:
+            # Return a default image or 404
+            default_image_path = os.path.join(
+                os.path.abspath(os.path.dirname(__file__)), 
+                'static', 'images', 'default_event.jpg'
+            )
+            if os.path.exists(default_image_path):
+                return send_file(default_image_path, mimetype='image/jpeg')
+            else:
+                return "Image not found", 404
+                
+    except Exception as e:
+        print(f"Error displaying image: {e}")
+        return "Error loading image", 500
 
 @views.route('/create_event', methods=['GET', 'POST'])
 @login_required
 def create_event():
-    """Create a club event"""
-    from .models import Club, ClubAuthorization
-    
+    """Create a new club event"""
     # Get authorized clubs
-    authorized_clubs = Club.query\
-        .join(ClubAuthorization, Club.cl_id == ClubAuthorization.ca_club_id)\
-        .filter(ClubAuthorization.ca_user_id == current_user.us_id)\
-        .all()
+    authorized_clubs = Club.query.join(ClubAuthorization).filter(
+        ClubAuthorization.ca_user_id == current_user.us_id
+    ).all()
     
+    # Get available event types for the form
+    event_types = EventType.query.filter(EventType.et_is_active == True).order_by(EventType.et_order).all()
+
     if request.method == 'POST':
-        # Handle event creation
-        flash("Event creation functionality will be implemented", category='info')
-        return redirect(url_for('views.managementEvents'))
-    
-    return render_template("create_event.html", user=current_user, clubs=authorized_clubs, 
-                         translate=session.get('translate', {}))
+        # Get form data
+        club_id = request.form.get('club_id')  # Optional now
+        title = request.form.get('title')
+        location = request.form.get('location')
+        event_date = request.form.get('event_date')
+        event_time = request.form.get('event_time')
+        event_type_id = request.form.get('event_type_id')
+        max_players = request.form.get('max_players')
+        registration_start = request.form.get('registration_start')
+        registration_end = request.form.get('registration_end')
+        
+        # Validate required fields (club_id is now optional)
+        if not all([title, location, event_date, event_time, event_type_id, max_players]):
+            flash(translate('Please fill in all required fields!'), 'error')
+            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types)
+        
+        # Check club authorization only if club is selected
+        if club_id:
+            is_authorized = any(club.cl_id == int(club_id) for club in authorized_clubs)
+            if not is_authorized:
+                flash(translate('You are not authorized to create events for this club!'), 'error')
+                return redirect(url_for('views.managementEvents'))
+
+        # Validate event type exists and is active
+        event_type = EventType.query.filter_by(et_id=int(event_type_id), et_is_active=True).first()
+        if not event_type:
+            flash(translate('Invalid event type selected!'), 'error')
+            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types)
+
+        try:
+            # Parse date and time - try multiple formats
+            event_date_parsed = None
+            try:
+                event_date_parsed = datetime.strptime(event_date, "%Y-%m-%d").date()
+            except ValueError:
+                try:
+                    # Try DD/MM/YYYY format (European)
+                    event_date_parsed = datetime.strptime(event_date, "%d/%m/%Y").date()
+                except ValueError:
+                    try:
+                        # Try MM/DD/YYYY format (American)
+                        event_date_parsed = datetime.strptime(event_date, "%m/%d/%Y").date()
+                    except ValueError:
+                        raise ValueError(f"Invalid event date format: '{event_date}'. Expected YYYY-MM-DD, DD/MM/YYYY or MM/DD/YYYY")
+            
+            if event_date_parsed is None:
+                raise ValueError(f"Could not parse event_date: {event_date}")
+                
+            try:
+                event_time_parsed = datetime.strptime(event_time, "%H:%M").time()
+            except ValueError:
+                raise ValueError(f"Invalid event time format: '{event_time}'. Expected HH:MM")
+            
+            # Parse registration dates if provided - handle multiple formats
+            reg_start_utc = None
+            reg_end_utc = None
+            if registration_start:
+                try:
+                    reg_start_utc = datetime.strptime(registration_start, "%Y-%m-%dT%H:%M").replace(tzinfo=timezone.utc)
+                except ValueError:
+                    try:
+                        # Try DD/MM/YYYY, HH:MM format
+                        reg_start_utc = datetime.strptime(registration_start, "%d/%m/%Y, %H:%M").replace(tzinfo=timezone.utc)
+                    except ValueError:
+                        try:
+                            # Try other common formats
+                            reg_start_utc = datetime.strptime(registration_start, "%d/%m/%Y %H:%M").replace(tzinfo=timezone.utc)
+                        except ValueError:
+                            raise ValueError(f"Invalid registration start format: '{registration_start}'. Expected YYYY-MM-DDTHH:MM, DD/MM/YYYY, HH:MM or DD/MM/YYYY HH:MM")
+            if registration_end:
+                try:
+                    reg_end_utc = datetime.strptime(registration_end, "%Y-%m-%dT%H:%M").replace(tzinfo=timezone.utc)
+                except ValueError:
+                    try:
+                        # Try DD/MM/YYYY, HH:MM format
+                        reg_end_utc = datetime.strptime(registration_end, "%d/%m/%Y, %H:%M").replace(tzinfo=timezone.utc)
+                    except ValueError:
+                        try:
+                            # Try other common formats
+                            reg_end_utc = datetime.strptime(registration_end, "%d/%m/%Y %H:%M").replace(tzinfo=timezone.utc)
+                        except ValueError:
+                            raise ValueError(f"Invalid registration end format: '{registration_end}'. Expected YYYY-MM-DDTHH:MM, DD/MM/YYYY, HH:MM or DD/MM/YYYY HH:MM")
+
+            # Create new event
+            new_event = Event(
+                ev_title=title,
+                ev_club_id=int(club_id) if club_id else None,  # Handle optional club
+                ev_location=location,
+                ev_date=event_date_parsed,
+                ev_start_time=event_time_parsed,
+                ev_type_id=int(event_type_id),
+                ev_max_players=int(max_players),
+                ev_registration_start=reg_start_utc,
+                ev_registration_end=reg_end_utc,
+                ev_status='announced',  # Start as announced
+                ev_created_by_id=current_user.us_id
+            )
+
+            db.session.add(new_event)
+            db.session.commit()
+
+            flash(translate('Event created successfully! Now configure courts and game settings.'), 'success')
+            return redirect(url_for('views.create_event_step2', event_id=new_event.ev_id))
+
+        except ValueError as e:
+            flash(f"Invalid date/time format! {str(e)}", 'error')
+            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types)
+        except Exception as e:
+            db.session.rollback()
+            flash(translate('Error creating event!'), 'error')
+            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types)
+
+    return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types)
 
 @views.route('/create_event_public', methods=['GET', 'POST'])
 def create_event_public():
-    """Create a public event"""
+    """Public event creation - no login required"""
+    # Get available event types for the form
+    event_types = EventType.query.filter(EventType.et_is_active == True).order_by(EventType.et_order).all()
+
     if request.method == 'POST':
-        # Handle public event creation
-        flash("Public event creation functionality will be implemented", category='info')
-        return redirect(url_for('views.events'))
-    
-    return render_template("create_event_public.html", user=current_user, 
-                         translate=session.get('translate', {}))
+        # Get form data
+        title = request.form.get('title')
+        location = request.form.get('location')
+        event_date = request.form.get('event_date')
+        event_time = request.form.get('event_time')
+        event_type_id = request.form.get('event_type_id')
+        max_players = request.form.get('max_players')
+        organizer_name = request.form.get('organizer_name')
+        organizer_email = request.form.get('organizer_email')
+        organizer_phone = request.form.get('organizer_phone')
+        registration_start = request.form.get('registration_start')
+        registration_end = request.form.get('registration_end')
+        
+        # Validate required fields
+        if not all([title, location, event_date, event_time, event_type_id, max_players, organizer_name]):
+            flash(translate('Please fill in all required fields!'), 'error')
+            return render_template("create_event_public.html", event_types=event_types, user=current_user)
+        
+        # Validate event type exists and is active
+        event_type = EventType.query.filter_by(et_id=int(event_type_id), et_is_active=True).first()
+        if not event_type:
+            flash(translate('Invalid event type selected!'), 'error')
+            return render_template("create_event_public.html", event_types=event_types, user=current_user)
+
+        try:
+            # Parse date and time
+            event_date_parsed = datetime.strptime(event_date, "%Y-%m-%d").date()
+            event_time_parsed = datetime.strptime(event_time, "%H:%M").time()
+            
+            # Parse registration dates if provided
+            reg_start_utc = None
+            reg_end_utc = None
+            if registration_start:
+                reg_start_utc = datetime.strptime(registration_start, "%Y-%m-%dT%H:%M").replace(tzinfo=timezone.utc)
+            if registration_end:
+                reg_end_utc = datetime.strptime(registration_end, "%Y-%m-%dT%H:%M").replace(tzinfo=timezone.utc)
+
+            # Find or create organizer user
+            organizer_user = None
+            if current_user.is_authenticated:
+                organizer_user = current_user
+            else:
+                # Try to find existing user by email or phone
+                if organizer_email:
+                    organizer_user = Users.query.filter_by(us_email=organizer_email).first()
+                if not organizer_user and organizer_phone:
+                    organizer_user = Users.query.filter_by(us_telephone=organizer_phone).first()
+                
+                # Create new user if not found
+                if not organizer_user:
+                    organizer_user = Users(
+                        us_name=organizer_name,
+                        us_email=organizer_email,
+                        us_telephone=organizer_phone,
+                        us_is_active=True,
+                        us_is_player=True,
+                        us_birthday=datetime.strptime('1990-01-01', '%Y-%m-%d').date(),
+                        us_pwd=generate_password_hash('welcome2padel', method='pbkdf2:sha256')
+                    )
+                    db.session.add(organizer_user)
+                    db.session.commit()
+
+            # Create new event without club
+            new_event = Event(
+                ev_title=title,
+                ev_club_id=None,  # No club association
+                ev_location=location,
+                ev_date=event_date_parsed,
+                ev_start_time=event_time_parsed,
+                ev_type_id=int(event_type_id),
+                ev_max_players=int(max_players),
+                ev_registration_start=reg_start_utc,
+                ev_registration_end=reg_end_utc,
+                ev_status='announced',
+                ev_created_by_id=organizer_user.us_id
+            )
+
+            db.session.add(new_event)
+            db.session.commit()
+
+            flash(translate('Event created successfully! Event ID: {}'.format(new_event.ev_id)), 'success')
+            return redirect(url_for('views.public_event_detail', event_id=new_event.ev_id))
+
+        except ValueError as e:
+            flash(translate('Invalid date/time format!'), 'error')
+            return render_template("create_event_public.html", event_types=event_types, user=current_user)
+        except Exception as e:
+            db.session.rollback()
+            flash(translate('Error creating event!'), 'error')
+            return render_template("create_event_public.html", event_types=event_types, user=current_user)
+
+    return render_template("create_event_public.html", event_types=event_types, user=current_user)
 
 @views.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
-@login_required
+@login_required  
 def edit_event(event_id):
-    """Edit an existing event"""
+    """Step 1: Edit basic event information"""
+    return edit_event_step1(event_id)
+
+@views.route('/edit_event_step1/<int:event_id>', methods=['GET', 'POST'])
+@login_required
+def edit_event_step1(event_id):
+    """Step 1: Edit basic event information"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Check authorization (superuser or club authorization)
+    if current_user.us_is_superuser != 1:
+        authorization = ClubAuthorization.query.filter_by(
+            ca_user_id=current_user.us_id, 
+            ca_club_id=event.ev_club_id
+        ).first()
+        
+        if not authorization:
+            flash(translate('You are not authorized to edit this event'), 'error')
+            return redirect(url_for('views.managementEvents'))
+    
+    # Get authorized clubs for the dropdown
+    if current_user.us_is_superuser == 1:
+        authorized_clubs = Club.query.filter_by(cl_active=True).all()
+    else:
+        authorized_clubs = db.session.query(Club).join(
+            ClubAuthorization, Club.cl_id == ClubAuthorization.ca_club_id
+        ).filter(
+            ClubAuthorization.ca_user_id == current_user.us_id,
+            Club.cl_active == True
+        ).all()
+
+    if request.method == 'POST':
+        try:
+            # Update basic event information
+            event.ev_title = request.form['title']
+            event.ev_description = request.form.get('description', '')
+            event.ev_location = request.form['location']
+            event.ev_club_id = request.form['club_id']
+            
+            # Parse dates and times
+            event.ev_date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+            event.ev_start_time = datetime.strptime(request.form['start_time'], '%H:%M').time()
+            
+            end_time_str = request.form.get('end_time')
+            if end_time_str:
+                event.ev_end_time = datetime.strptime(end_time_str, '%H:%M').time()
+            else:
+                event.ev_end_time = None
+                
+            # Parse registration dates
+            reg_start_str = request.form.get('registration_start')
+            if reg_start_str:
+                event.ev_registration_start = datetime.strptime(reg_start_str, '%Y-%m-%d').date()
+            
+            reg_end_str = request.form.get('registration_end')
+            if reg_end_str:
+                event.ev_registration_end = datetime.strptime(reg_end_str, '%Y-%m-%d').date()
+            
+            event.ev_status = request.form['status']
+            
+            db.session.commit()
+            #flash(translate('Basic event information updated!'), 'success')
+            return redirect(url_for('views.edit_event_step2', event_id=event_id))
+
+        except ValueError as e:
+            flash(translate('Invalid date/time format!'), 'error')
+        except Exception as e:
+            db.session.rollback()
+            flash(translate('Error updating event: {}').format(str(e)), 'error')
+
+    return render_template("edit_event_step1.html", user=current_user, event=event, clubs=authorized_clubs)
+
+@views.route('/edit_event_step2/<int:event_id>', methods=['GET', 'POST'])
+@login_required
+def edit_event_step2(event_id):
+    """Step 2: Edit court configuration and pairing type"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Check authorization
+    if current_user.us_is_superuser != 1:
+        authorization = ClubAuthorization.query.filter_by(
+            ca_user_id=current_user.us_id, 
+            ca_club_id=event.ev_club_id
+        ).first()
+        
+        if not authorization:
+            flash(translate('You are not authorized to edit this event'), 'error')
+            return redirect(url_for('views.managementEvents'))
+    
+    # Get club courts for this event
+    club = Club.query.get_or_404(event.ev_club_id)
+    all_courts = Court.query.filter_by(ct_club_id=club.cl_id).all()
+    
+    # Get existing event courts
+    existing_event_courts = EventCourts.query.filter_by(evc_event_id=event_id).all()
+    
+    if request.method == 'POST':
+        try:
+            # Update event type and pairing
+            event_type_id = request.form.get('event_type_id')
+            if event_type_id:
+                # Validate event type exists and is active
+                event_type = EventType.query.filter_by(et_id=int(event_type_id), et_is_active=True).first()
+                if not event_type:
+                    flash(translate('Invalid event type selected!'), 'error')
+                    return render_template("edit_event_step2.html", user=current_user, event=event, 
+                                          club=club, courts=all_courts, existing_event_courts=existing_event_courts,
+                                          event_types=EventType.query.filter(EventType.et_is_active == True).all())
+                event.ev_type_id = int(event_type_id)
+                
+            event.ev_pairing_type = request.form['pairing_type']
+            event.ev_max_players = int(request.form['max_players'])
+            
+            # Clear existing event courts
+            EventCourts.query.filter_by(evc_event_id=event_id).delete()
+            
+            # Add selected courts
+            court_count = int(request.form.get('court_count', 1))
+            for i in range(court_count):
+                court_id = request.form.get(f'court_{i}')
+                
+                if court_id:
+                    event_court = EventCourts(
+                        evc_event_id=event_id,
+                        evc_court_id=court_id
+                    )
+                    db.session.add(event_court)
+            
+            db.session.commit()
+            # flash(translate('Court configuration updated!'), 'success')
+            return redirect(url_for('views.edit_event_step3', event_id=event_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(translate('Error updating court configuration: {}').format(str(e)), 'error')
+    
+    # Get available event types for the form
+    event_types = EventType.query.filter(EventType.et_is_active == True).order_by(EventType.et_order).all()
+    
+    return render_template("edit_event_step2.html", user=current_user, event=event, 
+                          club=club, courts=all_courts, existing_event_courts=existing_event_courts,
+                          event_types=event_types)
+
+def update_event_players(event_id):
+    """Update event players with user creation and registration logic"""
+    from .models import EventPlayerNames
+    
+    event = Event.query.get_or_404(event_id)
+    
+    try:
+        # Clear existing player names and registrations for this event
+        EventPlayerNames.query.filter_by(epn_event_id=event.ev_id).delete()
+        EventRegistration.query.filter_by(er_event_id=event.ev_id).delete()
+        
+        pairing_type = event.ev_pairing_type or 'Random'
+        max_players = event.ev_max_players
+        players_registered = 0
+        
+        def get_or_create_user(player_name):
+            """Get existing user or create new player user"""
+            if not player_name or not player_name.strip():
+                return None
+                
+            # Try to find existing user by name (case insensitive)
+            user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+            
+            if not user:
+                # Create new user as player
+                user = Users(
+                    us_name=player_name.strip(),
+                    us_email=f"{player_name.strip().lower().replace(' ', '.')}@temp.event",
+                    us_telephone=f"temp_{player_name.strip().lower().replace(' ', '')}",
+                    us_is_player=True,
+                    us_is_active=True
+                )
+                db.session.add(user)
+                db.session.flush()  # Get the user ID
+            
+            return user
+        
+        if pairing_type == 'Random':
+            for i in range(max_players):
+                player_name = request.form.get(f'player_{i}')
+                if player_name and player_name.strip():
+                    # Create/get user
+                    user = get_or_create_user(player_name.strip())
+                    if user:
+                        # Store player name
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=player_name.strip(),
+                            epn_position_type='random',
+                            epn_position_index=i,
+                            epn_created_by_id=current_user.us_id
+                        )
+                        db.session.add(player_record)
+                        
+                        # Create event registration
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user.us_id,
+                            er_registered_by_id=current_user.us_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+                        
+        elif pairing_type == 'Manual':
+            teams_needed = max_players // 2
+            for team_idx in range(teams_needed):
+                team_letter = chr(65 + team_idx)  # A, B, C...
+                player1_name = request.form.get(f'team_{team_letter}_player1')
+                player2_name = request.form.get(f'team_{team_letter}_player2')
+                
+                for pos, player_name in enumerate([player1_name, player2_name], 1):
+                    if player_name and player_name.strip():
+                        user = get_or_create_user(player_name.strip())
+                        if user:
+                            player_record = EventPlayerNames(
+                                epn_event_id=event.ev_id,
+                                epn_player_name=player_name.strip(),
+                                epn_position_type='team',
+                                epn_position_index=team_idx,
+                                epn_team_identifier=team_letter,
+                                epn_team_position=pos,
+                                epn_created_by_id=current_user.us_id
+                            )
+                            db.session.add(player_record)
+                            
+                            registration = EventRegistration(
+                                er_event_id=event.ev_id,
+                                er_player_id=user.us_id,
+                                er_registered_by_id=current_user.us_id,
+                                er_is_substitute=False
+                            )
+                            db.session.add(registration)
+                            players_registered += 1
+                            
+        elif pairing_type == 'L&R Random':
+            left_players = max_players // 2
+            right_players = max_players // 2
+            
+            for i in range(left_players):
+                left_player = request.form.get(f'left_player_{i}')
+                if left_player and left_player.strip():
+                    user = get_or_create_user(left_player.strip())
+                    if user:
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=left_player.strip(),
+                            epn_position_type='left',
+                            epn_position_index=i,
+                            epn_created_by_id=current_user.us_id
+                        )
+                        db.session.add(player_record)
+                        
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user.us_id,
+                            er_registered_by_id=current_user.us_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+                        
+            for i in range(right_players):
+                right_player = request.form.get(f'right_player_{i}')
+                if right_player and right_player.strip():
+                    user = get_or_create_user(right_player.strip())
+                    if user:
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=right_player.strip(),
+                            epn_position_type='right',
+                            epn_position_index=i,
+                            epn_created_by_id=current_user.us_id
+                        )
+                        db.session.add(player_record)
+                        
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user.us_id,
+                            er_registered_by_id=current_user.us_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+        
+        db.session.commit()
+        flash(translate('Event players updated successfully! {} players registered.').format(players_registered), 'success')
+        return redirect(url_for('views.detail_event', event_id=event_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(translate('Error updating event players: {}').format(str(e)), 'error')
+        return redirect(url_for('views.edit_event_step3', event_id=event_id))
+
+@views.route('/edit_event_step3/<int:event_id>', methods=['GET', 'POST'])
+@login_required
+def edit_event_step3(event_id):
+    """Step 3: Edit player registration"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Check authorization
+    if current_user.us_is_superuser != 1:
+        authorization = ClubAuthorization.query.filter_by(
+            ca_user_id=current_user.us_id, 
+            ca_club_id=event.ev_club_id
+        ).first()
+        
+        if not authorization:
+            flash(translate('You are not authorized to edit this event'), 'error')
+            return redirect(url_for('views.managementEvents'))
+    
+    # Get existing player data for pre-population
+    from .models import EventPlayerNames
+    existing_players = EventPlayerNames.query.filter_by(epn_event_id=event.ev_id).all()
+    
+    # Organize player data by position type
+    player_data = {
+        'random': [],
+        'team': {},
+        'left': [],
+        'right': []
+    }
+    
+    for player in existing_players:
+        if player.epn_position_type == 'random':
+            # Ensure list is long enough
+            while len(player_data['random']) <= player.epn_position_index:
+                player_data['random'].append('')
+            player_data['random'][player.epn_position_index] = player.epn_player_name
+            
+        elif player.epn_position_type == 'team':
+            team_id = player.epn_team_identifier
+            if team_id not in player_data['team']:
+                player_data['team'][team_id] = {'player1': '', 'player2': ''}
+            
+            if player.epn_team_position == 1:
+                player_data['team'][team_id]['player1'] = player.epn_player_name
+            elif player.epn_team_position == 2:
+                player_data['team'][team_id]['player2'] = player.epn_player_name
+                
+        elif player.epn_position_type == 'left':
+            while len(player_data['left']) <= player.epn_position_index:
+                player_data['left'].append('')
+            player_data['left'][player.epn_position_index] = player.epn_player_name
+            
+        elif player.epn_position_type == 'right':
+            while len(player_data['right']) <= player.epn_position_index:
+                player_data['right'].append('')
+            player_data['right'][player.epn_position_index] = player.epn_player_name
+    
+    if request.method == 'POST':
+        # Process using the existing complete_event_creation logic but for editing
+        return update_event_players(event_id)
+    
+    return render_template("edit_event_step3.html", user=current_user, event=event, 
+                          player_data=player_data)
+
+@views.route('/edit_event_players/<int:event_id>', methods=['GET', 'POST'])
+@login_required
+def edit_event_players(event_id):
+    """Edit player list for an event with existing games (substitute players)"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Check authorization
+    if current_user.us_is_superuser != 1:
+        authorization = ClubAuthorization.query.filter_by(
+            ca_user_id=current_user.us_id, 
+            ca_club_id=event.ev_club_id
+        ).first()
+        
+        if not authorization:
+            flash(translate('You are not authorized to edit this event'), 'error')
+            return redirect(url_for('views.managementEvents'))
+    
+    # Check if event has games and if they haven't been played yet
+    event_games = Game.query.filter_by(gm_idEvent=event_id).all()
+    if not event_games:
+        flash(translate('No games exist for this event yet'), 'error')
+        return redirect(url_for('views.detail_event', event_id=event_id))
+    
+    # Check if any games have been played (have scores)
+    games_played = any(game.gm_result_A is not None or game.gm_result_B is not None for game in event_games)
+    if games_played:
+        flash(translate('Cannot substitute players - some games have already been played'), 'error')
+        return redirect(url_for('views.detail_event', event_id=event_id))
+    
+    # Get current registered players
+    current_registrations = EventRegistration.query.filter_by(er_event_id=event_id, er_is_substitute=False).all()
+    
+    if request.method == 'POST':
+        # Handle player substitution logic
+        flash(translate('Player substitution functionality will be implemented'), 'info')
+        return redirect(url_for('views.detail_event', event_id=event_id))
+    
+    return render_template("edit_event_players.html", user=current_user, event=event, 
+                          registrations=current_registrations)
+
+@views.route('/hide_event/<int:event_id>', methods=['POST'])
+@login_required
+def hide_event(event_id):
+    """Hide/Unhide an event (toggle between canceled and announced status)"""
     from .models import Event, Club, ClubAuthorization
     
     # Get event and verify user has permission
@@ -1121,16 +1794,24 @@ def edit_event(event_id):
         .first()
     
     if not event:
-        flash("Event not found or access denied", category='error')
+        flash(translate('Event not found or access denied'), category='error')
         return redirect(url_for('views.managementEvents'))
     
-    if request.method == 'POST':
-        # Handle event editing
-        flash("Event editing functionality will be implemented", category='info')
-        return redirect(url_for('views.managementEvents'))
+    try:
+        # Toggle between canceled and announced status
+        if event.ev_status == 'canceled':
+            event.ev_status = 'announced'
+            flash(translate('Event is now visible to players'), category='success')
+        else:
+            event.ev_status = 'canceled'
+            flash(translate('Event has been hidden from players'), category='success')
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(translate('Error updating event status'), category='error')
     
-    return render_template("edit_event.html", user=current_user, event=event, 
-                         translate=session.get('translate', {}))
+    return redirect(url_for('views.edit_event', event_id=event_id))
 
 # League management routes
 @views.route('/managementLeagues', methods=['GET', 'POST'])
@@ -2305,3 +2986,196 @@ def player_info(user_id):
 @login_required
 def recalculate_ELO_full():
     return func_calculate_ELO_full()
+
+# Event creation step functions
+@views.route('/create_event_step2/<int:event_id>', methods=['GET'])
+@login_required  
+def create_event_step2(event_id):
+    """Step 2: Configure courts and game settings for event"""
+    # Get the event
+    event = Event.query.get_or_404(event_id)
+    
+    # Check if user is authorized for this club (only if event has a club)
+    if event.ev_club_id:
+        is_authorized = db.session.query(ClubAuthorization).filter(
+            ClubAuthorization.ca_user_id == current_user.us_id,
+            ClubAuthorization.ca_club_id == event.ev_club_id
+        ).first() is not None
+        
+        if not is_authorized:
+            flash(translate('You are not authorized to edit this event!'), 'error')
+            return redirect(url_for('views.managementEvents'))
+        
+        # Get club 
+        club = Club.query.get_or_404(event.ev_club_id)
+        club_name = club.cl_name
+    else:
+        # Public event - check if current user is the creator
+        if event.ev_created_by_id != current_user.us_id:
+            flash(translate('You are not authorized to edit this event!'), 'error')
+            return redirect(url_for('views.managementEvents'))
+        club_name = "Public Event"
+    
+    # Calculate number of courts needed (max_players / 4)
+    courts_needed = event.ev_max_players // 4
+    
+    return render_template('create_event_step2.html', 
+                           user=current_user, 
+                           event=event, 
+                           courts_needed=courts_needed,
+                           club_name=club_name)
+
+@views.route('/create_event_step2/<int:event_id>', methods=['POST'])
+@login_required
+def process_event_step2(event_id):
+    """Process step 2 and redirect to step 3"""
+    # Get the event
+    event = Event.query.get_or_404(event_id)
+    
+    # Check authorization
+    if event.ev_club_id:
+        is_authorized = db.session.query(ClubAuthorization).filter(
+            ClubAuthorization.ca_user_id == current_user.us_id,
+            ClubAuthorization.ca_club_id == event.ev_club_id
+        ).first() is not None
+        
+        if not is_authorized:
+            flash(translate('You are not authorized to edit this event!'), 'error')
+            return redirect(url_for('views.managementEvents'))
+    else:
+        # Public event - check if current user is the creator
+        if event.ev_created_by_id != current_user.us_id:
+            flash(translate('You are not authorized to edit this event!'), 'error')
+            return redirect(url_for('views.managementEvents'))
+    
+    try:
+        # Get court names and pairing type
+        courts_needed = event.ev_max_players // 4
+        court_names = []
+        pairing_type = request.form.get('pairing_type')
+        
+        # Collect court names
+        for i in range(courts_needed):
+            court_name = request.form.get(f'court_name_{i}')
+            if not court_name or not court_name.strip():
+                flash(translate(f'Court name {i+1} is required!'), 'error')
+                return redirect(url_for('views.create_event_step2', event_id=event_id))
+            court_names.append(court_name.strip())
+        
+        # Validate pairing type
+        valid_pairing_types = ['Random', 'Manual', 'L&R Random']
+        if pairing_type not in valid_pairing_types:
+            flash(translate('Invalid pairing type selected!'), 'error')
+            return redirect(url_for('views.create_event_step2', event_id=event_id))
+        
+        # Store court names and pairing type
+        # Clear any existing court assignments
+        EventCourts.query.filter_by(evc_event_id=event.ev_id).delete()
+        
+        # Only process courts if event has a club
+        if event.ev_club_id:
+            # Get or create courts with the specified names for this club
+            for i, court_name in enumerate(court_names):
+                # Try to find existing court with this name
+                existing_court = Court.query.filter_by(
+                    ct_name=court_name, 
+                    ct_club_id=event.ev_club_id
+                ).first()
+                
+                if existing_court:
+                    court = existing_court
+                else:
+                    # Create new court if it doesn't exist
+                    court = Court(
+                        ct_name=court_name,
+                        ct_sport='Padel',  # Default to Padel
+                        ct_club_id=event.ev_club_id
+                    )
+                    db.session.add(court)
+                    db.session.flush()  # Get the ID
+                
+                # Create EventCourts relationship
+                event_court = EventCourts(
+                    evc_event_id=event.ev_id,
+                    evc_court_id=court.ct_id
+                )
+                db.session.add(event_court)
+        
+        # Store pairing type
+        event.ev_pairing_type = pairing_type
+        
+        db.session.commit()
+        
+        # Redirect to step 3 for player registration
+        return redirect(url_for('views.create_event_step3', event_id=event.ev_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(translate('Error processing event configuration: {}').format(str(e)), 'error')
+        return redirect(url_for('views.create_event_step2', event_id=event_id))
+
+@views.route('/create_event_step3/<int:event_id>', methods=['GET'])
+@login_required
+def create_event_step3(event_id):
+    """Step 3: Player registration based on pairing type"""
+    # Get the event
+    event = Event.query.get_or_404(event_id)
+    
+    # Check authorization
+    if event.ev_club_id:
+        is_authorized = db.session.query(ClubAuthorization).filter(
+            ClubAuthorization.ca_user_id == current_user.us_id,
+            ClubAuthorization.ca_club_id == event.ev_club_id
+        ).first() is not None
+        
+        if not is_authorized:
+            flash(translate('You are not authorized to edit this event!'), 'error')
+            return redirect(url_for('views.managementEvents'))
+        
+        club = Club.query.get_or_404(event.ev_club_id)
+        club_name = club.cl_name
+    else:
+        # Public event - check if current user is the creator
+        if event.ev_created_by_id != current_user.us_id:
+            flash(translate('You are not authorized to edit this event!'), 'error')
+            return redirect(url_for('views.managementEvents'))
+        club_name = "Public Event"
+    
+    # Calculate variables needed for player registration UI
+    max_players = event.ev_max_players
+    pairing_type = event.ev_pairing_type or 'Random'
+    
+    # Calculate teams needed for Manual pairing
+    teams_needed = max_players // 2 if pairing_type == 'Manual' else 0
+    
+    # Generate team letters (A, B, C, etc.)
+    team_letters = [chr(65 + i) for i in range(teams_needed)]  # A, B, C...
+    
+    # Get existing player data for editing
+    existing_players = EventPlayerNames.query.filter_by(epn_event_id=event.ev_id).all()
+    
+    # Organize existing player data by type and position for easy template access
+    player_data = {}
+    if pairing_type == 'Random':
+        player_data = {f'player_{p.epn_position_index}': p.epn_player_name 
+                      for p in existing_players if p.epn_position_type == 'random'}
+    elif pairing_type == 'Manual':
+        for p in existing_players:
+            if p.epn_position_type == 'team':
+                key = f'team_{p.epn_team_identifier}_player{p.epn_team_position}'
+                player_data[key] = p.epn_player_name
+    elif pairing_type == 'L&R Random':
+        for p in existing_players:
+            if p.epn_position_type in ['left', 'right']:
+                key = f'{p.epn_position_type}_player_{p.epn_position_index}'
+                player_data[key] = p.epn_player_name
+    
+    return render_template('create_event_step3.html',
+                           user=current_user,
+                           event=event,
+                           club_name=club_name,
+                           max_players=max_players,
+                           pairing_type=pairing_type,
+                           teams_needed=teams_needed,
+                           team_letters=team_letters,
+                           player_data=player_data)

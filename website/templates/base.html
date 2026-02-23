@@ -67,11 +67,12 @@
       </div>
       <ul class="sidebar-menu do-nicescrol">
         <li class="sidebar-header">{{ translate('Navigation') }}</li>
-        <li>
+        <!-- Temporarily hidden: Leagues navigation -->
+        <!-- <li>
           <a href="/">
             <i class="zmdi zmdi-grid"></i> <span>{{ translate('Leagues') }}</span>
           </a>
-        </li>
+        </li> -->
         <li>
           <a href="/events">
             <i class="zmdi zmdi-calendar"></i> <span>{{ translate('Events') }}</span>
@@ -79,11 +80,12 @@
         </li>
         {% if user.is_authenticated and (user.us_is_manager==1 or user.us_is_admin==1 or user.us_is_superuser==1)%} 
         <li class="sidebar-header">{{ translate('Management') }}</li>
-          <li>
+          <!-- Temporarily hidden: Manage Leagues -->
+          <!-- <li>
             <a href="/managementLeagues">
               <i class="zmdi zmdi-grid"></i> <span>{{ translate('Manage Leagues') }}</span>
             </a>
-          </li>
+          </li> -->
           <li>
             <a href="/managementClubs">
               <i class="zmdi zmdi-home"></i> <span>{{ translate('Manage Clubs') }}</span>
