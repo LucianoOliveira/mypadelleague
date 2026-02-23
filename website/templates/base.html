@@ -72,6 +72,11 @@
             <i class="zmdi zmdi-grid"></i> <span>{{ translate('Leagues') }}</span>
           </a>
         </li>
+        <li>
+          <a href="/events">
+            <i class="zmdi zmdi-calendar"></i> <span>{{ translate('Events') }}</span>
+          </a>
+        </li>
         {% if user.is_authenticated and (user.us_is_manager==1 or user.us_is_admin==1 or user.us_is_superuser==1)%} 
         <li class="sidebar-header">{{ translate('Management') }}</li>
           <li>
@@ -82,6 +87,11 @@
           <li>
             <a href="/managementClubs">
               <i class="zmdi zmdi-home"></i> <span>{{ translate('Manage Clubs') }}</span>
+            </a>
+          </li>
+          <li>
+            <a href="/managementEvents">
+              <i class="zmdi zmdi-calendar-check"></i> <span>{{ translate('Manage Events') }}</span>
             </a>
           </li>
         {% endif %}

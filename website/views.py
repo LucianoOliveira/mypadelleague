@@ -1051,6 +1051,87 @@ def edit_league(league_id):
                            registered_users=users_data,
                            now=datetime.utcnow())
 
+# Event management routes
+@views.route('/events', methods=['GET'])
+def events():
+    """Main events page displaying all public events"""
+    from .models import Event
+    events_data = Event.query.filter_by(ev_is_active=True).order_by(Event.ev_date.desc()).all()
+    return render_template("events.html", user=current_user, result=events_data)
+
+@views.route('/managementEvents', methods=['GET'])
+@login_required
+def managementEvents():
+    """Events management page for authorized users"""
+    from .models import Event, Club, ClubAuthorization
+    
+    # Get events from clubs the user is authorized for
+    events_data = Event.query\
+        .join(Club, Event.ev_club_id == Club.cl_id)\
+        .join(ClubAuthorization, Club.cl_id == ClubAuthorization.ca_club_id)\
+        .filter(ClubAuthorization.ca_user_id == current_user.us_id)\
+        .order_by(Event.ev_date.desc())\
+        .all()
+    
+    return render_template("managementEvents.html", user=current_user, result=events_data, 
+                         translate=session.get('translate', {}))
+
+@views.route('/create_event', methods=['GET', 'POST'])
+@login_required
+def create_event():
+    """Create a club event"""
+    from .models import Club, ClubAuthorization
+    
+    # Get authorized clubs
+    authorized_clubs = Club.query\
+        .join(ClubAuthorization, Club.cl_id == ClubAuthorization.ca_club_id)\
+        .filter(ClubAuthorization.ca_user_id == current_user.us_id)\
+        .all()
+    
+    if request.method == 'POST':
+        # Handle event creation
+        flash("Event creation functionality will be implemented", category='info')
+        return redirect(url_for('views.managementEvents'))
+    
+    return render_template("create_event.html", user=current_user, clubs=authorized_clubs, 
+                         translate=session.get('translate', {}))
+
+@views.route('/create_event_public', methods=['GET', 'POST'])
+def create_event_public():
+    """Create a public event"""
+    if request.method == 'POST':
+        # Handle public event creation
+        flash("Public event creation functionality will be implemented", category='info')
+        return redirect(url_for('views.events'))
+    
+    return render_template("create_event_public.html", user=current_user, 
+                         translate=session.get('translate', {}))
+
+@views.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
+@login_required
+def edit_event(event_id):
+    """Edit an existing event"""
+    from .models import Event, Club, ClubAuthorization
+    
+    # Get event and verify user has permission
+    event = Event.query\
+        .join(Club, Event.ev_club_id == Club.cl_id)\
+        .join(ClubAuthorization, Club.cl_id == ClubAuthorization.ca_club_id)\
+        .filter(Event.ev_id == event_id, ClubAuthorization.ca_user_id == current_user.us_id)\
+        .first()
+    
+    if not event:
+        flash("Event not found or access denied", category='error')
+        return redirect(url_for('views.managementEvents'))
+    
+    if request.method == 'POST':
+        # Handle event editing
+        flash("Event editing functionality will be implemented", category='info')
+        return redirect(url_for('views.managementEvents'))
+    
+    return render_template("edit_event.html", user=current_user, event=event, 
+                         translate=session.get('translate', {}))
+
 # League management routes
 @views.route('/managementLeagues', methods=['GET', 'POST'])
 @login_required
