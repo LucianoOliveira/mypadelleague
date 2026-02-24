@@ -13,7 +13,7 @@
             </div>
         </div>
         <div class="card-body">
-            <form action="{{ url_for('views.edit_event_step1', event_id=event.ev_id) }}" method="post" id="editEventForm">
+            <form action="{{ url_for('views.edit_event_step1', event_id=event.ev_id, code=access_code) if access_code else url_for('views.edit_event_step1', event_id=event.ev_id) }}" method="post" id="editEventForm">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
@@ -100,7 +100,7 @@
                 
                 <div class="row mt-4">
                     <div class="col-md-6">
-                        <a href="{{ url_for('views.detail_event', event_id=event.ev_id) }}" class="btn btn-secondary">
+                        <a href="{{ url_for('views.detail_event', event_id=event.ev_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event.ev_id) }}" class="btn btn-secondary">
                             <i class="fa fa-arrow-left"></i> {{ translate('Cancel') }}
                         </a>
                     </div>

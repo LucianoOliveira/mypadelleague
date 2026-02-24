@@ -195,6 +195,382 @@
     "en": "Create Event",
     "pt": "Criar Evento"
   },
+  "Choose your event type to get started!": {
+    "en": "Choose your event type to get started!",
+    "pt": "Escolha o tipo de evento para começar!"
+  },
+  "Mexican": {
+    "en": "Mexican",
+    "pt": "Mexicano"
+  },
+  "American": {
+    "en": "American", 
+    "pt": "Americano"
+  },
+  "Non-Stop": {
+    "en": "Non-Stop",
+    "pt": "Non-Stop"
+  },
+  "Players will be paired dynamically each round, may repeat pairings and opponents.": {
+    "en": "Players will be paired dynamically each round, may repeat pairings and opponents.",
+    "pt": "Os jogadores serão emparelhados dinamicamente a cada ronda, podem repetir emparelhamentos e oponentes."
+  },
+  "Every player will be paired at least once with each other player.": {
+    "en": "Every player will be paired at least once with each other player.",
+    "pt": "Cada jogador será emparelhado pelo menos uma vez com cada outro jogador."
+  },
+  "Pairing done at the beginning, pairs will face each other once, pairs do not change during rounds.": {
+    "en": "Pairing done at the beginning, pairs will face each other once, pairs do not change during rounds.",
+    "pt": "Emparelhamentos feitos no início, os pares enfrentarão uns aos outros uma vez, os pares não mudam durante as rondas."
+  },
+  "Choose Mexican": {
+    "en": "Choose Mexican",
+    "pt": "Escolher Mexicano"
+  },
+  "Choose American": {
+    "en": "Choose American",
+    "pt": "Escolher Americano"
+  },
+  "Choose Non-Stop": {
+    "en": "Choose Non-Stop",
+    "pt": "Escolher Non-Stop"
+  },
+  "Back to Home": {
+    "en": "Back to Home",
+    "pt": "Voltar ao Início"
+  },
+  "Event type not found!": {
+    "en": "Event type not found!",
+    "pt": "Tipo de evento não encontrado!"
+  },
+  "Mexican Tournament": {
+    "en": "Mexican Tournament",
+    "pt": "Torneio Mexicano"
+  },
+  "American Tournament": {
+    "en": "American Tournament", 
+    "pt": "Torneio Americano"
+  },
+  "Non-Stop Tournament": {
+    "en": "Non-Stop Tournament",
+    "pt": "Torneio Non-Stop"
+  },
+  "Back to Type Selection": {
+    "en": "Back to Type Selection",
+    "pt": "Voltar à Seleção de Tipo"
+  },
+  "Step 1: Basic Event Information": {
+    "en": "Step 1: Basic Event Information",
+    "pt": "Passo 1: Informações Básicas do Evento"
+  },
+  "Next: Players & Setup": {
+    "en": "Next: Players & Setup", 
+    "pt": "Próximo: Jogadores e Configuração"
+  },
+  "Step 2: Number of Players": {
+    "en": "Step 2: Number of Players",
+    "pt": "Passo 2: Número de Jogadores"
+  },
+  "Step 2 of 5": {
+    "en": "Step 2 of 5",
+    "pt": "Passo 2 de 5"
+  },
+  "How many players will participate?": {
+    "en": "How many players will participate?",
+    "pt": "Quantos jogadores irão participar?"
+  },
+  "Number of Players": {
+    "en": "Number of Players",
+    "pt": "Número de Jogadores"
+  },
+  "Select number of players": {
+    "en": "Select number of players",
+    "pt": "Selecione o número de jogadores"
+  },
+  "players": {
+    "en": "players",
+    "pt": "jogadores"
+  },
+  "courts": {
+    "en": "courts",
+    "pt": "campos"
+  },
+  "Must be a multiple of 4 (minimum 8 players)": {
+    "en": "Must be a multiple of 4 (minimum 8 players)",
+    "pt": "Deve ser múltiplo de 4 (mínimo 8 jogadores)"
+  },
+  "Tournament Setup": {
+    "en": "Tournament Setup",
+    "pt": "Configuração do Torneio"
+  },
+  "Players": {
+    "en": "Players",
+    "pt": "Jogadores"
+  },
+  "Courts": {
+    "en": "Courts",
+    "pt": "Campos"
+  },
+  "Games per Round": {
+    "en": "Games per Round",
+    "pt": "Jogos por Ronda"
+  },
+  "Back to Basic Info": {
+    "en": "Back to Basic Info",
+    "pt": "Voltar às Informações Básicas"
+  },
+  "Next: Pairing Method": {
+    "en": "Next: Pairing Method",
+    "pt": "Próximo: Método de Emparelhamento"
+  },
+  "Step 3: Pairing Method": {
+    "en": "Step 3: Pairing Method",
+    "pt": "Passo 3: Método de Emparelhamento"
+  },
+  "Step 3 of 5": {
+    "en": "Step 3 of 5",
+    "pt": "Passo 3 de 5"
+  },
+  "How should the first round pairs be created?": {
+    "en": "How should the first round pairs be created?",
+    "pt": "Como devem ser criados os pares da primeira ronda?"
+  },
+  "Random": {
+    "en": "Random",
+    "pt": "Aleatório"
+  },
+  "Manual": {
+    "en": "Manual",
+    "pt": "Manual"
+  },
+  "Random L&R": {
+    "en": "Random L&R",
+    "pt": "Aleatório E&D"
+  },
+  "We pick up the list of players and distribute them in pairs at random.": {
+    "en": "We pick up the list of players and distribute them in pairs at random.",
+    "pt": "Pegamos na lista de jogadores e distribuímos em pares aleatoriamente."
+  },
+  "When we insert the player names we will be adding them in pairs already.": {
+    "en": "When we insert the player names we will be adding them in pairs already.",
+    "pt": "Quando inserimos os nomes dos jogadores, já os adicionamos em pares."
+  },
+  "We will put the players in column Left and column Right and then we will pair at random one left and one right.": {
+    "en": "We will put the players in column Left and column Right and then we will pair at random one left and one right.",
+    "pt": "Colocamos os jogadores na coluna Esquerda e coluna Direita e depois emparelhamos aleatoriamente um da esquerda com um da direita."
+  },
+  "Choose Random": {
+    "en": "Choose Random",
+    "pt": "Escolher Aleatório"
+  },
+  "Choose Manual": {
+    "en": "Choose Manual",
+    "pt": "Escolher Manual"
+  },
+  "Choose Random L&R": {
+    "en": "Choose Random L&R",
+    "pt": "Escolher Aleatório E&D"
+  },
+  "Random Pairing": {
+    "en": "Random Pairing",
+    "pt": "Emparelhamento Aleatório"
+  },
+  "All players will be shuffled and paired randomly for the first round. This ensures completely fair and unpredictable matchups.": {
+    "en": "All players will be shuffled and paired randomly for the first round. This ensures completely fair and unpredictable matchups.",
+    "pt": "Todos os jogadores serão embaralhados e emparelhados aleatoriamente para a primeira ronda. Isso garante confrontos completamente justos e imprevisíveis."
+  },
+  "Manual Pairing": {
+    "en": "Manual Pairing",
+    "pt": "Emparelhamento Manual"
+  },
+  "You will enter players in pre-determined pairs. This is useful when you want specific players to start together or have existing partnerships.": {
+    "en": "You will enter players in pre-determined pairs. This is useful when you want specific players to start together or have existing partnerships.",
+    "pt": "Você inserirá jogadores em pares pré-determinados. Isso é útil quando você quer que jogadores específicos comecem juntos ou têm parcerias existentes."
+  },
+  "Random Left & Right": {
+    "en": "Random Left & Right",
+    "pt": "Aleatório Esquerda e Direita"
+  },
+  "Players are divided into Left and Right columns, then randomly paired one from each side. Good for balancing skill levels or mixing groups.": {
+    "en": "Players are divided into Left and Right columns, then randomly paired one from each side. Good for balancing skill levels or mixing groups.",
+    "pt": "Os jogadores são divididos em colunas Esquerda e Direita, depois emparelhados aleatoriamente um de cada lado. Bom para equilibrar níveis de habilidade ou misturar grupos."
+  },
+  "Back to Player Count": {
+    "en": "Back to Player Count",
+    "pt": "Voltar ao Número de Jogadores"
+  },
+  "Next: Court Setup": {
+    "en": "Next: Court Setup",
+    "pt": "Próximo: Configuração dos Campos"
+  },
+  "Step 4: Court Setup": {
+    "en": "Step 4: Court Setup",
+    "pt": "Passo 4: Configuração dos Campos"
+  },
+  "Step 4 of 5": {
+    "en": "Step 4 of 5",
+    "pt": "Passo 4 de 5"
+  },
+  "Customize your court names": {
+    "en": "Customize your court names",
+    "pt": "Personalize os nomes dos seus campos"
+  },
+  "We have pre-filled court names for you. You can change them or keep the default names.": {
+    "en": "We have pre-filled court names for you. You can change them or keep the default names.",
+    "pt": "Pré-preenchemos os nomes dos campos para você. Pode alterá-los ou manter os nomes padrão."
+  },
+  "Court": {
+    "en": "Court",
+    "pt": "Campo"
+  },
+  "Court Name": {
+    "en": "Court Name",
+    "pt": "Nome do Campo"
+  },
+  "Tournament Summary": {
+    "en": "Tournament Summary",
+    "pt": "Resumo do Torneio"
+  },
+  "Total Rounds": {
+    "en": "Total Rounds",
+    "pt": "Rondas Totais"
+  },
+  "Reset to Defaults": {
+    "en": "Reset to Defaults",
+    "pt": "Restaurar Padrões"
+  },
+  "Number Courts (1, 2, 3...)": {
+    "en": "Number Courts (1, 2, 3...)",
+    "pt": "Numerar Campos (1, 2, 3...)"
+  },
+  "Back to Pairing Method": {
+    "en": "Back to Pairing Method",
+    "pt": "Voltar ao Método de Emparelhamento"
+  },
+  "Next: Add Players": {
+    "en": "Next: Add Players",
+    "pt": "Próximo: Adicionar Jogadores"
+  },
+  "Step 5: Add Players": {
+    "en": "Step 5: Add Players",
+    "pt": "Passo 5: Adicionar Jogadores"
+  },
+  "Final Step": {
+    "en": "Final Step",
+    "pt": "Passo Final"
+  },
+  "Fill all player names": {
+    "en": "Fill all player names",
+    "pt": "Preencha todos os nomes dos jogadores"
+  },
+  "Enter all player names. They will be randomly paired for the first round.": {
+    "en": "Enter all player names. They will be randomly paired for the first round.",
+    "pt": "Insira todos os nomes dos jogadores. Eles serão emparelhados aleatoriamente para a primeira ronda."
+  },
+  "Enter players in pairs. These pairs will be locked for the first round.": {
+    "en": "Enter players in pairs. These pairs will be locked for the first round.",
+    "pt": "Insira jogadores em pares. Estes pares serão bloqueados para a primeira ronda."
+  },
+  "Enter players in Left and Right columns. Random pairing will be done between columns.": {
+    "en": "Enter players in Left and Right columns. Random pairing will be done between columns.",
+    "pt": "Insira jogadores nas colunas Esquerda e Direita. O emparelhamento aleatório será feito entre colunas."
+  },
+  "Enter Player Names": {
+    "en": "Enter Player Names",
+    "pt": "Inserir Nomes dos Jogadores"
+  },
+  "Player": {
+    "en": "Player",
+    "pt": "Jogador"
+  },
+  "Enter Player Pairs": {
+    "en": "Enter Player Pairs",
+    "pt": "Inserir Pares de Jogadores"
+  },
+  "Pair": {
+    "en": "Pair",
+    "pt": "Par"
+  },
+  "Lock for first round": {
+    "en": "Lock for first round",
+    "pt": "Bloquear para primeira ronda"
+  },
+  "Player 1": {
+    "en": "Player 1",
+    "pt": "Jogador 1"
+  },
+  "Player 2": {
+    "en": "Player 2",
+    "pt": "Jogador 2"
+  },
+  "Player 1 Name": {
+    "en": "Player 1 Name",
+    "pt": "Nome do Jogador 1"
+  },
+  "Player 2 Name": {
+    "en": "Player 2 Name",
+    "pt": "Nome do Jogador 2"
+  },
+  "Enter Players (Left & Right)": {
+    "en": "Enter Players (Left & Right)",
+    "pt": "Inserir Jogadores (Esquerda e Direita)"
+  },
+  "Left Players": {
+    "en": "Left Players",
+    "pt": "Jogadores da Esquerda"
+  },
+  "Right Players": {
+    "en": "Right Players",
+    "pt": "Jogadores da Direita"
+  },
+  "Left Player": {
+    "en": "Left Player",
+    "pt": "Jogador Esquerda"
+  },
+  "Right Player": {
+    "en": "Right Player",
+    "pt": "Jogador Direita"
+  },
+  "players entered": {
+    "en": "players entered",
+    "pt": "jogadores inseridos"
+  },
+  "Back to Court Setup": {
+    "en": "Back to Court Setup",
+    "pt": "Voltar à Configuração dos Campos"
+  },
+  "Create Tournament!": {
+    "en": "Create Tournament!",
+    "pt": "Criar Torneio!"
+  },
+  "Session expired. Please start again.": {
+    "en": "Session expired. Please start again.",
+    "pt": "Sessão expirada. Por favor, comece novamente."
+  },
+  "Number of players must be at least 8 and a multiple of 4!": {
+    "en": "Number of players must be at least 8 and a multiple of 4!",
+    "pt": "O número de jogadores deve ser pelo menos 8 e múltiplo de 4!"
+  },
+  "Please select a valid pairing method!": {
+    "en": "Please select a valid pairing method!",
+    "pt": "Por favor, selecione um método de emparelhamento válido!"
+  },
+  "Please fill all player names before creating the event!": {
+    "en": "Please fill all player names before creating the event!",
+    "pt": "Por favor, preencha todos os nomes dos jogadores antes de criar o evento!"
+  },
+  "Event created successfully! Access Code: {}. Save this code to manage your event.": {
+    "en": "Event created successfully! Access Code: {}. Save this code to manage your event.",
+    "pt": "Evento criado com sucesso! Código de Acesso: {}. Guarde este código para gerir o seu evento."
+  },
+  "Event created successfully! Access Code: {}": {
+    "en": "Event created successfully! Access Code: {}",
+    "pt": "Evento criado com sucesso! Código de Acesso: {}"
+  },
+  "Error creating event: {}": {
+    "en": "Error creating event: {}",
+    "pt": "Erro ao criar evento: {}"
+  },
   "Date": {
     "en": "Date",
     "pt": "Data"
@@ -870,5 +1246,101 @@
   "Become a Manager": {
     "en": "Become a Manager",
     "pt": "Tornar-se um Gestor"
+  },
+  "When is your tournament?": {
+    "en": "When is your tournament?",
+    "pt": "Quando é o seu torneio?"
+  },
+  "Date": {
+    "en": "Date",
+    "pt": "Data"
+  },
+  "Time": {
+    "en": "Time", 
+    "pt": "Hora"
+  },
+  "optional": {
+    "en": "optional",
+    "pt": "opcional"
+  },
+  "How can we contact you?": {
+    "en": "How can we contact you?",
+    "pt": "Como podemos contactá-lo?"
+  },
+  "We need just one way to contact you in case there are any issues with your tournament.": {
+    "en": "We need just one way to contact you in case there are any issues with your tournament.",
+    "pt": "Precisamos apenas de uma forma de o contactar caso haja algum problema com o seu torneio."
+  },
+  "Email": {
+    "en": "Email",
+    "pt": "E-mail"
+  },
+  "Enter your email": {
+    "en": "Enter your email",
+    "pt": "Digite o seu e-mail"
+  },
+  "Phone": {
+    "en": "Phone",
+    "pt": "Telefone"
+  },
+  "Enter your phone number": {
+    "en": "Enter your phone number",
+    "pt": "Digite o seu número de telefone"
+  },
+  "Tournament Name": {
+    "en": "Tournament Name",
+    "pt": "Nome do Torneio"
+  },
+  "e.g., Friday Evening Tournament, Club Championship...": {
+    "en": "e.g., Friday Evening Tournament, Club Championship...",
+    "pt": "por exemplo, Torneio de Sexta à Noite, Campeonato do Clube..."
+  },
+  "If left empty, we will generate a name automatically.": {
+    "en": "If left empty, we will generate a name automatically.",
+    "pt": "Se deixado em branco, iremos gerar um nome automaticamente."
+  },
+  "Back to Types": {
+    "en": "Back to Types",
+    "pt": "Voltar aos Tipos"
+  },
+  "Next: Players & Setup": {
+    "en": "Next: Players & Setup",
+    "pt": "Próximo: Jogadores & Configuração"
+  },
+  "Processing...": {
+    "en": "Processing...",
+    "pt": "Processando..."
+  },
+  "Step 1: Basic Event Info": {
+    "en": "Step 1: Basic Event Info",
+    "pt": "Passo 1: Informações Básicas do Evento"
+  },
+  "Event date is required!": {
+    "en": "Event date is required!",
+    "pt": "A data do evento é obrigatória!"
+  },
+  "Email is required when email contact method is selected!": {
+    "en": "Email is required when email contact method is selected!",
+    "pt": "E-mail é obrigatório quando o método de contacto por e-mail é selecionado!"
+  },
+  "Phone is required when phone contact method is selected!": {
+    "en": "Phone is required when phone contact method is selected!",
+    "pt": "Telefone é obrigatório quando o método de contacto por telefone é selecionado!"
+  },
+  "Locked": {
+    "en": "Locked",
+    "pt": "Bloqueado"
+  },
+  "Not Locked": {
+    "en": "Not Locked",
+    "pt": "Não Bloqueado"
+  },
+  "Enter players in pairs. All pairs are automatically locked for the first round.": {
+    "en": "Enter players in pairs. All pairs are automatically locked for the first round.",
+    "pt": "Insira os jogadores em pares. Todos os pares são automaticamente bloqueados para a primeira ronda."
+  },
+  "Mexican tournaments have unlimited rounds - play as long as you want!": {
+    "en": "Mexican tournaments have unlimited rounds - play as long as you want!",
+    "pt": "Torneios Mexicanos têm rondas ilimitadas - jogue o quanto quiser!"
   }
 }

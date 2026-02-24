@@ -9,13 +9,15 @@
         <h5 class="card-title mb-3">{{ translate('Events') }}</h5>    
     </div>
     <div class="col-md-6 text-right">
+        {% if current_user.is_authenticated %}
         <a href="{{ url_for('views.create_event_public') }}" class="btn btn-success">
             <i class="zmdi zmdi-plus"></i> {{ translate('Create Event') }}
         </a>
-        {% if current_user.is_authenticated and (current_user.us_is_admin or current_user.us_is_superuser) %}
+        {% if current_user.us_is_admin or current_user.us_is_superuser %}
         <a href="{{ url_for('views.create_event') }}" class="btn btn-primary ml-2">
             <i class="zmdi zmdi-plus"></i> {{ translate('Club Event') }}
         </a>
+        {% endif %}
         {% endif %}
     </div>
 </div>
@@ -27,17 +29,17 @@
             <a href="{% if event.ev_club_id %}{{ url_for('views.detail_event', event_id=event.ev_id) }}{% else %}{{ url_for('views.public_event_detail', event_id=event.ev_id) }}{% endif %}" class="card h-100">
                 <div class="card-img-top position-relative bg-primary d-flex align-items-center justify-content-center" style="height: 200px;">
                     <!-- Event type badge instead of image -->
-                    {% if event.ev_type == 'NonStop' %}
+                    {% if event.event_type and event.event_type.et_name == 'NonStop' %}
                         <div class="text-center text-white">
                             <i class="zmdi zmdi-refresh zmdi-hc-3x mb-2"></i>
                             <div class="badge badge-light">{{ translate('Non-Stop') }}</div>
                         </div>
-                    {% elif event.ev_type == 'Americano' %}
+                    {% elif event.event_type and event.event_type.et_name == 'Americano' %}
                         <div class="text-center text-white">
                             <i class="zmdi zmdi-shuffle zmdi-hc-3x mb-2"></i>
                             <div class="badge badge-light">{{ translate('Americano') }}</div>
                         </div>
-                    {% elif event.ev_type == 'Mexicano' %}
+                    {% elif event.event_type and event.event_type.et_name == 'Mexicano' %}
                         <div class="text-center text-white">
                             <i class="zmdi zmdi-trending-up zmdi-hc-3x mb-2"></i>
                             <div class="badge badge-light">{{ translate('Mexicano') }}</div>
@@ -45,7 +47,7 @@
                     {% else %}
                         <div class="text-center text-white">
                             <i class="zmdi zmdi-calendar-note zmdi-hc-3x mb-2"></i>
-                            <div class="badge badge-light">{{ event.ev_type }}</div>
+                            <div class="badge badge-light">{{ event.event_type.et_name if event.event_type else 'Unknown' }}</div>
                         </div>
                     {% endif %}
                     <!-- Club logo positioned like in leagues -->

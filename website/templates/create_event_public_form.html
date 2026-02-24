@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4>{{ translate('Create Event') }} - {{ translate(event_type.et_name) }}</h4>
+            <p class="mb-0 text-muted">{{ translate('Step 1: Basic Event Information') }}</p>
+            
+            <!-- Event Type Info Badge -->
+            <div class="mt-2">
+                <span class="badge badge-primary badge-lg">
+                    {% if event_type.et_name == 'Mexican' %}
+                        <i class="zmdi zmdi-shuffle"></i> {{ translate('Mexican Tournament') }}
+                    {% elif event_type.et_name == 'American' %}
+                        <i class="zmdi zmdi-accounts-alt"></i> {{ translate('American Tournament') }}
+                    {% elif event_type.et_name == 'Non-Stop' %}
+                        <i class="zmdi zmdi-timer"></i> {{ translate('Non-Stop Tournament') }}
+                    {% else %}
+                        {{ translate(event_type.et_name) }}
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('views.create_event_public_form', event_type_id=event_type.et_id) }}" method="post" id="eventForm">
+                <h5 class="mb-3">{{ translate('Event Information') }}</h5>
+                
+                <div class="form-group">
+                    <label for="title">{{ translate('Event Title') }} <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="title" placeholder="{{ translate('Enter event title') }}" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">{{ translate('Location') }} <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="location" placeholder="{{ translate('Event location or address') }}" name="location" required>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="event_date">{{ translate('Event Date') }} <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="event_date" name="event_date" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="event_time">{{ translate('Event Time') }} <span class="text-danger">*</span></label>
+                            <input type="time" class="form-control" id="event_time" name="event_time" required>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                
+                <h5 class="mb-3">{{ translate('Organizer Information') }}</h5>
+                
+                <div class="form-group">
+                    <label for="organizer_name">{{ translate('Your Name') }} <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="organizer_name" placeholder="{{ translate('Enter your full name') }}" name="organizer_name" required>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="organizer_email">{{ translate('Email') }}</label>
+                            <input type="email" class="form-control" id="organizer_email" placeholder="{{ translate('Enter your email') }}" name="organizer_email">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="organizer_phone">{{ translate('Phone Number') }}</label>
+                            <input type="tel" class="form-control" id="organizer_phone" placeholder="{{ translate('Enter your phone number') }}" name="organizer_phone">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="row mt-4">
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('views.create_event_public') }}" class="btn btn-secondary btn-block">
+                            <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Type Selection') }}
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="zmdi zmdi-arrow-right"></i> {{ translate('Next: Players & Setup') }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for form enhancements -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('event_date').setAttribute('min', today);
+});
+</script>
+
+<!-- Custom CSS for mobile responsiveness -->
+<style>
+@media (max-width: 576px) {
+    .card-header h4 {
+        font-size: 1.25rem;
+    }
+    
+    .badge-lg {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .btn-block {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-control {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+}
+
+.badge-lg {
+    font-size: 1rem;
+    padding: 0.6rem 1rem;
+    border-radius: 0.5rem;
+}
+
+/* Improve form spacing on mobile */
+@media (max-width: 768px) {
+    .row.mt-4 {
+        margin-top: 2rem !important;
+    }
+    
+    .col-md-6 {
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+
+{% endblock %}

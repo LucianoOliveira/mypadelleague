@@ -2,152 +2,158 @@
 {% block content %}
 <div class="mt-4">
     <div class="card">
-        <div class="card-header">
+        <div class="card-header text-center">
             <h4>{{ translate('Create Event') }} - {{ translate('Public') }}</h4>
-            <p class="mb-0 text-muted">{{ translate('Create your event for free - no login required!') }}</p>
+            <p class="mb-0 text-muted">{{ translate('Choose your event type to get started!') }}</p>
         </div>
         <div class="card-body">
-            <form action="{{ url_for('views.create_event_public') }}" method="post" id="eventForm">
-                <h5 class="mb-3">{{ translate('Event Information') }}</h5>
+            
+            <!-- Event Type Selection Cards -->
+            <div class="row justify-content-center">
                 
-                <div class="form-group">
-                    <label for="title">{{ translate('Event Title') }} <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="title" placeholder="{{ translate('Enter event title') }}" name="title" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="location">{{ translate('Location') }} <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="location" placeholder="{{ translate('Event location or address') }}" name="location" required>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="event_date">{{ translate('Event Date') }} <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="event_date" name="event_date" required>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="event_time">{{ translate('Event Time') }} <span class="text-danger">*</span></label>
-                            <input type="time" class="form-control" id="event_time" name="event_time" required>
+                <!-- Mexican Event Type Card -->
+                <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card event-type-card h-100" onclick="selectEventType('Mexicano', findEventTypeId('Mexicano'))" style="cursor: pointer; transition: all 0.3s ease;">
+                        <div class="card-body text-center">
+                            <div class="event-icon mb-3">
+                                <i class="zmdi zmdi-shuffle" style="font-size: 3rem; color: #ff6b6b;"></i>
+                            </div>
+                            <h5 class="card-title">{{ translate('Mexican') }}</h5>
+                            <p class="card-text text-muted">{{ translate('Players will be paired dynamically each round, may repeat pairings and opponents.') }}</p>
+                            <div class="mt-auto">
+                                <button type="button" class="btn btn-outline-primary btn-sm">
+                                    <i class="zmdi zmdi-play"></i> {{ translate('Choose Mexican') }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="event_type_id">{{ translate('Event Type') }} <span class="text-danger">*</span></label>
-                            <select class="form-control" id="event_type_id" name="event_type_id" required>
-                                <option value="">{{ translate('Select event type') }}...</option>
-                                {% for event_type in event_types %}
-                                <option value="{{ event_type.et_id }}">{{ translate(event_type.et_name) }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="max_players">{{ translate('Maximum Players') }} <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="max_players" name="max_players" min="4" max="64" step="4" placeholder="8" required>
-                            <small class="form-text text-muted">{{ translate('Must be a multiple of 4') }}</small>
+                <!-- American Event Type Card -->
+                <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card event-type-card h-100" onclick="selectEventType('Americano', findEventTypeId('Americano'))" style="cursor: pointer; transition: all 0.3s ease;">
+                        <div class="card-body text-center">
+                            <div class="event-icon mb-3">
+                                <i class="zmdi zmdi-accounts-alt" style="font-size: 3rem; color: #4ecdc4;"></i>
+                            </div>
+                            <h5 class="card-title">{{ translate('American') }}</h5>
+                            <p class="card-text text-muted">{{ translate('Every player will be paired at least once with each other player.') }}</p>
+                            <div class="mt-auto">
+                                <button type="button" class="btn btn-outline-success btn-sm">
+                                    <i class="zmdi zmdi-play"></i> {{ translate('Choose American') }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <hr>
-                <h5 class="mb-3">{{ translate('Organizer Information') }}</h5>
+                <!-- Non-Stop Event Type Card -->
+                <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card event-type-card h-100" onclick="selectEventType('NonStop', findEventTypeId('NonStop'))" style="cursor: pointer; transition: all 0.3s ease;">
+                        <div class="card-body text-center">
+                            <div class="event-icon mb-3">
+                                <i class="zmdi zmdi-timer" style="font-size: 3rem; color: #f7b801;"></i>
+                            </div>
+                            <h5 class="card-title">{{ translate('Non-Stop') }}</h5>
+                            <p class="card-text text-muted">{{ translate('Pairing done at the beginning, pairs will face each other once, pairs do not change during rounds.') }}</p>
+                            <div class="mt-auto">
+                                <button type="button" class="btn btn-outline-warning btn-sm">
+                                    <i class="zmdi zmdi-play"></i> {{ translate('Choose Non-Stop') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
-                <div class="form-group">
-                    <label for="organizer_name">{{ translate('Organizer Name') }} <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="organizer_name" placeholder="{{ translate('Your full name') }}" name="organizer_name" required>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="organizer_email">{{ translate('Email') }}</label>
-                            <input type="email" class="form-control" id="organizer_email" placeholder="{{ translate('your@email.com') }}" name="organizer_email">
-                            <small class="form-text text-muted">{{ translate('Optional but recommended for contact') }}</small>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="organizer_phone">{{ translate('Phone Number') }}</label>
-                            <input type="tel" class="form-control" id="organizer_phone" placeholder="{{ translate('Your phone number') }}" name="organizer_phone">
-                            <small class="form-text text-muted">{{ translate('Optional - for player contact') }}</small>
-                        </div>
-                    </div>
-                </div>
-
-                <hr>
-                <h5>{{ translate('Registration Period') }} <span class="text-muted">({{ translate('Optional') }})</span></h5>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="registration_start">{{ translate('Registration Opens') }}</label>
-                            <input type="datetime-local" class="form-control" id="registration_start" name="registration_start">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="registration_end">{{ translate('Registration Closes') }}</label>
-                            <input type="datetime-local" class="form-control" id="registration_end" name="registration_end">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group text-center">
-                    <button type="submit" class="btn btn-success px-5">
-                        <i class="icon-plus"></i> {{ translate('Create Event') }}
-                    </button>
-                    <a href="{{ url_for('views.events') }}" class="btn btn-secondary ml-3 px-5">
-                        <i class="icon-arrow-left"></i> {{ translate('Back to Events') }}
-                    </a>
-                </div>
-
-                <div class="alert alert-info mt-4">
-                    <strong>{{ translate('Already have an account?') }}</strong> 
-                    <a href="{{ url_for('auth.login') }}">{{ translate('Login here') }}</a> {{ translate('to access more features and club management.') }}
-                </div>
-            </form>
+            </div>
+            
+            <!-- Back to Home Button -->
+            <div class="text-center mt-4">
+                <a href="{{ url_for('views.home') }}" class="btn btn-secondary">
+                    <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Home') }}
+                </a>
+            </div>
+            
         </div>
     </div>
 </div>
 
-<script>
-document.getElementById('eventForm').addEventListener('submit', function(e) {
-    const maxPlayers = parseInt(document.getElementById('max_players').value);
-    if (maxPlayers % 4 !== 0) {
-        e.preventDefault();
-        alert('{{ translate("Maximum players must be a multiple of 4") }}');
-        return false;
-    }
-    
-    const regStart = document.getElementById('registration_start').value;
-    const regEnd = document.getElementById('registration_end').value;
-    
-    if (regStart && regEnd && regStart >= regEnd) {
-        e.preventDefault();
-        alert('{{ translate("Registration end must be after registration start") }}');
-        return false;
-    }
-    
-    const eventDate = document.getElementById('event_date').value;
-    const eventTime = document.getElementById('event_time').value;
-    const eventDateTime = new Date(eventDate + 'T' + eventTime);
-    const now = new Date();
-    
-    if (eventDateTime <= now) {
-        e.preventDefault();
-        alert('{{ translate("Event date and time must be in the future") }}');
-        return false;
-    }
-});
+<!-- Custom CSS for Event Type Cards -->
+<style>
+.event-type-card {
+    border-radius: 15px;
+    border: 2px solid transparent;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
 
-// Set minimum date to today
-document.getElementById('event_date').min = new Date().toISOString().split('T')[0];
+.event-type-card:hover {
+    transform: translateY(-5px);
+    border-color: #007bff;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+
+.event-icon {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 576px) {
+    .event-type-card {
+        margin-bottom: 1rem;
+    }
+    .card-title {
+        font-size: 1.25rem;
+    }
+    .card-text {
+        font-size: 0.9rem;
+    }
+    .event-icon i {
+        font-size: 2.5rem !important;
+    }
+}
+
+/* Make sure cards have equal height */
+.h-100 {
+    height: 100% !important;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.mt-auto {
+    margin-top: auto !important;
+}
+</style>
+
+<!-- JavaScript for Event Type Selection -->
+<script>
+// Event types data from backend
+const eventTypes = [
+    {% for event_type in event_types %}
+    {
+        id: {{ event_type.et_id }},
+        name: "{{ event_type.et_name }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+function findEventTypeId(typeName) {
+    const eventType = eventTypes.find(type => type.name === typeName);
+    return eventType ? eventType.id : null;
+}
+
+function selectEventType(typeName, typeId) {
+    if (typeId) {
+        // Redirect to the form page with the selected event type
+        window.location.href = "{{ url_for('views.create_event_public_form', event_type_id=0) }}".replace('0', typeId);
+    } else {
+        alert("{{ translate('Event type not found!') }}");
+    }
+}
 </script>
+
 {% endblock %}

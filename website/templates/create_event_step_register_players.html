@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4>{{ translate('Edit Event') if is_edit else translate('Create Mexican Tournament') }}</h4>
+            <p class="mb-0 text-muted">{{ translate('Step 5: Add Players') }}</p>
+            
+            <!-- Progress indicators -->
+            <div class="mt-3">
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar bg-success" style="width: 100%"></div>
+                </div>
+                <small class="text-muted">{{ translate('Final Step') }} - {{ translate('Fill all player names') }}</small>
+            </div>
+        </div>
+        <div class="card-body">
+            
+            <!-- Pairing Method Info -->
+            <div class="alert alert-info">
+                <h6>
+                    {% if pairing_method == 'Random' %}
+                        <i class="zmdi zmdi-shuffle"></i> {{ translate('Random Pairing') }}
+                    {% elif pairing_method == 'Manual' %}
+                        <i class="zmdi zmdi-accounts"></i> {{ translate('Manual Pairing') }}
+                    {% elif pairing_method == 'Random L&R' %}
+                        <i class="zmdi zmdi-swap"></i> {{ translate('Random Left & Right') }}
+                    {% endif %}
+                </h6>
+                <p class="mb-0">
+                    {% if pairing_method == 'Random' %}
+                        {{ translate('Enter all player names. They will be randomly paired for the first round.') }}
+                    {% elif pairing_method == 'Manual' %}
+                        {{ translate('Enter players in pairs. These pairs will be locked for the first round.') }}
+                    {% elif pairing_method == 'Random L&R' %}
+                        {{ translate('Enter players in Left and Right columns. Random pairing will be done between columns.') }}
+                    {% endif %}
+                </p>
+            </div>
+            
+            {% if is_edit %}
+            <form action="{{ url_for('views.edit_event_public_step_register', event_id=event_id, code=access_code) }}" method="post" id="playersForm">
+            {% else %}
+            <form action="{{ url_for('views.create_event_step_register_players') }}" method="post" id="playersForm">
+            {% endif %}
+                
+                <h5 class="mb-3">{{ translate('Enter Player Names') }}</h5>
+                <div class="alert alert-light">
+                    <i class="zmdi zmdi-info-outline"></i>
+                    {% if pairing_method == 'Manual' %}
+                        {{ translate('Enter players in pairs. All pairs are automatically locked for the first round.') }}
+                    {% else %}
+                        {{ translate('Use two columns for all pairing types. Lock any pair to keep those two players together in round 1.') }}
+                    {% endif %}
+                </div>
+
+                <div class="row">
+                    {% for i in range(max_players // 2) %}
+                    <div class="col-12 mb-3">
+                        <div class="card pair-card">
+                            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                <strong>{{ translate('Pair') }} {{ i + 1 }}</strong>
+                                {% if pairing_method != 'Manual' %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary lock-btn" data-pair="{{ i }}" onclick="togglePairLock({{ i }})">
+                                    <i class="zmdi zmdi-lock-open"></i> <span class="lock-label">{{ translate('Not Locked') }}</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <input type="text"
+                                               class="form-control player-input"
+                                               name="player_{{ i * 2 }}"
+                                               placeholder="{{ translate('Player') }} {{ (i * 2) + 1 }}"
+                                               required>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <input type="text"
+                                               class="form-control player-input"
+                                               name="player_{{ (i * 2) + 1 }}"
+                                               placeholder="{{ translate('Player') }} {{ (i * 2) + 2 }}"
+                                               required>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="pair_{{ i }}_locked" id="pair_{{ i }}_locked" value="{% if pairing_method == 'Manual' %}true{% else %}false{% endif %}">
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Progress indicator -->
+                <div class="mt-4">
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar progress-bar-animated" id="fillProgress" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted">
+                        <span id="filledCount">0</span> / {{ max_players }} {{ translate('players entered') }}
+                    </small>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="row mt-4">
+                    <div class="col-md-6 mb-3">
+                        {% if is_edit %}
+                        <a href="{{ url_for('views.edit_event_public_step_courts', event_id=event_id, code=access_code) }}" class="btn btn-secondary btn-block">
+                            <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Court Setup') }}
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('views.create_event_step_courts') }}" class="btn btn-secondary btn-block">
+                            <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Court Setup') }}
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <button type="submit" class="btn btn-success btn-block" id="createBtn" disabled>
+                            <i class="zmdi zmdi-check"></i> {{ translate('Update Tournament!') if is_edit else translate('Create Tournament!') }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const playerInputs = document.querySelectorAll('.player-input');
+    const createBtn = document.getElementById('createBtn');
+    const fillProgress = document.getElementById('fillProgress');
+    const filledCount = document.getElementById('filledCount');
+    const totalPlayers = {{ max_players }};
+    
+    function updateProgress() {
+        let filled = 0;
+        playerInputs.forEach(input => {
+            if (input.value.trim()) {
+                filled++;
+            }
+        });
+        
+        const percentage = (filled / totalPlayers) * 100;
+        fillProgress.style.width = percentage + '%';
+        filledCount.textContent = filled;
+        
+        createBtn.disabled = filled !== totalPlayers;
+        
+        if (filled === totalPlayers) {
+            fillProgress.classList.add('bg-success');
+            createBtn.textContent = '✓ ' + "{{ translate('Create Tournament!') }}";
+        } else {
+            fillProgress.classList.remove('bg-success');
+            createBtn.innerHTML = '<i class="zmdi zmdi-check"></i> {{ translate("Create Tournament!") }}';
+        }
+    }
+    
+    // Add event listeners to all inputs
+    playerInputs.forEach(input => {
+        input.addEventListener('input', updateProgress);
+        input.addEventListener('blur', function() {
+            // Auto-capitalize names
+            if (this.value) {
+                this.value = this.value.split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(' ');
+            }
+        });
+    });
+    
+    // Focus first input
+    if (playerInputs.length > 0) {
+        playerInputs[0].focus();
+    }
+    
+    // Initial progress check
+    updateProgress();
+});
+
+function togglePairLock(pairIndex) {
+    const hiddenInput = document.getElementById(`pair_${pairIndex}_locked`);
+    const button = document.querySelector(`.lock-btn[data-pair="${pairIndex}"]`);
+    const icon = button.querySelector('i');
+    const label = button.querySelector('.lock-label');
+    const pairCard = button.closest('.pair-card');
+
+    const currentlyLocked = hiddenInput.value === 'true';
+    const nextLocked = !currentlyLocked;
+    hiddenInput.value = nextLocked ? 'true' : 'false';
+
+    if (nextLocked) {
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-warning');
+        icon.className = 'zmdi zmdi-lock';
+        label.textContent = "{{ translate('Locked') }}";
+        pairCard.classList.add('pair-locked');
+    } else {
+        button.classList.remove('btn-warning');
+        button.classList.add('btn-outline-secondary');
+        icon.className = 'zmdi zmdi-lock-open';
+        label.textContent = "{{ translate('Not Locked') }}";
+        pairCard.classList.remove('pair-locked');
+    }
+}
+
+// Quick fill for testing
+function quickFill() {
+    const inputs = document.querySelectorAll('.player-input');
+    inputs.forEach((input, index) => {
+        input.value = `Player ${index + 1}`;
+        input.dispatchEvent(new Event('input'));
+    });
+}
+
+// Add quick fill button for development (remove in production)
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    document.addEventListener('DOMContentLoaded', function() {
+        const header = document.querySelector('.card-header');
+        const quickBtn = document.createElement('button');
+        quickBtn.type = 'button';
+        quickBtn.className = 'btn btn-sm btn-outline-warning float-right';
+        quickBtn.textContent = 'Quick Fill (Test)';
+        quickBtn.onclick = quickFill;
+        header.appendChild(quickBtn);
+    });
+}
+</script>
+
+<style>
+.input-group-text {
+    min-width: 45px;
+    justify-content: center;
+}
+
+.pair-card {
+    border: 1px solid #e9ecef;
+}
+
+.pair-card .card-header {
+    background: #f8f9fa;
+}
+
+.pair-card.pair-locked {
+    border-color: #ffc107;
+    box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.25);
+}
+
+.player-input:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.form-check-label {
+    font-size: 0.9rem;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}
+
+@media (max-width: 576px) {
+    .btn-block {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .player-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .float-right {
+        float: none !important;
+        margin-top: 0.5rem;
+    }
+    
+    .form-check-inline {
+        display: block;
+    }
+}
+
+.card-header h6 {
+    margin-bottom: 0.5rem;
+}
+
+@media (min-width: 768px) {
+    .card-header h6 {
+        margin-bottom: 0;
+    }
+}
+</style>
+
+{% endblock %}

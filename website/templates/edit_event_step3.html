@@ -17,7 +17,7 @@
             </div>
         </div>
 
-        <form action="{{ url_for('views.edit_event_step3', event_id=event.ev_id) }}" method="post" id="editPlayersForm">
+        <form action="{{ url_for('views.edit_event_step3', event_id=event.ev_id, code=access_code) if access_code else url_for('views.edit_event_step3', event_id=event.ev_id) }}" method="post" id="editPlayersForm">
             
             <!-- Pairing Type Description -->
             <div class="card mb-4">
@@ -25,7 +25,7 @@
                     <h5>{{ translate('How Pairing Works') }}</h5>
                 </div>
                 <div class="card-body">
-                    {% if event.ev_type == 'NonStop' %}
+                    {% if event.event_type and event.event_type.et_name == 'NonStop' %}
                         {% if event.ev_pairing_type == 'Random' %}
                             <p class="mb-0">{{ translate('Teams will be formed randomly and stay fixed throughout the event. Players will maintain the same partner for all games.') }}</p>
                         {% elif event.ev_pairing_type == 'Manual' %}
@@ -33,9 +33,9 @@
                         {% elif event.ev_pairing_type == 'L&R Random' %}
                             <p class="mb-0">{{ translate('Players choose their preferred side (left/right), then teams are formed randomly within each side and stay fixed.') }}</p>
                         {% endif %}
-                    {% elif event.ev_type == 'Americano' %}
+                    {% elif event.event_type and event.event_type.et_name == 'Americano' %}
                         <p class="mb-0">{{ translate('Players will rotate partners each round to play with as many different people as possible. The pairing type determines initial team formation only.') }}</p>
-                    {% elif event.ev_type == 'Mexicano' %}
+                    {% elif event.event_type and event.event_type.et_name == 'Mexicano' %}
                         <p class="mb-0">{{ translate('Players are ranked by performance and paired accordingly each round. Better players will tend to play together as the tournament progresses.') }}</p>
                     {% endif %}
                 </div>
@@ -156,7 +156,7 @@
 
             <!-- Navigation buttons -->
             <div class="d-flex justify-content-between mt-4">
-                <a href="{{ url_for('views.edit_event_step2', event_id=event.ev_id) }}" class="btn btn-secondary">
+                <a href="{{ url_for('views.edit_event_step2', event_id=event.ev_id, code=access_code) if access_code else url_for('views.edit_event_step2', event_id=event.ev_id) }}" class="btn btn-secondary">
                     <i class="fa fa-arrow-left"></i> {{ translate('Previous') }}: {{ translate('Courts & Settings') }}
                 </a>
                 <button type="submit" class="btn btn-success">

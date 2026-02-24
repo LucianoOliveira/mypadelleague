@@ -24,7 +24,7 @@
                     </thead>
                     <tbody>
                         {% for event in result %}
-                        <tr onclick="window.location.href='{{ url_for('views.edit_event', event_id=event.ev_id) }}';" style="cursor: pointer;">
+                        <tr onclick="window.location.href='{{ url_for('views.edit_event_step1', event_id=event.ev_id) }}';" style="cursor: pointer;">
                             <td>
                                 <strong>{{ event.ev_title }}</strong><br>
                                 <small class="text-muted">{{ event.ev_location }}</small>
@@ -35,14 +35,14 @@
                                 <small>{{ event.ev_start_time.strftime('%H:%M') }}</small>
                             </td>
                             <td>
-                                {% if event.ev_type == 'NonStop' %}
+                                {% if event.event_type and event.event_type.et_name == 'NonStop' %}
                                     <span class="badge badge-info">{{ translate('Non-Stop') }}</span>
-                                {% elif event.ev_type == 'Americano' %}
+                                {% elif event.event_type and event.event_type.et_name == 'Americano' %}
                                     <span class="badge badge-success">{{ translate('Americano') }}</span>
-                                {% elif event.ev_type == 'Mexicano' %}
+                                {% elif event.event_type and event.event_type.et_name == 'Mexicano' %}
                                     <span class="badge badge-warning">{{ translate('Mexicano') }}</span>
                                 {% else %}
-                                    <span class="badge badge-secondary">{{ event.ev_type }}</span>
+                                    <span class="badge badge-secondary">{{ event.event_type.et_name if event.event_type else 'Unknown' }}</span>
                                 {% endif %}
                             </td>
                             <td>{{ event.registrations|length }} / {{ event.ev_max_players }}</td>

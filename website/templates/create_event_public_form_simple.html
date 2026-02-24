@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header text-center">
+            <h4>{{ translate('Edit Event') if is_edit else translate('Create Event') }} - {{ event_type.et_name }}</h4>
+            <p class="mb-0 text-muted">{{ translate('Step 1: Basic Event Info') }}</p>
+        </div>
+        <div class="card-body">
+            
+            <!-- Event Type Badge -->
+            <div class="text-center mb-4">
+                <span class="badge badge-primary" style="font-size: 1.2rem; padding: 0.6rem 1.5rem; border-radius: 25px;">
+                    <i class="zmdi zmdi-shuffle"></i> {{ event_type.et_name }}
+                </span>
+            </div>
+
+            <form method="POST" id="publicEventForm">
+                
+                <!-- When is your tournament? -->
+                <div class="mb-5">
+                    <h5 class="text-primary mb-4">
+                        <i class="zmdi zmdi-calendar"></i> {{ translate('When is your tournament?') }}
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-8 col-12 mb-3">
+                            <label for="event_date" class="form-label text-bold">{{ translate('Date') }} <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control form-control-lg" id="event_date" name="event_date" 
+                                   value="{{ event_data.event_date if event_data else '' }}" required>
+                        </div>
+                        <div class="col-md-4 col-12 mb-3">
+                            <label for="event_time" class="form-label">{{ translate('Time') }} <small class="text-muted">({{ translate('optional') }})</small></label>
+                            <input type="time" class="form-control form-control-lg" id="event_time" name="event_time" 
+                                   value="{{ event_data.event_time if event_data else '18:00' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Optional: Give your tournament a name -->
+                <div class="mb-5">
+                    <h5 class="text-primary mb-4">
+                        <i class="zmdi zmdi-tag"></i> {{ translate('Tournament Name') }} <small class="text-muted">({{ translate('optional') }})</small>
+                    </h5>
+                    <input type="text" class="form-control form-control-lg" id="event_title" name="event_title" 
+                           placeholder="{{ translate('e.g., Friday Evening Tournament, Club Championship...') }}" 
+                           value="{{ event_data.event_title if event_data else '' }}"
+                           maxlength="100">
+                    <small class="text-muted mt-2 d-block">{{ translate('If left empty, we will generate a name automatically.') }}</small>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="row mt-5">
+                    <div class="col-6">
+                        {% if is_edit %}
+                        <a href="{{ url_for('views.public_event_detail', event_id=event_id, code=access_code) }}" class="btn btn-secondary btn-lg w-100">
+                            <i class="zmdi zmdi-close"></i> {{ translate('Cancel') }}
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('views.create_event_public') }}" class="btn btn-secondary btn-lg w-100">
+                            <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Types') }}
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="col-6">
+                        <button type="submit" class="btn btn-primary btn-lg w-100" id="nextBtn" {{ '' if is_edit else 'disabled' }}>
+                            {{ translate('Next: Number of Players') }} <i class="zmdi zmdi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+                
+            </form>
+            
+        </div>
+    </div>
+</div>
+
+<style>
+.form-control-lg {
+    font-size: 1.2rem;
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+}
+
+.badge-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+}
+
+.text-primary {
+    color: #007bff !important;
+    font-weight: 600;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.7rem;
+    font-size: 1rem;
+}
+
+.text-bold {
+    font-weight: 600;
+}
+
+.card {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    border: none;
+    border-radius: 15px;
+}
+
+.btn-lg {
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+    .btn-lg {
+        font-size: 1rem;
+        padding: 0.8rem 1rem;
+    }
+    
+    .form-control, .form-control-lg {
+        font-size: 16px; /* Prevent iOS zoom */
+    }
+    
+    h5 {
+        font-size: 1.1rem;
+    }
+}
+
+/* Smooth transitions */
+.btn, .form-control {
+    transition: all 0.3s ease;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,123,255,0.4);
+}
+</style>
+
+<script>
+function checkFormValidity() {
+    const eventDate = document.getElementById('event_date');
+    const nextBtn = document.getElementById('nextBtn');
+    
+    const hasDate = eventDate.value !== '';
+    
+    // Enable/disable button based on date requirement only
+    nextBtn.disabled = !hasDate;
+    
+    // Visual feedback
+    if (hasDate) {
+        nextBtn.classList.remove('btn-outline-primary');
+        nextBtn.classList.add('btn-primary');
+    } else {
+        nextBtn.classList.remove('btn-primary'); 
+        nextBtn.classList.add('btn-outline-primary');
+    }
+}
+
+// Add event listeners when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    const eventDate = document.getElementById('event_date');
+    eventDate.min = today;
+    
+    // Only pre-fill with today's date if creating (not editing)
+    {% if not is_edit %}
+    if (!eventDate.value) {
+        eventDate.value = today;
+    }
+    {% endif %}
+    
+    // Check form validity on date change
+    eventDate.addEventListener('change', checkFormValidity);
+    eventDate.addEventListener('input', checkFormValidity);
+    
+    // Initial check
+    checkFormValidity();
+    
+    // Form submission handler
+    document.getElementById('publicEventForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (document.getElementById('nextBtn').disabled) {
+            return false;
+        }
+        
+        // Show loading state
+        const nextBtn = document.getElementById('nextBtn');
+        const originalText = nextBtn.innerHTML;
+        nextBtn.innerHTML = '<i class="zmdi zmdi-refresh zmdi-hc-spin"></i> {{ translate("Processing...") }}';
+        nextBtn.disabled = true;
+        
+        // Submit the form after short delay for visual feedback
+        setTimeout(() => {
+            this.submit();
+        }, 200);
+    });
+});
+</script>
+
+{% endblock %}

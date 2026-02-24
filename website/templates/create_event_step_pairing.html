@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4>{{ translate('Edit Event') if is_edit else translate('Create Mexican Tournament') }}</h4>
+            <p class="mb-0 text-muted">{{ translate('Step 3: Pairing Method') }}</p>
+            
+            <!-- Progress indicators -->
+            <div class="mt-3">
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar bg-success" style="width: 60%"></div>
+                </div>
+                <small class="text-muted">{{ translate('Step 3 of 5') }}</small>
+            </div>
+        </div>
+        <div class="card-body">
+            <h5 class="mb-3">{{ translate('How should the first round pairs be created?') }}</h5>
+            
+            {% if is_edit %}
+            <form action="{{ url_for('views.edit_event_public_step_pairing', event_id=event_id, code=access_code) }}" method="post" id="pairingForm">
+            {% else %}
+            <form action="{{ url_for('views.create_event_step_pairing') }}" method="post" id="pairingForm">
+            {% endif %}
+                
+                <div class="row">
+                    <!-- Random Pairing -->
+                    <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                        <div class="card pairing-card h-100" onclick="selectPairing('Random')" style="cursor: pointer;">
+                            <div class="card-body text-center">
+                                <div class="pairing-icon mb-3">
+                                    <i class="zmdi zmdi-shuffle" style="font-size: 3rem; color: #ff6b6b;"></i>
+                                </div>
+                                <h6 class="card-title">{{ translate('Random') }}</h6>
+                                <p class="card-text text-muted">{{ translate('We pick up the list of players and distribute them in pairs at random.') }}</p>
+                                <div class="mt-auto">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="pairing_method" value="Random" id="random">
+                                        <label class="form-check-label" for="random">
+                                            {{ translate('Choose Random') }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Pairing -->
+                    <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                        <div class="card pairing-card h-100" onclick="selectPairing('Manual')" style="cursor: pointer;">
+                            <div class="card-body text-center">
+                                <div class="pairing-icon mb-3">
+                                    <i class="zmdi zmdi-accounts" style="font-size: 3rem; color: #4ecdc4;"></i>
+                                </div>
+                                <h6 class="card-title">{{ translate('Manual') }}</h6>
+                                <p class="card-text text-muted">{{ translate('When we insert the player names we will be adding them in pairs already.') }}</p>
+                                <div class="mt-auto">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="pairing_method" value="Manual" id="manual">
+                                        <label class="form-check-label" for="manual">
+                                            {{ translate('Choose Manual') }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Random L&R Pairing -->
+                    <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                        <div class="card pairing-card h-100" onclick="selectPairing('Random L&R')" style="cursor: pointer;">
+                            <div class="card-body text-center">
+                                <div class="pairing-icon mb-3">
+                                    <i class="zmdi zmdi-swap" style="font-size: 3rem; color: #f7b801;"></i>
+                                </div>
+                                <h6 class="card-title">{{ translate('Random L&R') }}</h6>
+                                <p class="card-text text-muted">{{ translate('We will put the players in column Left and column Right and then we will pair at random one left and one right.') }}</p>
+                                <div class="mt-auto">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="pairing_method" value="Random L&R" id="random_lr">
+                                        <label class="form-check-label" for="random_lr">
+                                            {{ translate('Choose Random L&R') }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Explanation of selected method -->
+                <div class="alert alert-light" id="method-explanation" style="display: none;">
+                    <h6 id="explanation-title"></h6>
+                    <p id="explanation-text" class="mb-0"></p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="row mt-4">
+                    <div class="col-md-6 mb-3">
+                        {% if is_edit %}
+                        <a href="{{ url_for('views.edit_event_public_step_players', event_id=event_id, code=access_code) }}" class="btn btn-secondary btn-block">
+                            <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Player Count') }}
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('views.create_event_step_players') }}" class="btn btn-secondary btn-block">
+                            <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Player Count') }}
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <button type="submit" class="btn btn-primary btn-block" id="nextBtn" {{ '' if is_edit and current_pairing else 'disabled' }}>
+                            <i class="zmdi zmdi-arrow-right"></i> {{ translate('Next: Court Setup') }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const explanations = {
+    'Random': {
+        title: "{{ translate('Random Pairing') }}",
+        text: "{{ translate('All players will be shuffled and paired randomly for the first round. This ensures completely fair and unpredictable matchups.') }}"
+    },
+    'Manual': {
+        title: "{{ translate('Manual Pairing') }}",
+        text: "{{ translate('You will enter players in pre-determined pairs. This is useful when you want specific players to start together or have existing partnerships.') }}"
+    },
+    'Random L&R': {
+        title: "{{ translate('Random Left & Right') }}",
+        text: "{{ translate('Players are divided into Left and Right columns, then randomly paired one from each side. Good for balancing skill levels or mixing groups.') }}"
+    }
+};
+
+function selectPairing(method) {
+    // Clear previous selections
+    document.querySelectorAll('.pairing-card').forEach(card => {
+        card.classList.remove('border-primary');
+        card.style.borderWidth = '';
+    });
+    
+    // Select clicked card
+    event.currentTarget.classList.add('border-primary');
+    event.currentTarget.style.borderWidth = '2px';
+    
+    // Set radio button
+    document.querySelector(`input[value="${method}"]`).checked = true;
+    
+    // Show explanation
+    const explanation = document.getElementById('method-explanation');
+    const title = document.getElementById('explanation-title');
+    const text = document.getElementById('explanation-text');
+    
+    title.textContent = explanations[method].title;
+    text.textContent = explanations[method].text;
+    explanation.style.display = 'block';
+    
+    // Enable next button
+    document.getElementById('nextBtn').disabled = false;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle radio button changes
+    document.querySelectorAll('input[name="pairing_method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                selectPairing(this.value);
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.pairing-card {
+    border-radius: 15px;
+    border: 2px solid transparent;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.pairing-card:hover {
+    transform: translateY(-5px);
+    border-color: #007bff;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+
+.pairing-icon {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-check-input:checked + .form-check-label {
+    font-weight: bold;
+    color: #007bff;
+}
+
+@media (max-width: 576px) {
+    .pairing-card {
+        margin-bottom: 1rem;
+    }
+    .card-title {
+        font-size: 1.1rem;
+    }
+    .card-text {
+        font-size: 0.9rem;
+    }
+    .pairing-icon i {
+        font-size: 2.5rem !important;
+    }
+}
+
+/* Make sure cards have equal height */
+.h-100 {
+    height: 100% !important;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.mt-auto {
+    margin-top: auto !important;
+}
+
+.progress {
+    border-radius: 10px;
+}
+</style>
+
+{% endblock %}

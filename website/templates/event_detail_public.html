@@ -64,11 +64,6 @@
                         </div>
                     </div>
                     {% endif %}
-                    
-                    <div class="row mb-3">
-                        <div class="col-sm-3"><strong>{{ translate('Organizer') }}:</strong></div>
-                        <div class="col-sm-9">{{ event.created_by.us_name if event.created_by else 'N/A' }}</div>
-                    </div>
 
                     {% if event.ev_registration_start or event.ev_registration_end %}
                     <hr>
@@ -100,26 +95,6 @@
                                 <h3>{{ event.current_player_count }}/{{ event.ev_max_players }}</h3>
                                 <small class="text-muted">{{ translate('Players registered') }}</small>
                             </div>
-                            
-                            {% if user.is_authenticated %}
-                                {% if is_registered %}
-                                    <div class="alert alert-success">
-                                        <i class="zmdi zmdi-check-circle"></i> {{ translate('You are registered') }}
-                                    </div>
-                                {% else %}
-                                    <button class="btn btn-primary btn-block" disabled>
-                                        {{ translate('Registration not yet implemented') }}
-                                    </button>
-                                {% endif %}
-                            {% else %}
-                                <div class="alert alert-info">
-                                    <i class="zmdi zmdi-info"></i> 
-                                    {{ translate('Login required to register') }}
-                                </div>
-                                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-block">
-                                    {{ translate('Login to Register') }}
-                                </a>
-                            {% endif %}
                         </div>
                     </div>
                     
@@ -129,7 +104,17 @@
                             <h6 class="mb-0">{{ translate('Registered Players') }}</h6>
                         </div>
                         <div class="card-body">
-                            <small class="text-muted">{{ translate('Player list will be shown here') }}</small>
+                            {% if registrations %}
+                                <ul class="list-unstyled mb-0">
+                                    {% for registration in registrations %}
+                                        {% if not registration.er_is_substitute %}
+                                            <li class="mb-1">{{ registration.player.us_name }}</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <small class="text-muted">{{ translate('No players registered yet') }}</small>
+                            {% endif %}
                         </div>
                     </div>
                     {% endif %}
@@ -138,6 +123,11 @@
         </div>
         
         <div class="card-footer">
+            {% if can_edit %}
+            <a href="{{ url_for('views.edit_event_public', event_id=event.ev_id, code=access_code) }}" class="btn btn-primary">
+                <i class="zmdi zmdi-edit"></i> {{ translate('Edit Event') }}
+            </a>
+            {% endif %}
             <a href="{{ url_for('views.events') }}" class="btn btn-secondary">
                 <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Events') }}
             </a>

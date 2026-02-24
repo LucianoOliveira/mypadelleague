@@ -263,6 +263,7 @@ class Game(db.Model):
     gm_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     gm_idLeague = db.Column(db.Integer, db.ForeignKey('tb_league.lg_id'), nullable=False)
     gm_idGameDay = db.Column(db.Integer, db.ForeignKey('tb_gameday.gd_id'), nullable=False)
+    gm_idEvent = db.Column(db.Integer, db.ForeignKey('tb_event.ev_id'), nullable=True)
     gm_date = db.Column(db.Date)
     gm_timeStart = db.Column(db.Time)
     gm_timeEnd = db.Column(db.Time)
@@ -461,6 +462,7 @@ class Event(db.Model):
     winner1 = db.relationship('Users', foreign_keys=[ev_winner1_id], backref=db.backref('event_wins_first', lazy=True))
     winner2 = db.relationship('Users', foreign_keys=[ev_winner2_id], backref=db.backref('event_wins_second', lazy=True))
     created_by = db.relationship('Users', foreign_keys=[ev_created_by_id], backref=db.backref('events_created', lazy=True))
+    games = db.relationship('Game', foreign_keys='Game.gm_idEvent', backref=db.backref('event', lazy=True))
 
     @property
     def current_player_count(self):

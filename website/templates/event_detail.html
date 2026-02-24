@@ -26,11 +26,11 @@
                                 <span class="badge badge-light">{{ event.ev_status }}</span>
                             {% endif %}
 
-                            {% if event.ev_type == 'NonStop' %}
+                            {% if event.event_type and event.event_type.et_name == 'NonStop' %}
                                 <span class="badge badge-info ml-2">{{ translate('Non-Stop') }}</span>
-                            {% elif event.ev_type == 'Americano' %}
+                            {% elif event.event_type and event.event_type.et_name == 'Americano' %}
                                 <span class="badge badge-success ml-2">{{ translate('Americano') }}</span>
-                            {% elif event.ev_type == 'Mexicano' %}
+                            {% elif event.event_type and event.event_type.et_name == 'Mexicano' %}
                                 <span class="badge badge-warning ml-2">{{ translate('Mexicano') }}</span>
                             {% endif %}
                         </div>
@@ -39,11 +39,11 @@
                         <!-- Edit button only for superusers or admin users with club authorization -->
                         {% if current_user.is_authenticated and user_is_authorized %}
                             <div class="btn-group" role="group">
-                                <a href="{{ url_for('views.edit_event', event_id=event.ev_id) }}" class="btn btn-outline-primary">
+                                <a href="{{ url_for('views.edit_event_step1', event_id=event.ev_id) }}" class="btn btn-outline-primary">
                                     <i class="fa fa-edit"></i> {{ translate('Edit Event') }}
                                 </a>
                                 
-                                <!-- Delete button - only show if event can be safely deleted -->
+                                {# Delete button - only show if event can be safely deleted 
                                 {% if can_delete %}
                                     <form action="{{ url_for('views.delete_event', event_id=event.ev_id) }}" method="POST" class="d-inline" 
                                           onsubmit="return confirm('{{ translate('Are you sure you want to permanently delete this event? This action cannot be undone.') }}')">
@@ -65,15 +65,15 @@
                                             </button>
                                         {% endif %}
                                     </form>
-                                {% endif %}
+                                {% endif %} 
                                 
-                                <!-- Show delete reason if deletion is not possible -->
+                                Show delete reason if deletion is not possible
                                 {% if not can_delete and delete_message %}
                                     <button type="button" class="btn btn-outline-info" data-toggle="tooltip" data-placement="bottom" 
                                             title="{{ delete_message }}">
                                         <i class="fa fa-info-circle"></i>
                                     </button>
-                                {% endif %}
+                                {% endif %} #}
                             </div>
                         {% endif %}
                     </div>
@@ -110,14 +110,14 @@
                                         {{ translate('Registered') }}
                                     {% endif %}
                                 </span>
-                                <form action="{{ url_for('views.unregister_event', event_id=event.ev_id) }}" method="POST" class="d-inline">
+                                {# <form action="{{ url_for('views.unregister_event', event_id=event.ev_id) }}" method="POST" class="d-inline">
                                     <button type="submit" class="btn btn-outline-danger btn-sm" 
-                                            onclick="return confirm('{{ translate('Are you sure you want to unregister from this event?') }}')">
+                                            onclick="return confirm('{{ translate('Are you sure you want to unregister from this event?') }}')"> 
                                         {{ translate('Unregister') }}
                                     </button>
-                                </form>
+                                </form> #}
                             {% elif can_register %}
-                                <form action="{{ url_for('views.register_event', event_id=event.ev_id) }}" method="POST" class="d-inline">
+                                {# <form action="{{ url_for('views.register_event', event_id=event.ev_id) }}" method="POST" class="d-inline">
                                     <button type="submit" class="btn btn-success">
                                         <i class="fa fa-plus"></i> 
                                         {% if regular_players|length >= event.ev_max_players %}
@@ -126,7 +126,7 @@
                                             {{ translate('Register for Event') }}
                                         {% endif %}
                                     </button>
-                                </form>
+                                </form> #}
                             {% else %}
                                 {% if not event.is_registration_open() %}
                                     <span class="badge badge-secondary">{{ translate('Registration not open') }}</span>
@@ -142,7 +142,7 @@
                                 <!-- Show Create Games button if no games exist and event has enough players -->
                                 {% set regular_count = regular_players|length %}
                                 {% set min_players_needed = event.ev_max_players %}
-                                {% if regular_count >= min_players_needed and event.ev_type == 'Mexicano' %}
+                                {% if regular_count >= min_players_needed and event.event_type and event.event_type.et_name == 'Mexicano' %}
                                     <form action="{{ url_for('views.create_event_games', event_id=event.ev_id) }}" method="POST" class="d-inline">
                                         <button type="submit" class="btn btn-primary" 
                                                 onclick="return confirm('{{ translate('Create the first round of games for this event? This will generate ') }}{{ (event.ev_max_players // 4) }}{{ translate(' games based on the pairing rules.') }}')">
@@ -154,7 +154,7 @@
                                         <i class="fa fa-exclamation-triangle"></i>
                                         {{ translate('Need') }} {{ min_players_needed - regular_count }} {{ translate('more players to create games') }}
                                     </div>
-                                {% elif event.ev_type != 'Mexicano' %}
+                                {% elif event.event_type and event.event_type.et_name != 'Mexicano' %}
                                     <div class="alert alert-info">
                                         <i class="fa fa-info-circle"></i>
                                         {{ translate('Game creation is currently only supported for Mexicano events') }}
@@ -206,7 +206,7 @@
                     <div class="card">
                         <div class="card-body">
                             {% if current_user.is_authenticated and user_is_authorized %}
-                                <form id="saveAllScoresForm" action="{{ url_for('views.update_all_game_scores', event_id=event.ev_id) }}" method="POST">
+                                {# <form id="saveAllScoresForm" action="{{ url_for('views.update_all_game_scores', event_id=event.ev_id) }}" method="POST"> #}
                                     <div class="mb-3 d-flex justify-content-between align-items-center">
                                         <h5 class="mb-0">{{ translate('Event Matches') }}</h5>
                                         <button type="submit" class="btn btn-success">
@@ -365,11 +365,11 @@
                                                     <tr>
                                                         <td>{{ loop.index }}</td>
                                                         <td>
-                                                            <a href="{{ url_for('views.player_info', user_id=player.user.us_id) if player.user.us_id else '#' }}">
-                                                                {{ player.user.us_name }}
+                                                            <a href="{{ url_for('views.player_info', user_id=player.player.us_id) if player.player.us_id else '#' }}">
+                                                                {{ player.player.us_name }}
                                                             </a>
                                                         </td>
-                                                        <td>{{ player.registered_at.strftime('%Y-%m-%d %H:%M') if player.registered_at else '-' }}</td>
+                                                        <td>{{ player.er_registered_at.strftime('%Y-%m-%d %H:%M') if player.er_registered_at else '-' }}</td>
                                                     </tr>
                                                     {% endfor %}
                                                 </tbody>
@@ -387,10 +387,10 @@
                                         <div class="list-group">
                                             {% for substitute in substitute_players %}
                                             <div class="list-group-item">
-                                                <a href="{{ url_for('views.player_info', user_id=substitute.user.us_id) }}">
-                                                    {{ substitute.user.us_name }}
+                                                <a href="{{ url_for('views.player_info', user_id=substitute.player.us_id) }}">
+                                                    {{ substitute.player.us_name }}
                                                 </a>
-                                                <br><small class="text-muted">{{ substitute.registered_at.strftime('%m-%d %H:%M') if substitute.registered_at else '-' }}</small>
+                                                <br><small class="text-muted">{{ substitute.er_registered_at.strftime('%m-%d %H:%M') if substitute.er_registered_at else '-' }}</small>
                                             </div>
                                             {% endfor %}
                                         </div>
@@ -427,10 +427,10 @@
                                         {% for classification in classifications %}
                                         <tr>
                                             <td>
-                                                {% if classification.ec_position <= 3 %}
+                                                {% if loop.index <= 3 %}
                                                     <i class="fa fa-trophy text-warning"></i>
                                                 {% endif %}
-                                                {{ classification.ec_position }}
+                                                {{ loop.index }}
                                             </td>
                                             <td>
                                                 <a href="{{ url_for('views.player_info', user_id=classification.ec_player_id) }}">
@@ -467,7 +467,7 @@ function clearGameScore(gameId) {
         // Create a form to submit the clear request
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '{{ url_for("views.clear_game_score", game_id=0) }}'.replace('0', gameId);
+        // form.action = '/clear_game_score/' + gameId; // Route disabled
         
         // Add CSRF token if available
         const csrfToken = document.querySelector('meta[name="csrf-token"]');
