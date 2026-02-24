@@ -1194,8 +1194,18 @@ def detail_event(event_id):
     # Get club info
     club = Club.query.get(event.ev_club_id) if event.ev_club_id else None
     
-    # Get event classifications
-    classifications = EventClassification.query.filter_by(ec_event_id=event_id).order_by(EventClassification.ec_points.desc()).all()
+    # Get event classifications with proper sorting
+    classifications = EventClassification.query.filter_by(ec_event_id=event_id).order_by(
+        EventClassification.ec_points.desc(),
+        EventClassification.ec_games_diff.desc()
+    ).all()
+    
+    # Re-sort with player name as final tiebreaker (Python sort for complex logic)
+    classifications = sorted(classifications, key=lambda c: (
+        -c.ec_points,  # Higher points first
+        -c.ec_games_diff,  # Higher games difference first  
+        c.player.us_name.lower()  # Alphabetical by name (A before C)
+    ))
     
     # Check if user is registered
     user_registration = None
@@ -2462,8 +2472,52 @@ def update_event_players(event_id):
         # Automatically create games if we have all players for a Mexicano event
         if players_registered == event.ev_max_players and event.event_type and event.event_type.et_name == 'Mexicano':
             # Check if games already exist
-            existing_games = Game.query.filter_by(gm_idEvent=event_id).count()
-            if existing_games == 0:
+            existing_games = Game.query.filter_by(gm_idEvent=event_id).all()
+            
+            if existing_games:
+                # Games exist - check if any have results
+                games_with_results = [g for g in existing_games if g.gm_result_A is not None or g.gm_result_B is not None]
+                
+                if games_with_results:
+                    # Some games have results - cannot recreate
+                    flash(translate('Player names updated but games were not recreated because some games already have results.'), 'warning')
+                else:
+                    # No games have results - safe to recreate with new player names
+                    try:
+                        # Delete existing games and related records
+                        print(f"Deleting {len(existing_games)} existing games to recreate with updated player names")
+                        
+                        # Get the gameday associated with these games
+                        if existing_games:
+                            gameday_id = existing_games[0].gm_idGameDay
+                            
+                            # Delete games first
+                            Game.query.filter_by(gm_idEvent=event_id).delete()
+                            
+                            # Delete gameday players for this event's gameday
+                            GameDayPlayer.query.filter_by(gp_idGameDay=gameday_id).delete()
+                            
+                            # Delete gameday classifications for this event's gameday  
+                            GameDayClassification.query.filter_by(gc_idGameDay=gameday_id).delete()
+                            
+                            # Delete event classifications
+                            EventClassification.query.filter_by(ec_event_id=event_id).delete()
+                            
+                            # Delete the gameday itself
+                            GameDay.query.filter_by(gd_id=gameday_id).delete()
+                        
+                        # Create new games with updated player names
+                        num_games = create_games_for_event(event_id)
+                        db.session.commit()  # Commit the cleanup and new games
+                        flash(translate('Player names updated and {} games have been recreated with new pairings!').format(num_games), 'success')
+                    except Exception as e:
+                        print(f"ERROR recreating games: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
+                        db.session.rollback()  # Rollback if game recreation fails
+                        flash(translate('Player names updated but could not recreate games: {}').format(str(e)), 'warning')
+            else:
+                # No existing games - create them normally
                 try:
                     # Automatically create first round games
                     num_games = create_games_for_event(event_id)
@@ -2503,11 +2557,6 @@ def create_games_for_event(event_id):
     player_names_list = [reg.player.us_name.strip().lower() for reg in registrations]
     if len(player_names_list) != len(set(player_names_list)):
         raise Exception(translate('Duplicate player names found. Each player must have a unique name.'))
-    
-    # Check if games already exist
-    existing_games = Game.query.filter_by(gm_idEvent=event_id).count()
-    if existing_games > 0:
-        raise Exception(translate('Games already exist for this event'))
     
     # Get event courts
     event_courts = EventCourts.query.filter_by(evc_event_id=event_id).all()
@@ -2647,6 +2696,322 @@ def create_event_games(event_id):
     # Redirect to event detail page to show games and allow result entry
     access_code = session.get(f'event_{event_id}_access_code', '')
     return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+
+@views.route('/update_all_game_scores/<int:event_id>', methods=['POST'])
+@login_or_access_code_required
+def update_all_game_scores(event_id):
+    """Update all game scores for a Mexicano event and create next round"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Check authorization (superuser, club authorization, or public event with access code)
+    is_public_event = event.ev_club_id == 2  # Public Events club ID
+    
+    if current_user.is_authenticated and not is_public_event and current_user.us_is_superuser != 1:
+        authorization = ClubAuthorization.query.filter_by(
+            ca_user_id=current_user.us_id, 
+            ca_club_id=event.ev_club_id
+        ).first()
+        
+        if not authorization:
+            flash(translate('You are not authorized to update scores for this event'), 'error')
+            return redirect(url_for('views.managementEvents'))
+    
+    try:
+        # Get all submitted scores from form
+        scores_data = {}
+        all_zero_scores = True
+        any_scores_submitted = False
+        
+        for key, value in request.form.items():
+            if key.startswith('scores[') and value.strip():
+                # Parse scores[game_id][A] or scores[game_id][B] format
+                import re
+                match = re.match(r'scores\[(\d+)\]\[([AB])\]', key)
+                if match:
+                    game_id = int(match.group(1))
+                    team = match.group(2)
+                    score = int(value.strip()) if value.strip().isdigit() else 0
+                    
+                    if game_id not in scores_data:
+                        scores_data[game_id] = {}
+                    scores_data[game_id][team] = score
+                    
+                    any_scores_submitted = True
+                    if score != 0:
+                        all_zero_scores = False
+        
+        if not any_scores_submitted:
+            flash(translate('No scores were submitted'), 'warning')
+            access_code = session.get(f'event_{event_id}_access_code', '')
+            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+        
+        # Check if all submitted scores are 0-0 (special case - delete round and recalculate)
+        if all_zero_scores:
+            return handle_zero_scores_case(event_id)
+        
+        # Update games with scores
+        games_updated = 0
+        current_round_games = []
+        
+        for game_id, game_scores in scores_data.items():
+            game = Game.query.get(game_id)
+            if game and game.gm_idEvent == event_id:
+                if 'A' in game_scores and 'B' in game_scores:
+                    game.gm_result_A = game_scores['A']
+                    game.gm_result_B = game_scores['B']
+                    games_updated += 1
+                    current_round_games.append(game)
+        
+        if games_updated == 0:
+            flash(translate('No valid game scores were updated'), 'warning')
+            access_code = session.get(f'event_{event_id}_access_code', '')
+            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+        
+        # Calculate and update classifications
+        calculate_event_classifications(event_id)
+        
+        # Check if this completes a round - create next round if needed
+        all_event_games = Game.query.filter_by(gm_idEvent=event_id).all()
+        incomplete_games = [g for g in all_event_games if g.gm_result_A is None or g.gm_result_B is None]
+        
+        # If no incomplete games, check if we need to create next round
+        if not incomplete_games:
+            # Check if we should create next round (Mexicano typically has multiple rounds)
+            classifications = EventClassification.query.filter_by(ec_event_id=event_id).order_by(
+                EventClassification.ec_points.desc(),
+                EventClassification.ec_games_diff.desc(),
+                EventClassification.player.has(Users.us_name)
+            ).all()
+            
+            total_rounds = event.ev_max_players // 4  # One round per 4 players typically
+            current_round = len([g for g in all_event_games if g.gm_result_A is not None]) // (event.ev_max_players // 4)
+            
+            if current_round < total_rounds:
+                next_round_games = create_next_round_games(event_id, classifications, current_round + 1)
+                flash(translate('Scores updated! Round {} completed. {} games created for next round.').format(current_round, next_round_games), 'success')
+            else:
+                flash(translate('Tournament completed! Final results are now available.'), 'success')
+        else:
+            flash(translate('{} game scores updated successfully!').format(games_updated), 'success')
+        
+        db.session.commit()
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        traceback.print_exc()
+        flash(translate('Error updating scores: {}').format(str(e)), 'error')
+    
+    access_code = session.get(f'event_{event_id}_access_code', '')
+    return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+
+def handle_zero_scores_case(event_id):
+    """Handle the special case where all scores are 0-0 - delete round and recalculate"""
+    try:
+        # Get the latest round games (games without results or games just submitted with 0-0)
+        all_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart.desc()).all()
+        
+        if not all_games:
+            flash(translate('No games found to reset'), 'warning')
+            access_code = session.get(f'event_{event_id}_access_code', '')
+            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+        
+        # Find the latest round (games with same start time)
+        latest_start_time = all_games[0].gm_timeStart
+        latest_round_games = [g for g in all_games if g.gm_timeStart == latest_start_time]
+        
+        # Delete the latest round games
+        for game in latest_round_games:
+            db.session.delete(game)
+        
+        # Recalculate classifications from remaining games
+        calculate_event_classifications(event_id)
+        
+        # Create new round with recalculated rankings
+        classifications = EventClassification.query.filter_by(ec_event_id=event_id).order_by(
+            EventClassification.ec_points.desc(),
+            EventClassification.ec_games_diff.desc()
+        ).all()
+        
+        # Determine round number
+        remaining_games = Game.query.filter_by(gm_idEvent=event_id).count()
+        round_number = (remaining_games // (len(classifications) // 4)) + 1
+        
+        new_games = create_next_round_games(event_id, classifications, round_number)
+        
+        db.session.commit()
+        flash(translate('Round reset due to all 0-0 scores. Classifications recalculated and {} new games created.').format(new_games), 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        traceback.print_exc()
+        flash(translate('Error resetting round: {}').format(str(e)), 'error')
+    
+    access_code = session.get(f'event_{event_id}_access_code', '')
+    return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+
+def calculate_event_classifications(event_id):
+    """Calculate classifications for all players in an event"""
+    from .models import EventPlayerNames
+    
+    # Get all players in the event
+    registrations = EventRegistration.query.filter_by(er_event_id=event_id, er_is_substitute=False).all()
+    
+    # Clear existing classifications
+    EventClassification.query.filter_by(ec_event_id=event_id).delete()
+    
+    # Calculate stats for each player
+    for registration in registrations:
+        player_id = registration.er_player_id
+        
+        # Get all games involving this player
+        games = Game.query.filter(
+            Game.gm_idEvent == event_id,
+            (Game.gm_idPlayer_A1 == player_id) | 
+            (Game.gm_idPlayer_A2 == player_id) |
+            (Game.gm_idPlayer_B1 == player_id) | 
+            (Game.gm_idPlayer_B2 == player_id)
+        ).filter(
+            Game.gm_result_A.isnot(None),
+            Game.gm_result_B.isnot(None)
+        ).all()
+        
+        wins = 0
+        losses = 0
+        games_favor = 0
+        games_against = 0
+        
+        for game in games:
+            # Determine if player is on team A or B
+            if player_id in [game.gm_idPlayer_A1, game.gm_idPlayer_A2]:
+                # Player is on team A
+                games_favor += game.gm_result_A
+                games_against += game.gm_result_B
+                if game.gm_result_A > game.gm_result_B:
+                    wins += 1
+                else:
+                    losses += 1
+            else:
+                # Player is on team B
+                games_favor += game.gm_result_B
+                games_against += game.gm_result_A
+                if game.gm_result_B > game.gm_result_A:
+                    wins += 1
+                else:
+                    losses += 1
+        
+        # Calculate points (3 points per win)
+        points = wins * 3
+        games_diff = games_favor - games_against
+        
+        # Create classification record
+        classification = EventClassification(
+            ec_event_id=event_id,
+            ec_player_id=player_id,
+            ec_points=points,
+            ec_wins=wins,
+            ec_losses=losses,
+            ec_games_favor=games_favor,
+            ec_games_against=games_against,
+            ec_games_diff=games_diff,
+            ec_ranking=0.0  # Will be calculated after all players are processed
+        )
+        db.session.add(classification)
+
+def create_next_round_games(event_id, classifications, round_number):
+    """Create games for the next round based on current classifications"""
+    from datetime import datetime, time, timedelta
+    
+    event = Event.query.get_or_404(event_id)
+    
+    # Get event courts
+    event_courts = EventCourts.query.filter_by(evc_event_id=event_id).all()
+    if not event_courts:
+        raise Exception(translate('No courts configured for this event'))
+    
+    # Sort classifications by points, games difference, and finally by player name
+    sorted_classifications = sorted(classifications, key=lambda c: (
+        -c.ec_points,  # Higher points first
+        -c.ec_games_diff,  # Higher games difference first
+        c.player.us_name.lower()  # Alphabetical by name (A before C)
+    ))
+    
+    if len(sorted_classifications) != 16:
+        raise Exception(translate('Need exactly 16 players for Mexicano tournament'))
+    
+    # Get the start time for new games (14 minutes after the last round)
+    last_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart.desc()).limit(4).all()
+    if last_games:
+        last_start_time = last_games[0].gm_timeStart
+        # Convert to datetime, add 14 minutes, convert back to time
+        from datetime import datetime, timedelta
+        base_datetime = datetime.combine(event.ev_date, last_start_time)
+        new_start_datetime = base_datetime + timedelta(minutes=14)
+        new_start_time = new_start_datetime.time()
+        new_end_datetime = new_start_datetime + timedelta(minutes=13)  # 13-minute duration
+        new_end_time = new_end_datetime.time()
+    else:
+        # First round, use event start time
+        new_start_time = event.ev_start_time
+        base_datetime = datetime.combine(event.ev_date, new_start_time)
+        new_end_datetime = base_datetime + timedelta(minutes=13)
+        new_end_time = new_end_datetime.time()
+    
+    # Get gameday for this event (find it through existing games)
+    existing_game = Game.query.filter_by(gm_idEvent=event_id).first()
+    if not existing_game:
+        raise Exception(translate('No existing games found for this event'))
+    
+    gameday = GameDay.query.get(existing_game.gm_idGameDay)
+    if not gameday:
+        raise Exception(translate('No gameday found for this event'))
+    
+    # Create pairings according to Mexicano rules:
+    # Court 1: 1st & 4th vs 2nd & 3rd
+    # Court 2: 5th & 8th vs 6th & 7th  
+    # Court 3: 9th & 12th vs 10th & 11th
+    # Court 4: 13th & 16th vs 14th & 15th
+    
+    pairings = [
+        (0, 3, 1, 2),  # Court 1: 1st & 4th vs 2nd & 3rd (0-based indices)
+        (4, 7, 5, 6),  # Court 2: 5th & 8th vs 6th & 7th
+        (8, 11, 9, 10),  # Court 3: 9th & 12th vs 10th & 11th
+        (12, 15, 13, 14)  # Court 4: 13th & 16th vs 14th & 15th
+    ]
+    
+    games_created = 0
+    
+    for court_idx, (a1_idx, a2_idx, b1_idx, b2_idx) in enumerate(pairings):
+        if court_idx < len(event_courts):
+            court = event_courts[court_idx]
+            
+            # Get player IDs from sorted classifications
+            player_a1_id = sorted_classifications[a1_idx].ec_player_id
+            player_a2_id = sorted_classifications[a2_idx].ec_player_id
+            player_b1_id = sorted_classifications[b1_idx].ec_player_id
+            player_b2_id = sorted_classifications[b2_idx].ec_player_id
+            
+            # Create game
+            game = Game(
+                gm_idLeague=gameday.gd_idLeague,
+                gm_idGameDay=gameday.gd_id,
+                gm_idEvent=event_id,
+                gm_date=event.ev_date,
+                gm_timeStart=new_start_time,
+                gm_timeEnd=new_end_time,
+                gm_court=court.evc_court_id,
+                gm_idPlayer_A1=player_a1_id,
+                gm_idPlayer_A2=player_a2_id,
+                gm_idPlayer_B1=player_b1_id,
+                gm_idPlayer_B2=player_b2_id,
+                gm_result_A=None,
+                gm_result_B=None
+            )
+            db.session.add(game)
+            games_created += 1
+    
+    return games_created
 
 @views.route('/edit_event_step3/<int:event_id>', methods=['GET', 'POST'])
 @login_or_access_code_required

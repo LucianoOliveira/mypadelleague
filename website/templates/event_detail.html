@@ -190,13 +190,6 @@
                     </a>
                 </li>
                 {% endif %}
-                {% if classifications %}
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link" id="results-tab" data-toggle="tab" href="#results" role="tab">
-                        {{ translate('Results') }}
-                    </a>
-                </li>
-                {% endif %}
             </ul>
             
             <div class="tab-content" id="eventTabsContent">
@@ -206,8 +199,7 @@
                     <div class="card">
                         <div class="card-body">
                             {% if current_user.is_authenticated and user_is_authorized %}
-                                {# <form id="saveAllScoresForm" action="{{ url_for('views.update_all_game_scores', event_id=event.ev_id) }}" method="POST"> #}
-                                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                                <form id="saveAllScoresForm" action="{{ url_for('views.update_all_game_scores', event_id=event.ev_id) }}" method="POST">\n                                    <div class="mb-3 d-flex justify-content-between align-items-center">
                                         <h5 class="mb-0">{{ translate('Event Matches') }}</h5>
                                         <button type="submit" class="btn btn-success">
                                             <i class="fa fa-save"></i> {{ translate('Save All Results') }}
@@ -402,58 +394,62 @@
                         </div>
                     </div>
                 </div>
-
-
-
-                <!-- Results Tab -->
-                {% if classifications %}
-                <div class="tab-pane fade" id="results" role="tabpanel">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5>{{ translate('Final Rankings') }}</h5>
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>{{ translate('Position') }}</th>
-                                            <th>{{ translate('Player') }}</th>
-                                            <th>{{ translate('Wins') }}</th>
-                                            <th>{{ translate('Losses') }}</th>
-                                            <th>{{ translate('Games') }}</th>
-                                            <th>{{ translate('Points') }}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for classification in classifications %}
-                                        <tr>
-                                            <td>
-                                                {% if loop.index <= 3 %}
-                                                    <i class="fa fa-trophy text-warning"></i>
-                                                {% endif %}
-                                                {{ loop.index }}
-                                            </td>
-                                            <td>
-                                                <a href="{{ url_for('views.player_info', user_id=classification.ec_player_id) }}">
-                                                    {{ classification.player.us_name }}
-                                                </a>
-                                            </td>
-                                            <td>{{ classification.ec_wins }}</td>
-                                            <td>{{ classification.ec_losses }}</td>
-                                            <td>{{ classification.ec_games_favor }} - {{ classification.ec_games_against }}</td>
-                                            <td><strong>{{ classification.ec_points }}</strong></td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+<!-- Classification Table -->
+{% if classifications %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5>{{ translate('Classification') }}</h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>{{ translate('Position') }}</th>
+                                    <th>{{ translate('Player') }}</th>
+                                    <th>{{ translate('Points') }}</th>
+                                    <th>{{ translate('Wins') }}</th>
+                                    <th>{{ translate('Losses') }}</th>
+                                    <th>{{ translate('Games Difference') }}</th>
+                                    <th>{{ translate('Games') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for classification in classifications %}
+                                <tr>
+                                    <td>
+                                        {% if loop.index == 1 %}
+                                            <i class="fa fa-trophy text-warning"></i>
+                                        {% endif %}
+                                        {{ loop.index }}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('views.player_info', user_id=classification.ec_player_id) }}">
+                                            {{ classification.player.us_name }}
+                                        </a>
+                                    </td>
+                                    <td><strong>{{ classification.ec_points }}</strong></td>
+                                    <td>{{ classification.ec_wins }}</td>
+                                    <td>{{ classification.ec_losses }}</td>
+                                    <td><strong>{{ classification.ec_games_diff }}</strong></td>
+                                    <td>{{ classification.ec_games_favor }} - {{ classification.ec_games_against }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <script>
 // Initialize tooltips
