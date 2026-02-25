@@ -1355,6 +1355,34 @@
     "en": "Event Matches",
     "pt": "Jogos do Evento"
   },
+  "Events TV": {
+    "en": "Events TV",
+    "pt": "Eventos TV"
+  },
+  "Current Round": {
+    "en": "Current Round",
+    "pt": "Ronda Atual"
+  },
+  "Playing": {
+    "en": "Playing",
+    "pt": "A Jogar"
+  },
+  "Other Rounds": {
+    "en": "Other Rounds",
+    "pt": "Outras Rondas"
+  },
+  "Please select an event first to view in TV mode": {
+    "en": "Please select an event first to view in TV mode",
+    "pt": "Por favor selecione um evento primeiro para ver no modo TV"
+  },
+  "TV View": {
+    "en": "TV View",
+    "pt": "Vista TV"
+  },
+  "No games played yet": {
+    "en": "No games played yet",
+    "pt": "Nenhum jogo disputado ainda"
+  },
   "Round": {
     "en": "Round",
     "pt": "Ronda"

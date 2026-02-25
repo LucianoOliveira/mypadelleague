@@ -297,6 +297,27 @@
       crossorigin="anonymous"
     ></script>
 
+    <!-- TV Navigation Function -->
+    <script>
+    function openTVView() {
+        // Check if we're on an event detail page
+        const currentPath = window.location.pathname;
+        const eventDetailMatch = currentPath.match(/\/detail_event\/(\d+)/);
+        
+        if (eventDetailMatch) {
+            // If on event detail page, redirect to TV version in same tab
+            const eventId = eventDetailMatch[1];
+            window.location.href = '/detail_event_tv/' + eventId;
+        } else {
+            // If not on event detail page, show message and redirect to events list
+            alert('{{ translate("Please select an event first to view in TV mode") }}');
+            window.location.href = '/events';
+        }
+    }
+    </script>
+
+    {% block scripts %}{% endblock %}
+
 
     {% block javascript %}{% endblock %}
 

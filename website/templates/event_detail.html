@@ -42,6 +42,9 @@
                                 <a href="{{ url_for('views.edit_event', event_id=event.ev_id) }}" class="btn btn-outline-primary">
                                     <i class="fa fa-edit"></i> {{ translate('Edit Event') }}
                                 </a>
+                                <a href="{{ url_for('views.detail_event_tv', event_id=event.ev_id) }}" class="btn btn-outline-info">
+                                    <i class="fa fa-tv"></i> {{ translate('TV View') }}
+                                </a>
                                 
                                 {# Delete button - only show if event can be safely deleted 
                                 {% if can_delete %}
@@ -223,7 +226,7 @@
                                     <h6 class="mb-0">
                                         <i class="fas fa-clock mr-2"></i>
                                         {{ translate('Round') }} - {{ round_time }}
-                                        <span class="badge badge-info ml-2">{{ round_games|length }} {{ translate('games') }}</span>
+                                        <span class="badge badge-info ml-2">{{ round_games|length }} {{ translate('Games') }}</span>
                                     </h6>
                                     <small class="text-muted">
                                         {{ round_time }} - {{ round_games[0].gm_timeEnd.strftime('%H:%M') if round_games[0].gm_timeEnd else '??:??' }}
@@ -373,7 +376,7 @@
                                     <h6 class="mb-0">
                                         <i class="fas fa-clock mr-2"></i>
                                         {{ translate('Round') }} - {{ round_time }}
-                                        <span class="badge badge-info ml-2">{{ round_games|length }} {{ translate('games') }}</span>
+                                        <span class="badge badge-info ml-2">{{ round_games|length }} {{ translate('Games') }}</span>
                                     </h6>
                                     <small class="text-muted">
                                         {{ round_time }} - {{ round_games[0].gm_timeEnd.strftime('%H:%M') if round_games[0].gm_timeEnd else '??:??' }}
@@ -674,6 +677,29 @@
     </div>
 </div>
 {% endif %}
+
+<!-- TV View Access Button -->
+<div class="container mt-4 mb-4">
+    <div class="row">
+        <div class="col-12 text-center">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fa fa-tv mr-2"></i>
+                        {{ translate('TV Display Mode') }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ translate('View this event optimized for large TV screens with live updates') }}
+                    </p>
+                    <a href="{{ url_for('views.detail_event_tv', event_id=event.ev_id) }}" class="btn btn-info btn-lg">
+                        <i class="fa fa-tv mr-2"></i>
+                        {{ translate('Open TV View') }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 // Initialize tooltips

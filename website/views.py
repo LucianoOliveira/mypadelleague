@@ -1154,6 +1154,59 @@ def public_event_detail(event_id):
                          registrations=registrations,
                          access_code=provided_code if can_edit else None)
 
+@views.route('/detail_event_tv/<int:event_id>', methods=['GET'])  
+def detail_event_tv(event_id):
+    """TV-optimized view for event details"""
+    from .models import EventClassification
+    event = Event.query.get_or_404(event_id)
+    
+    # Check if user is authorized to manage this event
+    user_is_authorized = False
+    if current_user.is_authenticated:
+        if current_user.us_is_superuser == 1:
+            user_is_authorized = True
+        else:
+            # Check club authorization for non-public events
+            is_public_event = event.ev_club_id == 2
+            if not is_public_event:
+                authorization = ClubAuthorization.query.filter_by(
+                    ca_user_id=current_user.us_id, 
+                    ca_club_id=event.ev_club_id
+                ).first()
+                user_is_authorized = authorization is not None
+    
+    # Get event games and player info
+    event_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart, Game.gm_id).all()
+    regular_players = EventRegistration.query.filter_by(er_event_id=event_id, er_is_substitute=False).all()
+    substitute_players = EventRegistration.query.filter_by(er_event_id=event_id, er_is_substitute=True).all()
+    
+    # Get game player names for fallback display
+    game_player_names = {}
+    player_names = EventPlayerNames.query.filter_by(epn_event_id=event_id).all()
+    
+    # Get event classifications with proper sorting (same as regular page)
+    classifications = EventClassification.query.filter_by(ec_event_id=event_id).order_by(
+        EventClassification.ec_points.desc(),
+        EventClassification.ec_games_diff.desc()
+    ).all()
+    
+    # Re-sort with player name as final tiebreaker (Python sort for complex logic)
+    classifications = sorted(classifications, key=lambda c: (
+        -c.ec_points,  # Higher points first
+        -c.ec_games_diff,  # Higher games difference first  
+        c.player.us_name.lower()  # Alphabetical by name (A before C)
+    ))
+    
+    return render_template('event_detail_tv.html', 
+                         event=event, 
+                         event_games=event_games,
+                         game_player_names=game_player_names,
+                         regular_players=regular_players,
+                         substitute_players=substitute_players,
+                         classifications=classifications,
+                         user_is_authorized=user_is_authorized,
+                         user=current_user)
+
 @views.route('/detail_event/<int:event_id>', methods=['GET'])  
 def detail_event(event_id):
     """Event detail page with full functionality for authenticated users"""
