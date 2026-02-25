@@ -67,6 +67,4 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Photos and uploads (if they shouldn't be in version control)
-website/static/photos/*
-!website/static/photos/.gitkeep
+# Keep photos directory tracked in Git (don't ignore)
