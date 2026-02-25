@@ -39,7 +39,7 @@
                         <!-- Edit button only for superusers or admin users with club authorization -->
                         {% if current_user.is_authenticated and user_is_authorized %}
                             <div class="btn-group" role="group">
-                                <a href="{{ url_for('views.edit_event_step1', event_id=event.ev_id) }}" class="btn btn-outline-primary">
+                                <a href="{{ url_for('views.edit_event', event_id=event.ev_id) }}" class="btn btn-outline-primary">
                                     <i class="fa fa-edit"></i> {{ translate('Edit Event') }}
                                 </a>
                                 
@@ -196,131 +196,301 @@
                 <!-- Matches Tab -->
                 {% if event_games %}
                 <div class="tab-pane fade show active" id="matches" role="tabpanel">
-                    <div class="card">
-                        <div class="card-body">
-                            {% if current_user.is_authenticated and user_is_authorized %}
-                                <form id="saveAllScoresForm" action="{{ url_for('views.update_all_game_scores', event_id=event.ev_id) }}" method="POST">\n                                    <div class="mb-3 d-flex justify-content-between align-items-center">
-                                        <h5 class="mb-0">{{ translate('Event Matches') }}</h5>
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="fa fa-save"></i> {{ translate('Save All Results') }}
-                                        </button>
-                                    </div>
-                            {% else %}
-                                <h5>{{ translate('Event Matches') }}</h5>
+                    {% if current_user.is_authenticated and user_is_authorized %}
+                    <form id="saveAllScoresForm" action="{{ url_for('views.update_all_game_scores', event_id=event.ev_id) }}" method="POST">
+                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ translate('Event Matches') }}</h5>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fa fa-save"></i> {{ translate('Save All Results') }}
+                            </button>
+                        </div>
+                        
+                        <!-- Group games by rounds (start time) -->
+                        {% set rounds = {} %}
+                        {% for game in event_games %}
+                            {% set round_time = game.gm_timeStart.strftime('%H:%M') %}
+                            {% if round_time not in rounds %}
+                                {% set _ = rounds.update({round_time: []}) %}
                             {% endif %}
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>{{ translate('Game') }}</th>
-                                            <th>{{ translate('Team A') }}</th>
-                                            <th>{{ translate('Team B') }}</th>
-                                            <th>{{ translate('Score') }}</th>
-                                            <th>{{ translate('Time') }}</th>
-                                            <th>{{ translate('Status') }}</th>
-                                            {% if current_user.is_authenticated and user_is_authorized %}
-                                                <th>{{ translate('Actions') }}</th>
-                                            {% endif %}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for game in event_games %}
-                                        <tr>
-                                            <td>
-                                                <strong>{{ game.court.ct_name }}</strong><br>
-                                                <small class="text-muted">{{ translate('Game') }} {{ loop.index }}</small>
-                                            </td>
-                                            <td>
-                                                {% if game.player_A1 and game.player_A2 %}
-                                                    {{ game.player_A1.us_name }}<br>
-                                                    {{ game.player_A2.us_name }}
-                                                {% else %}
-                                                    {% set player_names = game_player_names.get(game.gm_id, {}) %}
-                                                    {% if player_names.get('A1') and player_names.get('A2') %}
-                                                        {{ player_names.get('A1') }}<br>
-                                                        {{ player_names.get('A2') }}
-                                                    {% else %}
-                                                        {{ translate('TBD') }}
-                                                    {% endif %}
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if game.player_B1 and game.player_B2 %}
-                                                    {{ game.player_B1.us_name }}<br>
-                                                    {{ game.player_B2.us_name }}
-                                                {% else %}
-                                                    {% set player_names = game_player_names.get(game.gm_id, {}) %}
-                                                    {% if player_names.get('B1') and player_names.get('B2') %}
-                                                        {{ player_names.get('B1') }}<br>
-                                                        {{ player_names.get('B2') }}
-                                                    {% else %}
-                                                        {{ translate('TBD') }}
-                                                    {% endif %}
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if current_user.is_authenticated and user_is_authorized %}
-                                                    <!-- Editable score inputs for authorized users -->
-                                                    <div class="d-flex align-items-center justify-content-center">
-                                                        <div class="input-group input-group-sm" style="width: 120px;">
-                                                            <input type="number" name="scores[{{ game.gm_id }}][A]" value="{{ game.gm_result_A if game.gm_result_A is not none else '' }}" 
-                                                                   class="form-control text-center" style="max-width: 60px;" min="0" max="99" placeholder="0">
-                                                            <div class="input-group-prepend input-group-append">
-                                                                <span class="input-group-text px-2">-</span>
-                                                            </div>
-                                                            <input type="number" name="scores[{{ game.gm_id }}][B]" value="{{ game.gm_result_B if game.gm_result_B is not none else '' }}" 
-                                                                   class="form-control text-center" style="max-width: 60px;" min="0" max="99" placeholder="0">
-                                                        </div>
-                                                    </div>
-                                                {% else %}
-                                                    <!-- Read-only score display for non-authorized users -->
-                                                    {% if game.gm_result_A is not none and game.gm_result_B is not none %}
-                                                        {{ game.gm_result_A }} - {{ game.gm_result_B }}
-                                                    {% else %}
-                                                        {{ translate('Not played') }}
-                                                    {% endif %}
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {{ game.gm_timeStart.strftime('%H:%M') }} - {{ game.gm_timeEnd.strftime('%H:%M') }}
-                                            </td>
-                                            <td>
+                            {% set _ = rounds[round_time].append(game) %}
+                        {% endfor %}
+                        
+                        <!-- Display each round in a separate card -->
+                        {% for round_time, round_games in rounds.items() %}
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-clock mr-2"></i>
+                                        {{ translate('Round') }} - {{ round_time }}
+                                        <span class="badge badge-info ml-2">{{ round_games|length }} {{ translate('games') }}</span>
+                                    </h6>
+                                    <small class="text-muted">
+                                        {{ round_time }} - {{ round_games[0].gm_timeEnd.strftime('%H:%M') if round_games[0].gm_timeEnd else '??:??' }}
+                                    </small>
+                                </div>
+                                
+                                <!-- Round Actions -->
+                                {% set round_has_results = round_games | selectattr('gm_result_A', 'ne', none) | selectattr('gm_result_B', 'ne', none) | list | length > 0 %}
+                                {% if round_has_results %}
+                                <button type="button" class="btn btn-outline-warning btn-sm" 
+                                        onclick="confirmClearRound('{{ round_time }}', '{{ event.ev_id }}')"
+                                        title="{{ translate('Clear this round and all subsequent rounds') }}">
+                                    <i class="fas fa-undo"></i> {{ translate('Clear Round') }}
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    {% for game in round_games %}
+                                    <div class="col-lg-6 col-md-6 mb-3">
+                                        <div class="game-card" {% if game.gm_result_A is not none and game.gm_result_B is not none %}style="background-color: rgba(255, 255, 255, 0.1);"{% endif %}>
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <strong>{{ game.court.ct_name if game.court else 'Court ' + loop.index|string }}</strong>
                                                 {% if game.gm_result_A is not none and game.gm_result_B is not none %}
                                                     <span class="badge badge-success">{{ translate('Finished') }}</span>
                                                 {% else %}
                                                     <span class="badge badge-secondary">{{ translate('Pending') }}</span>
                                                 {% endif %}
-                                            </td>
-                                            {% if current_user.is_authenticated and user_is_authorized %}
-                                                <td class="text-center">
-                                                    {% if game.gm_result_A is not none and game.gm_result_B is not none %}
-                                                        <!-- Game is finished - show clear button -->
-                                                        <button type="button" class="btn btn-sm btn-outline-warning" 
-                                                                onclick="clearGameScore({{ game.gm_id }})" 
-                                                                title="{{ translate('Clear score') }}">
-                                                            <i class="fa fa-undo"></i>
-                                                        </button>
-                                                    {% else %}
-                                                        <!-- Game is pending - no additional actions needed -->
-                                                        <span class="text-muted">-</span>
-                                                    {% endif %}
-                                                </td>
-                                            {% endif %}
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {% if current_user.is_authenticated and user_is_authorized %}
-                                    <div class="mt-3 text-right">
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="fa fa-save"></i> {{ translate('Save All Results') }}
-                                        </button>
+                                            </div>
+                                            <div class="game-content p-3">
+                                                <div class="game-time mb-3">
+                                                    {{ game.gm_timeStart.strftime('%H:%M') }} - {{ game.gm_timeEnd.strftime('%H:%M') if game.gm_timeEnd else '??:??' }}
+                                                </div>
+                                                
+                                                <!-- Team A -->
+                                                <div class="team-row mb-2">
+                                                    <div class="team-players d-flex align-items-center">
+                                                        <div class="player-photos mr-3">
+                                                            {% if game.player_A1 and game.player_A2 %}
+                                                                <img src="{{ url_for('views.display_user_image', userID=game.player_A1.us_id) }}" 
+                                                                     onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
+                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                <img src="{{ url_for('views.display_user_image', userID=game.player_A2.us_id) }}" 
+                                                                     onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
+                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                            {% else %}
+                                                                <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
+                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
+                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="player-names flex-grow-1">
+                                                            {% if game.player_A1 and game.player_A2 %}
+                                                                {{ game.player_A1.us_name }} / {{ game.player_A2.us_name }}
+                                                            {% else %}
+                                                                {% set player_names = game_player_names.get(game.gm_id, {}) %}
+                                                                {% if player_names.get('A1') and player_names.get('A2') %}
+                                                                    {{ player_names.get('A1') }} / {{ player_names.get('A2') }}
+                                                                {% else %}
+                                                                    <span class="text-muted">{{ translate('TBD') }}</span>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        </div>
+                                                        <input type="number" name="scores[{{ game.gm_id }}][A]" 
+                                                               value="{{ game.gm_result_A if game.gm_result_A is not none else '' }}" 
+                                                               class="form-control score-input text-center ml-2" style="width: 60px;" 
+                                                               min="0" max="99" placeholder="0">
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- VS Divider -->
+                                                <div class="text-center mb-2">
+                                                    <small class="text-muted">VS</small>
+                                                </div>
+                                                
+                                                <!-- Team B -->
+                                                <div class="team-row">
+                                                    <div class="team-players d-flex align-items-center">
+                                                        <div class="player-photos mr-3">
+                                                            {% if game.player_B1 and game.player_B2 %}
+                                                                <img src="{{ url_for('views.display_user_image', userID=game.player_B1.us_id) }}" 
+                                                                     onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
+                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                <img src="{{ url_for('views.display_user_image', userID=game.player_B2.us_id) }}" 
+                                                                     onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
+                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                            {% else %}
+                                                                <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
+                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
+                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="player-names flex-grow-1">
+                                                            {% if game.player_B1 and game.player_B2 %}
+                                                                {{ game.player_B1.us_name }} / {{ game.player_B2.us_name }}
+                                                            {% else %}
+                                                                {% set player_names = game_player_names.get(game.gm_id, {}) %}
+                                                                {% if player_names.get('B1') and player_names.get('B2') %}
+                                                                    {{ player_names.get('B1') }} / {{ player_names.get('B2') }}
+                                                                {% else %}
+                                                                    <span class="text-muted">{{ translate('TBD') }}</span>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        </div>
+                                                        <input type="number" name="scores[{{ game.gm_id }}][B]" 
+                                                               value="{{ game.gm_result_B if game.gm_result_B is not none else '' }}" 
+                                                               class="form-control score-input text-center ml-2" style="width: 60px;" 
+                                                               min="0" max="99" placeholder="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </form>
-                            {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                        {% endfor %}
+                        
+                        <div class="mt-3 text-right">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fa fa-save"></i> {{ translate('Save All Results') }}
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                        <!-- Read-only view for non-authorized users -->
+                        <h5>{{ translate('Event Matches') }}</h5>
+                        
+                        <!-- Group games by rounds (start time) -->
+                        {% set rounds = {} %}
+                        {% for game in event_games %}
+                            {% set round_time = game.gm_timeStart.strftime('%H:%M') %}
+                            {% if round_time not in rounds %}
+                                {% set _ = rounds.update({round_time: []}) %}
+                            {% endif %}
+                            {% set _ = rounds[round_time].append(game) %}
+                        {% endfor %}
+                        
+                        <!-- Display each round in a separate card -->
+                        {% for round_time, round_games in rounds.items() %}
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-clock mr-2"></i>
+                                        {{ translate('Round') }} - {{ round_time }}
+                                        <span class="badge badge-info ml-2">{{ round_games|length }} {{ translate('games') }}</span>
+                                    </h6>
+                                    <small class="text-muted">
+                                        {{ round_time }} - {{ round_games[0].gm_timeEnd.strftime('%H:%M') if round_games[0].gm_timeEnd else '??:??' }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    {% for game in round_games %}
+                                    <div class="col-lg-6 col-md-6 mb-3">
+                                        <div class="game-card" {% if game.gm_result_A is not none and game.gm_result_B is not none %}style="background-color: rgba(255, 255, 255, 0.1);"{% endif %}>
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <strong>{{ game.court.ct_name if game.court else 'Court ' + loop.index|string }}</strong>
+                                                {% if game.gm_result_A is not none and game.gm_result_B is not none %}
+                                                    <span class="badge badge-success">{{ translate('Finished') }}</span>
+                                                {% else %}
+                                                    <span class="badge badge-secondary">{{ translate('Pending') }}</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="game-content p-3">
+                                                <div class="game-time mb-3">
+                                                    {{ game.gm_timeStart.strftime('%H:%M') }} - {{ game.gm_timeEnd.strftime('%H:%M') if game.gm_timeEnd else '??:??' }}
+                                                </div>
+                                                
+                                                <!-- Team A -->
+                                                <div class="team-row mb-2">
+                                                    <div class="team-players d-flex align-items-center">
+                                                        <div class="player-photos mr-3">
+                                                            {% if game.player_A1 and game.player_A2 %}
+                                                                <img src="{{ url_for('views.display_user_image', userID=game.player_A1.us_id) }}" 
+                                                                     onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
+                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                <img src="{{ url_for('views.display_user_image', userID=game.player_A2.us_id) }}" 
+                                                                     onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
+                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                            {% else %}
+                                                                <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
+                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
+                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="player-names flex-grow-1">
+                                                            {% if game.player_A1 and game.player_A2 %}
+                                                                {{ game.player_A1.us_name }} / {{ game.player_A2.us_name }}
+                                                            {% else %}
+                                                                {% set player_names = game_player_names.get(game.gm_id, {}) %}
+                                                                {% if player_names.get('A1') and player_names.get('A2') %}
+                                                                    {{ player_names.get('A1') }} / {{ player_names.get('A2') }}
+                                                                {% else %}
+                                                                    <span class="text-muted">{{ translate('TBD') }}</span>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="score-display ml-2">
+                                                            {% if game.gm_result_A is not none %}
+                                                                <strong>{{ game.gm_result_A }}</strong>
+                                                            {% else %}
+                                                                <span class="text-muted">-</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- VS Divider -->
+                                                <div class="text-center mb-2">
+                                                    <small class="text-muted">VS</small>
+                                                </div>
+                                                
+                                                <!-- Team B -->
+                                                <div class="team-row">
+                                                    <div class="team-players d-flex align-items-center">
+                                                        <div class="player-photos mr-3">
+                                                            {% if game.player_B1 and game.player_B2 %}
+                                                                <img src="{{ url_for('views.display_user_image', userID=game.player_B1.us_id) }}" 
+                                                                     onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
+                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                <img src="{{ url_for('views.display_user_image', userID=game.player_B2.us_id) }}" 
+                                                                     onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
+                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                            {% else %}
+                                                                <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
+                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
+                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="player-names flex-grow-1">
+                                                            {% if game.player_B1 and game.player_B2 %}
+                                                                {{ game.player_B1.us_name }} / {{ game.player_B2.us_name }}
+                                                            {% else %}
+                                                                {% set player_names = game_player_names.get(game.gm_id, {}) %}
+                                                                {% if player_names.get('B1') and player_names.get('B2') %}
+                                                                    {{ player_names.get('B1') }} / {{ player_names.get('B2') }}
+                                                                {% else %}
+                                                                    <span class="text-muted">{{ translate('TBD') }}</span>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="score-display ml-2">
+                                                            {% if game.gm_result_B is not none %}
+                                                                <strong>{{ game.gm_result_B }}</strong>
+                                                            {% else %}
+                                                                <span class="text-muted">-</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
                 </div>
                 {% endif %}
 
@@ -405,19 +575,23 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
+                <div class="card-header">
+                    <h4>{{ translate('Classification') }}</h4>
+                </div>
                 <div class="card-body">
-                    <h5>{{ translate('Classification') }}</h5>
-                    <div class="table-responsive">
-                        <table class="table">
+                    <!-- Desktop version - visible on md and larger screens -->
+                    <div class="table-responsive d-none d-md-block">
+                        <table class="table desktop-classification">
                             <thead>
                                 <tr>
-                                    <th>{{ translate('Position') }}</th>
-                                    <th>{{ translate('Player') }}</th>
-                                    <th>{{ translate('Points') }}</th>
-                                    <th>{{ translate('Wins') }}</th>
-                                    <th>{{ translate('Losses') }}</th>
-                                    <th>{{ translate('Games Difference') }}</th>
-                                    <th>{{ translate('Games') }}</th>
+                                    <th scope="col">{{ translate('Position') }}</th>
+                                    <th scope="col" class="player-col">{{ translate('Player') }}</th>
+                                    <th scope="col" class="points-col">{{ translate('Pts') }}</th>
+                                    <th scope="col">{{ translate('W') }}</th>
+                                    <th scope="col">{{ translate('L') }}</th>
+                                    <th scope="col">{{ translate('GF') }}</th>
+                                    <th scope="col">{{ translate('GA') }}</th>
+                                    <th scope="col" class="diff-col">{{ translate('GD') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -429,20 +603,70 @@
                                         {% endif %}
                                         {{ loop.index }}
                                     </td>
-                                    <td>
-                                        <a href="{{ url_for('views.player_info', user_id=classification.ec_player_id) }}">
-                                            {{ classification.player.us_name }}
-                                        </a>
+                                    <td class="player-col">
+                                        <div class="player-info">
+                                            <img src="{{ url_for('views.display_user_image', userID=classification.ec_player_id) }}"
+                                                 onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                                 alt="{{ classification.player.us_name }}"
+                                                 class="rounded-circle">
+                                            <span>{{ classification.player.us_name }}</span>
+                                        </div>
                                     </td>
-                                    <td><strong>{{ classification.ec_points }}</strong></td>
+                                    <td class="points-col"><strong>{{ classification.ec_points }}</strong></td>
                                     <td>{{ classification.ec_wins }}</td>
                                     <td>{{ classification.ec_losses }}</td>
-                                    <td><strong>{{ classification.ec_games_diff }}</strong></td>
-                                    <td>{{ classification.ec_games_favor }} - {{ classification.ec_games_against }}</td>
+                                    <td>{{ classification.ec_games_favor }}</td>
+                                    <td>{{ classification.ec_games_against }}</td>
+                                    <td class="diff-col"><strong>{{ classification.ec_games_diff }}</strong></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Mobile version - visible only on smaller screens -->
+                    <div class="d-md-none">
+                        <div class="mobile-classification">
+                            <!-- Headers row -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="player-info">
+                                    <span class="text-muted">{{ translate('Player') }}</span>
+                                </div>
+                                <div class="d-flex stats-container">
+                                    <div class="text-center mx-2">
+                                        <span class="text-muted">{{ translate('Pts') }}</span>
+                                    </div>
+                                    <div class="text-center mx-2">
+                                        <span class="text-muted">{{ translate('GD') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% for classification in classifications %}
+                            <div class="player-card">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex player-info">
+                                        {% if loop.index == 1 %}
+                                            <i class="fa fa-trophy text-warning mr-2"></i>
+                                        {% endif %}
+                                        <img src="{{ url_for('views.display_user_image', userID=classification.ec_player_id) }}"
+                                             onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                             alt="{{ classification.player.us_name }}"
+                                             class="rounded-circle">
+                                        <span class="text-truncate">{{ classification.player.us_name }}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center stats-container">
+                                        <div class="text-center mx-2">
+                                            <strong>{{ classification.ec_points }}</strong>
+                                        </div>
+                                        <div class="text-center mx-2">
+                                            <strong>{{ classification.ec_games_diff }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -457,27 +681,68 @@ $(function () {
     $('[data-toggle="tooltip"]').tooltip()
 })
 
-// Function to clear game score
-function clearGameScore(gameId) {
-    if (confirm('{{ translate("Are you sure you want to clear this game's score?") }}')) {
-        // Create a form to submit the clear request
-        const form = document.createElement('form');
-        form.method = 'POST';
-        // form.action = '/clear_game_score/' + gameId; // Route disabled
-        
-        // Add CSRF token if available
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (csrfToken) {
-            const tokenInput = document.createElement('input');
-            tokenInput.type = 'hidden';
-            tokenInput.name = 'csrf_token';
-            tokenInput.value = csrfToken.getAttribute('content');
-            form.appendChild(tokenInput);
-        }
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
+// Function to confirm and clear an entire round
+function confirmClearRound(roundTime, eventId) {
+    // Get information about what will happen
+    fetch(`/get_round_deletion_info/${eventId}/${roundTime}`)
+        .then(response => response.json())
+        .then(data => {
+            let message = '{{ translate("Are you sure you want to clear the round at") }} ' + roundTime + '?\\n\\n';
+            
+            if (data.target_games > 0) {
+                message += '{{ translate("This will:") }}\\n';
+                message += '• {{ translate("Reset scores for") }} ' + data.target_games + ' {{ translate("games in this round") }}\\n';
+                
+                if (data.future_games > 0) {
+                    message += '• {{ translate("DELETE") }} ' + data.future_games + ' {{ translate("games from subsequent rounds") }}\\n';
+                    message += '  {{ translate("(Rounds after") }} ' + roundTime + ')\\n\\n';
+                    message += '{{ translate("⚠️ DELETED GAMES CANNOT BE RECOVERED!") }}\\n';
+                } else {
+                    message += '• {{ translate("No future rounds will be affected") }}\\n';
+                }
+                
+                message += '\\n{{ translate("This action CANNOT be undone!") }}';
+                
+                if (confirm(message)) {
+                    // Create and submit form
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = `/clear_event_round/${eventId}/${roundTime}`;
+                    
+                    // Add CSRF token if available
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                    if (csrfToken) {
+                        const tokenInput = document.createElement('input');
+                        tokenInput.type = 'hidden';
+                        tokenInput.name = 'csrf_token';
+                        tokenInput.value = csrfToken.getAttribute('content');
+                        form.appendChild(tokenInput);
+                    }
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            } else {
+                alert('{{ translate("No games found for this round") }}');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Fallback confirmation
+            const message = '{{ translate("Are you sure you want to clear the round at") }} ' + roundTime + '?\\n\\n' +
+                          '{{ translate("This will reset scores for games in this round and may delete future rounds.") }}\\n' +
+                          '{{ translate("This action CANNOT be undone!") }}';
+                          
+            if (confirm(message)) {
+                // Create and submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/clear_event_round/${eventId}/${roundTime}`;
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
 }
 </script>
 {% endblock %}

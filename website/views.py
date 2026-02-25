@@ -2099,6 +2099,346 @@ def edit_event_public_step_register(event_id):
 # CLUB EVENT EDITING ROUTES (traditional admin interface)
 # ============================================
 
+@views.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
+@login_required  
+def edit_event(event_id):
+    """Unified edit event page with tabs"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Check authorization (superuser or club authorization)
+    if current_user.us_is_superuser != 1:
+        authorization = ClubAuthorization.query.filter_by(
+            ca_user_id=current_user.us_id, 
+            ca_club_id=event.ev_club_id
+        ).first()
+        
+        if not authorization:
+            flash(translate('You are not authorized to edit this event'), 'error')
+            return redirect(url_for('views.managementEvents'))
+
+    # Get data needed for the template
+    if current_user.us_is_superuser == 1:
+        authorized_clubs = Club.query.filter_by(cl_active=True).all()
+    else:
+        authorized_clubs = db.session.query(Club).join(
+            ClubAuthorization, Club.cl_id == ClubAuthorization.ca_club_id
+        ).filter(
+            ClubAuthorization.ca_user_id == current_user.us_id,
+            Club.cl_active == True
+        ).all()
+
+    # Get club courts for this event
+    club = Club.query.get_or_404(event.ev_club_id)
+    all_courts = Court.query.filter_by(ct_club_id=club.cl_id).all()
+    
+    # Get existing event courts
+    existing_event_courts = EventCourts.query.filter_by(evc_event_id=event_id).all()
+    
+    # Get available event types
+    event_types = EventType.query.filter(EventType.et_is_active == True).order_by(EventType.et_order).all()
+    
+    # Get existing player data
+    from .models import EventPlayerNames
+    existing_players = EventPlayerNames.query.filter_by(epn_event_id=event.ev_id).all()
+    
+    # Organize player data by position type
+    player_data = {
+        'random': [],
+        'team': {},
+        'left': [],
+        'right': [],
+        'locked_pairs': []
+    }
+    
+    for player in existing_players:
+        if player.epn_position_type == 'random':
+            # Ensure list is long enough
+            while len(player_data['random']) <= player.epn_position_index:
+                player_data['random'].append('')
+            player_data['random'][player.epn_position_index] = player.epn_player_name
+            
+            # Track locked pairs
+            if hasattr(player, 'epn_is_locked') and player.epn_is_locked:
+                pair_index = player.epn_position_index // 2
+                if pair_index not in player_data['locked_pairs']:
+                    player_data['locked_pairs'].append(pair_index)
+            
+        elif player.epn_position_type == 'team':
+            team_id = player.epn_team_identifier
+            if team_id not in player_data['team']:
+                player_data['team'][team_id] = {'player1': '', 'player2': ''}
+            
+            if player.epn_team_position == 1:
+                player_data['team'][team_id]['player1'] = player.epn_player_name
+            elif player.epn_team_position == 2:
+                player_data['team'][team_id]['player2'] = player.epn_player_name
+                
+            # Track locked pairs for manual pairing
+            if hasattr(player, 'epn_is_locked') and player.epn_is_locked:
+                pair_index = ord(team_id) - ord('A')
+                if pair_index not in player_data['locked_pairs']:
+                    player_data['locked_pairs'].append(pair_index)
+                
+        elif player.epn_position_type == 'left':
+            while len(player_data['left']) <= player.epn_position_index:
+                player_data['left'].append('')
+            player_data['left'][player.epn_position_index] = player.epn_player_name
+            
+        elif player.epn_position_type == 'right':
+            while len(player_data['right']) <= player.epn_position_index:
+                player_data['right'].append('')
+            player_data['right'][player.epn_position_index] = player.epn_player_name
+
+    if request.method == 'POST':
+        tab = request.form.get('tab', 'players')
+        
+        try:
+            if tab == 'players':
+                # Handle player registration update with pair locking
+                return update_event_players_with_locking(event_id)
+                
+            elif tab == 'basic':
+                # Handle basic information update
+                event.ev_title = request.form['title']
+                event.ev_description = request.form.get('description', '')
+                event.ev_location = request.form['location']
+                event.ev_club_id = request.form['club_id']
+                
+                # Parse dates and times
+                event.ev_date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+                event.ev_start_time = datetime.strptime(request.form['start_time'], '%H:%M').time()
+                
+                end_time_str = request.form.get('end_time')
+                if end_time_str:
+                    event.ev_end_time = datetime.strptime(end_time_str, '%H:%M').time()
+                else:
+                    event.ev_end_time = None
+                    
+                # Parse registration dates
+                reg_start_str = request.form.get('registration_start')
+                if reg_start_str:
+                    event.ev_registration_start = datetime.strptime(reg_start_str, '%Y-%m-%d').date()
+                
+                reg_end_str = request.form.get('registration_end')
+                if reg_end_str:
+                    event.ev_registration_end = datetime.strptime(reg_end_str, '%Y-%m-%d').date()
+                
+                event.ev_status = request.form['status']
+                
+                db.session.commit()
+                flash(translate('Basic event information updated!'), 'success')
+                
+            elif tab == 'courts':
+                # Handle courts and settings update
+                event_type_id = request.form.get('event_type_id')
+                if event_type_id:
+                    # Validate event type exists and is active
+                    event_type = EventType.query.filter_by(et_id=int(event_type_id), et_is_active=True).first()
+                    if not event_type:
+                        flash(translate('Invalid event type selected!'), 'error')
+                    else:
+                        event.ev_type_id = int(event_type_id)
+                        
+                event.ev_max_players = int(request.form['max_players'])
+                
+                # Clear existing event courts
+                EventCourts.query.filter_by(evc_event_id=event_id).delete()
+                
+                # Add selected courts
+                court_count = int(request.form.get('court_count', 1))
+                for i in range(court_count):
+                    court_id = request.form.get(f'court_{i}')
+                    
+                    if court_id:
+                        event_court = EventCourts(
+                            evc_event_id=event_id,
+                            evc_court_id=court_id
+                        )
+                        db.session.add(event_court)
+                
+                db.session.commit()
+                flash(translate('Courts and settings updated!'), 'success')
+
+        except ValueError as e:
+            flash(translate('Invalid date/time format!'), 'error')
+        except Exception as e:
+            db.session.rollback()
+            flash(translate('Error updating event: {}').format(str(e)), 'error')
+
+    return render_template("edit_event.html", 
+                         user=current_user, 
+                         event=event, 
+                         clubs=authorized_clubs,
+                         courts=all_courts,
+                         existing_event_courts=existing_event_courts,
+                         event_types=event_types,
+                         player_data=player_data)
+
+def update_event_players_with_locking(event_id):
+    """Update event players with pair locking functionality"""
+    from .models import EventPlayerNames
+    
+    event = Event.query.get_or_404(event_id)
+    
+    try:
+        # Clear existing player names and registrations for this event
+        EventPlayerNames.query.filter_by(epn_event_id=event.ev_id).delete()
+        EventRegistration.query.filter_by(er_event_id=event.ev_id).delete()
+        
+        pairing_type = request.form.get('pairing_type') or event.ev_pairing_type or 'Random'
+        max_players = event.ev_max_players
+        players_registered = 0
+        
+        # Update pairing type if changed
+        event.ev_pairing_type = pairing_type
+        
+        # Get locked pairs
+        locked_pairs_str = request.form.get('locked_pairs', '')
+        locked_pairs = set()
+        if locked_pairs_str:
+            try:
+                locked_pairs = set(int(x) for x in locked_pairs_str.split(',') if x.strip())
+            except:
+                pass
+        
+        def get_or_create_user(player_name):
+            """Get existing user or create new player user"""
+            if not player_name or not player_name.strip():
+                return None
+                
+            # Try to find existing user by name (case insensitive)
+            user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+            
+            if not user:
+                # Create new user as player
+                user = Users(
+                    us_name=player_name.strip(),
+                    us_email=f"{player_name.strip().lower().replace(' ', '.')}@temp.event",
+                    us_telephone=f"temp_{player_name.strip().lower().replace(' ', '')}",
+                    us_is_player=True,
+                    us_is_active=True
+                )
+                db.session.add(user)
+                db.session.flush()  # Get the user ID
+            
+            return user
+        
+        if pairing_type == 'Random' or pairing_type == 'Manual':
+            # Handle pair-based input
+            max_pairs = max_players // 2
+            for pair_idx in range(max_pairs):
+                player1_name = request.form.get(f'pair_{pair_idx}_player1')
+                player2_name = request.form.get(f'pair_{pair_idx}_player2')
+                
+                # Process player 1
+                if player1_name and player1_name.strip():
+                    user1 = get_or_create_user(player1_name.strip())
+                    if user1:
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=player1_name.strip(),
+                            epn_position_type='team' if pairing_type == 'Manual' else 'random',
+                            epn_position_index=pair_idx,
+                            epn_team_identifier=chr(65 + pair_idx) if pairing_type == 'Manual' else None,
+                            epn_team_position=1 if pairing_type == 'Manual' else None,
+                            epn_created_by_id=current_user.us_id,
+                            epn_is_locked=pair_idx in locked_pairs
+                        )
+                        db.session.add(player_record)
+                        
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user1.us_id,
+                            er_registered_by_id=current_user.us_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+                
+                # Process player 2
+                if player2_name and player2_name.strip():
+                    user2 = get_or_create_user(player2_name.strip())
+                    if user2:
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=player2_name.strip(),
+                            epn_position_type='team' if pairing_type == 'Manual' else 'random',
+                            epn_position_index=pair_idx,
+                            epn_team_identifier=chr(65 + pair_idx) if pairing_type == 'Manual' else None,
+                            epn_team_position=2 if pairing_type == 'Manual' else None,
+                            epn_created_by_id=current_user.us_id,
+                            epn_is_locked=pair_idx in locked_pairs
+                        )
+                        db.session.add(player_record)
+                        
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user2.us_id,
+                            er_registered_by_id=current_user.us_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+                        
+        elif pairing_type == 'L&R Random':
+            left_players = max_players // 2
+            right_players = max_players // 2
+            
+            for i in range(left_players):
+                left_player = request.form.get(f'left_player_{i}')
+                if left_player and left_player.strip():
+                    user = get_or_create_user(left_player.strip())
+                    if user:
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=left_player.strip(),
+                            epn_position_type='left',
+                            epn_position_index=i,
+                            epn_created_by_id=current_user.us_id
+                        )
+                        db.session.add(player_record)
+                        
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user.us_id,
+                            er_registered_by_id=current_user.us_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+                        
+            for i in range(right_players):
+                right_player = request.form.get(f'right_player_{i}')
+                if right_player and right_player.strip():
+                    user = get_or_create_user(right_player.strip())
+                    if user:
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=right_player.strip(),
+                            epn_position_type='right',
+                            epn_position_index=i,
+                            epn_created_by_id=current_user.us_id
+                        )
+                        db.session.add(player_record)
+                        
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user.us_id,
+                            er_registered_by_id=current_user.us_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+        
+        db.session.commit()
+        flash(translate('Event players updated successfully! {} players registered.').format(players_registered), 'success')
+        return redirect(url_for('views.edit_event', event_id=event_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(translate('Error updating event players: {}').format(str(e)), 'error')
+        return redirect(url_for('views.edit_event', event_id=event_id))
+
 @views.route('/edit_event_step1/<int:event_id>', methods=['GET', 'POST'])
 @login_or_access_code_required
 def edit_event_step1(event_id):
@@ -2666,6 +3006,193 @@ def create_games_for_event(event_id):
     
     # Note: Don't commit here - let the calling function handle the commit
     return num_games
+
+@views.route('/clear_event_round/<int:event_id>/<start_time>', methods=['POST'])
+@login_or_access_code_required
+def clear_event_round(event_id, start_time):
+    """Clear an entire round of games and all subsequent rounds"""
+    print(f"DEBUG clear_event_round: Called with event_id={event_id}, start_time={start_time}")
+    
+    try:
+        event = Event.query.get_or_404(event_id)
+        print(f"DEBUG clear_event_round: Found event {event.ev_id}")
+    
+        # Check authorization (superuser, club authorization, or public event with access code)
+        is_public_event = event.ev_club_id == 2  # Public Events club ID
+        print(f"DEBUG clear_event_round: is_public_event={is_public_event}")
+    
+        if current_user.is_authenticated and not is_public_event and current_user.us_is_superuser != 1:
+            print(f"DEBUG clear_event_round: Checking authorization for user {current_user.us_id}")
+            authorization = ClubAuthorization.query.filter_by(
+                ca_user_id=current_user.us_id, 
+                ca_club_id=event.ev_club_id
+            ).first()
+            
+            if not authorization:
+                print(f"DEBUG clear_event_round: Not authorized")
+                flash(translate('You are not authorized to delete rounds for this event'), 'error')
+                access_code = session.get(f'event_{event_id}_access_code', '')
+                return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+
+        print(f"DEBUG clear_event_round: Authorization passed, parsing time")
+        from datetime import datetime, time
+        
+        # Parse the start_time from URL parameter (format: HH:MM)
+        target_hour, target_minute = map(int, start_time.split(':'))
+        target_time = time(target_hour, target_minute)
+        
+        # Get all games for this event
+        all_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart).all()
+        
+        # Debug: Print all game times to see what we're working with
+        print(f"DEBUG: Looking for round at {start_time} (parsed as {target_time})")
+        for game in all_games:
+            # Handle both datetime and time objects
+            if hasattr(game.gm_timeStart, 'time'):
+                game_time = game.gm_timeStart.time()  # It's a datetime object
+            else:
+                game_time = game.gm_timeStart  # It's already a time object
+            print(f"DEBUG: Game {game.gm_id} starts at {game_time} (hour={game_time.hour}, minute={game_time.minute})")
+        
+        if not all_games:
+            flash(translate('No games found for this event'), 'warning')
+            access_code = session.get(f'event_{event_id}_access_code', '')
+            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+        
+        # Find games in the target round and all games that start after it
+        target_round_games = []
+        games_to_delete = []
+        
+        print(f"DEBUG: Searching for games with hour={target_time.hour} and minute={target_time.minute}")
+        
+        for game in all_games:
+            # Handle both datetime and time objects  
+            if hasattr(game.gm_timeStart, 'time'):
+                game_time = game.gm_timeStart.time()  # It's a datetime object
+            else:
+                game_time = game.gm_timeStart  # It's already a time object
+            
+            print(f"DEBUG: Checking game {game.gm_id}: {game_time} -> hour={game_time.hour}, minute={game_time.minute}")
+            
+            # If this is the target round, reset scores to None (match hour and minute only)
+            if game_time.hour == target_time.hour and game_time.minute == target_time.minute:
+                print(f"DEBUG: Match found! Adding game {game.gm_id} to target_round_games")
+                target_round_games.append(game)
+            # If this game starts after the target round, mark for deletion
+            elif (game_time.hour > target_time.hour or 
+                  (game_time.hour == target_time.hour and game_time.minute > target_time.minute)):
+                print(f"DEBUG: Game {game.gm_id} is after target round, marking for deletion")
+                games_to_delete.append(game)
+        
+        print(f"DEBUG: Found {len(target_round_games)} games in target round, {len(games_to_delete)} games to delete")
+        
+        if not target_round_games:
+            flash(translate('No games found for the specified round time'), 'warning')
+            access_code = session.get(f'event_{event_id}_access_code', '')
+            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+        
+        # Reset scores for the target round
+        for game in target_round_games:
+            game.gm_result_A = None
+            game.gm_result_B = None
+        
+        # Delete all subsequent rounds
+        for game in games_to_delete:
+            db.session.delete(game)
+        
+        db.session.commit()
+        
+        # Recalculate event classifications after the changes
+        calculate_event_classifications(event_id)
+        db.session.commit()
+        
+        success_msg = translate('Round at {} cleared successfully!').format(start_time)
+        if games_to_delete:
+            success_msg += ' ' + translate('{} subsequent games were deleted.').format(len(games_to_delete))
+        
+        flash(success_msg, 'success')
+        
+    except ValueError:
+        flash(translate('Invalid time format provided'), 'error')
+    except Exception as e:
+        print(f"DEBUG clear_event_round: Exception occurred: {str(e)}")
+        db.session.rollback()
+        flash(translate('Error clearing round: {}').format(str(e)), 'error')
+    
+    access_code = session.get(f'event_{event_id}_access_code', '')
+    return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+
+@views.route('/get_round_deletion_info/<int:event_id>/<start_time>', methods=['GET'])
+@login_or_access_code_required
+def get_round_deletion_info(event_id, start_time):
+    """Get information about what will be affected when deleting a round"""
+    print(f"DEBUG get_round_deletion_info: Called with event_id={event_id}, start_time={start_time}")
+    
+    try:
+        event = Event.query.get_or_404(event_id)
+        print(f"DEBUG get_round_deletion_info: Found event {event.ev_id}")
+    
+        # Check authorization (superuser, club authorization, or public event with access code)
+        is_public_event = event.ev_club_id == 2  # Public Events club ID
+        print(f"DEBUG get_round_deletion_info: is_public_event={is_public_event}")
+    
+        if current_user.is_authenticated and not is_public_event and current_user.us_is_superuser != 1:
+            print(f"DEBUG get_round_deletion_info: Checking authorization for user {current_user.us_id}")
+            authorization = ClubAuthorization.query.filter_by(
+                ca_user_id=current_user.us_id, 
+                ca_club_id=event.ev_club_id
+            ).first()
+            
+            if not authorization:
+                print(f"DEBUG get_round_deletion_info: Not authorized")
+                return jsonify({'error': 'Not authorized'}), 403
+
+        print(f"DEBUG get_round_deletion_info: Authorization passed, parsing time")
+        from datetime import datetime, time
+        
+        # Parse the start_time from URL parameter (format: HH:MM)
+        target_hour, target_minute = map(int, start_time.split(':'))
+        target_time = time(target_hour, target_minute)
+        print(f"DEBUG get_round_deletion_info: Parsed time as {target_time}")
+        
+        # Get all games for this event
+        all_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart).all()
+        print(f"DEBUG get_round_deletion_info: Found {len(all_games)} games")
+        
+        target_games = 0
+        future_games = 0
+        
+        for game in all_games:
+            # Handle both datetime and time objects
+            if hasattr(game.gm_timeStart, 'time'):
+                game_time = game.gm_timeStart.time()  # It's a datetime object
+            else:
+                game_time = game.gm_timeStart  # It's already a time object
+            
+            print(f"DEBUG get_round_deletion_info: Game {game.gm_id} time: {game_time}")
+            
+            # Count games in the target round
+            if game_time.hour == target_time.hour and game_time.minute == target_time.minute:
+                target_games += 1
+                print(f"DEBUG get_round_deletion_info: Found target game {game.gm_id}")
+            # Count games that start after the target round
+            elif (game_time.hour > target_time.hour or 
+                  (game_time.hour == target_time.hour and game_time.minute > target_time.minute)):
+                future_games += 1
+                print(f"DEBUG get_round_deletion_info: Found future game {game.gm_id}")
+        
+        return jsonify({
+            'target_games': target_games,
+            'future_games': future_games,
+            'round_time': start_time
+        })
+        
+    except ValueError:
+        print(f"DEBUG get_round_deletion_info: ValueError occurred")
+        return jsonify({'error': 'Invalid time format'}), 400
+    except Exception as e:
+        print(f"DEBUG get_round_deletion_info: Exception occurred: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @views.route('/create_event_games/<int:event_id>', methods=['POST'])
 @login_or_access_code_required 
