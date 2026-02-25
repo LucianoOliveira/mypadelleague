@@ -945,11 +945,11 @@
   },
   "MW": {
     "en": "MW",
-    "pt": "JV"
+    "pt": "V"
   },
   "ML": {
     "en": "ML",
-    "pt": "JP"
+    "pt": "D"
   },
   "GW": {
     "en": "GW",
@@ -961,7 +961,7 @@
   },
   "GD": {
     "en": "GD",
-    "pt": "DG"
+    "pt": "DJ"
   },
   "Ranking": {
     "en": "Ranking",
@@ -1342,5 +1342,41 @@
   "Mexican tournaments have unlimited rounds - play as long as you want!": {
     "en": "Mexican tournaments have unlimited rounds - play as long as you want!",
     "pt": "Torneios Mexicanos têm rondas ilimitadas - jogue o quanto quiser!"
+  },
+  "Max Players": {
+    "en": "Max Players",
+    "pt": "Máximo de Jogadores"
+  },
+  "Matches": {
+    "en": "Matches",
+    "pt": "Jogos"
+  },
+  "Event Matches": {
+    "en": "Event Matches",
+    "pt": "Jogos do Evento"
+  },
+  "Round": {
+    "en": "Round",
+    "pt": "Ronda"
+  },
+  "Position": {
+    "en": "Position",
+    "pt": "Posição"
+  },
+  "W": {
+    "en": "W",
+    "pt": "V"
+  },
+  "L": {
+    "en": "L",
+    "pt": "D"
+  },
+  "GF": {
+    "en": "GF",
+    "pt": "JF"
+  },
+  "GA": {
+    "en": "GA",
+    "pt": "JC"
   }
 }
