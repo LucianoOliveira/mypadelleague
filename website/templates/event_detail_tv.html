@@ -199,19 +199,19 @@
                                         <!-- Team A -->
                                         <div class="team-row mb-2">
                                             <div class="team-players d-flex align-items-center">
-                                                <div class="player-photos mr-3">
+                                                <div class="player-photos mr-1">
                                                     {% if game.player_A1 and game.player_A2 %}
                                                         <img src="{{ url_for('views.display_user_image', userID=game.player_A1.us_id) }}" 
                                                              onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
-                                                             class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                             class="rounded-circle" style="width: 16px; height: 16px;" alt="">
                                                         <img src="{{ url_for('views.display_user_image', userID=game.player_A2.us_id) }}" 
                                                              onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
-                                                             class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                             class="rounded-circle ml-1" style="width: 16px; height: 16px;" alt="">
                                                     {% else %}
                                                         <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
-                                                             class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                             class="rounded-circle" style="width: 16px; height: 16px;" alt="">
                                                         <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
-                                                             class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                             class="rounded-circle ml-1" style="width: 16px; height: 16px;" alt="">
                                                     {% endif %}
                                                 </div>
                                                 <div class="player-names flex-grow-1">
@@ -244,19 +244,19 @@
                                         <!-- Team B -->
                                         <div class="team-row">
                                             <div class="team-players d-flex align-items-center">
-                                                <div class="player-photos mr-3">
+                                                <div class="player-photos mr-1">
                                                     {% if game.player_B1 and game.player_B2 %}
                                                         <img src="{{ url_for('views.display_user_image', userID=game.player_B1.us_id) }}" 
                                                              onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
-                                                             class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                             class="rounded-circle" style="width: 16px; height: 16px;" alt="">
                                                         <img src="{{ url_for('views.display_user_image', userID=game.player_B2.us_id) }}" 
                                                              onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
-                                                             class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                             class="rounded-circle ml-1" style="width: 16px; height: 16px;" alt="">
                                                     {% else %}
                                                         <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
-                                                             class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                             class="rounded-circle" style="width: 16px; height: 16px;" alt="">
                                                         <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
-                                                             class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                             class="rounded-circle ml-1" style="width: 16px; height: 16px;" alt="">
                                                     {% endif %}
                                                 </div>
                                                 <div class="player-names flex-grow-1">
@@ -345,19 +345,19 @@
                                                 <!-- Team A -->
                                                 <div class="team-row mb-2">
                                                     <div class="team-players d-flex align-items-center">
-                                                        <div class="player-photos mr-3">
+                                                        <div class="player-photos mr-1">
                                                             {% if game.player_A1 and game.player_A2 %}
                                                                 <img src="{{ url_for('views.display_user_image', userID=game.player_A1.us_id) }}" 
                                                                      onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
-                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                     class="rounded-circle" style="width: 16px; height: 16px;" alt="">
                                                                 <img src="{{ url_for('views.display_user_image', userID=game.player_A2.us_id) }}" 
                                                                      onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
-                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                                     class="rounded-circle ml-1" style="width: 16px; height: 16px;" alt="">
                                                             {% else %}
                                                                 <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
-                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                     class="rounded-circle" style="width: 16px; height: 16px;" alt="">
                                                                 <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
-                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                                     class="rounded-circle ml-1" style="width: 16px; height: 16px;" alt="">
                                                             {% endif %}
                                                         </div>
                                                         <div class="player-names flex-grow-1">
@@ -390,19 +390,19 @@
                                                 <!-- Team B -->
                                                 <div class="team-row">
                                                     <div class="team-players d-flex align-items-center">
-                                                        <div class="player-photos mr-3">
+                                                        <div class="player-photos mr-1">
                                                             {% if game.player_B1 and game.player_B2 %}
                                                                 <img src="{{ url_for('views.display_user_image', userID=game.player_B1.us_id) }}" 
                                                                      onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
-                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                     class="rounded-circle" style="width: 16px; height: 16px;" alt="">
                                                                 <img src="{{ url_for('views.display_user_image', userID=game.player_B2.us_id) }}" 
                                                                      onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'" 
-                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                                     class="rounded-circle ml-1" style="width: 16px; height: 16px;" alt="">
                                                             {% else %}
                                                                 <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
-                                                                     class="rounded-circle" style="width: 30px; height: 30px;" alt="">
+                                                                     class="rounded-circle" style="width: 16px; height: 16px;" alt="">
                                                                 <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" 
-                                                                     class="rounded-circle ml-1" style="width: 30px; height: 30px;" alt="">
+                                                                     class="rounded-circle ml-1" style="width: 16px; height: 16px;" alt="">
                                                             {% endif %}
                                                         </div>
                                                         <div class="player-names flex-grow-1">
@@ -473,40 +473,101 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-/* TV Layout Styles - Size adjustments only, inherit application colors */
+/* TV Layout Styles - Highly optimized for lower resolution displays */
 .tv-layout {
     min-height: 100vh;
-    padding: 5px;
+    padding: 2px;
+    font-size: 0.7rem;
 }
 
-/* Slightly larger text for TV viewing */
+.tv-layout .card {
+    margin-bottom: 2px;
+}
+
+.tv-layout .row {
+    margin-left: -2px;
+    margin-right: -2px;
+}
+
+.tv-layout .col-6,
+.tv-layout .col-12 {
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
 .tv-layout h2 {
-    font-size: 2rem;
+    font-size: 1rem;
     font-weight: bold;
+    margin-bottom: 0;
+    line-height: 1.2;
 }
 
 .tv-layout h4 {
-    font-size: 1.4rem;
+    font-size: 0.85rem;
     margin-bottom: 0;
+    line-height: 1.2;
 }
 
 .tv-layout h5 {
-    font-size: 1.3rem;
+    font-size: 0.8rem;
     margin-bottom: 0;
+    line-height: 1.2;
+}
+
+.tv-layout h6 {
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+.tv-layout .card-header {
+    padding: 4px 6px;
+}
+
+.tv-layout .card-body {
+    padding: 4px;
+}
+
+.tv-layout .mb-2 {
+    margin-bottom: 2px !important;
+}
+
+.tv-layout .mb-3 {
+    margin-bottom: 3px !important;
+}
+
+.tv-layout .mb-4 {
+    margin-bottom: 4px !important;
+}
+
+.tv-layout .mt-1 {
+    margin-top: 1px !important;
+}
+
+.tv-layout .mt-2 {
+    margin-top: 2px !important;
+}
+
+.tv-layout .p-3 {
+    padding: 3px !important;
 }
 
 .badge-lg {
-    font-size: 0.9rem;
-    padding: 6px 12px;
+    font-size: 0.6rem;
+    padding: 2px 6px;
 }
 
 .badge-sm {
-    font-size: 0.75rem;
-    padding: 3px 6px;
+    font-size: 0.55rem;
+    padding: 1px 4px;
+}
+
+.tv-layout .badge {
+    font-size: 0.55rem;
+    padding: 2px 4px;
 }
 
 .tv-time {
-    font-size: 1.5rem;
+    font-size: 0.9rem;
     font-weight: bold;
     font-family: 'Courier New', monospace;
 }
@@ -516,56 +577,91 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .tv-classification {
-    max-height: 70vh;
+    max-height: 82vh;
     overflow-y: auto;
 }
 
-/* Make table text slightly larger for TV */
+/* Force compact row heights in classification */
+.tv-classification .table tbody tr {
+    height: 22px;
+}
+
+/* Compact table for lower resolution */
 .tv-classification .table {
-    font-size: 1rem;
+    font-size: 0.65rem;
+    margin-bottom: 0;
 }
 
 .tv-classification .table th {
-    font-size: 1.1rem;
-    padding: 10px 8px;
+    font-size: 0.7rem;
+    padding: 3px 2px;
+    white-space: nowrap;
 }
 
 .tv-classification .table td {
-    padding: 8px;
+    padding: 2px;
     vertical-align: middle;
+    line-height: 1.3;
 }
 
-/* Make player photos slightly larger for TV */
+/* Smaller player photos */
 .tv-classification .player-info img {
-    width: 35px;
-    height: 35px;
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+}
+
+.tv-classification .player-info span {
+    font-size: 0.65rem;
+    line-height: 1.2;
 }
 
 .tv-current-round {
     overflow: visible;
 }
 
-/* Make game cards content slightly larger */
+/* Compact game cards */
 .tv-game-card {
-    border-radius: 6px;
-    padding: 10px;
+    border-radius: 3px;
+    padding: 3px;
 }
 
 .tv-game-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    font-size: 1rem;
+    margin-bottom: 3px;
+    padding-bottom: 2px;
+    font-size: 0.7rem;
 }
 
-/* Truncate player names to prevent line wrapping and inconsistent card heights */
+/* More aggressive truncation for player names */
 .player-names {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
+    font-size: 0.65rem;
+    line-height: 1.1;
+    flex: 1;
+}
+
+.tv-layout .game-card {
+    margin-bottom: 2px;
+}
+
+.tv-layout .game-card .card-header {
+    padding: 2px 4px;
+    font-size: 0.65rem;
+}
+
+.tv-layout .game-card .card-header strong {
+    font-size: 0.7rem;
+}
+
+.tv-layout .game-time {
+    font-size: 0.6rem;
+    margin-bottom: 2px !important;
 }
 
 .tv-court-name {
@@ -576,87 +672,211 @@ document.addEventListener('DOMContentLoaded', function() {
 .tv-game-content {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 1px;
 }
 
 .tv-team-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px;
-    border-radius: 4px;
+    padding: 2px;
+    border-radius: 2px;
+}
+
+.tv-layout .team-row {
+    margin-bottom: 2px;
 }
 
 .tv-team-players {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 4px;
     flex: 1;
+    min-width: 0;
 }
 
 .tv-player-photos {
     display: flex;
-    gap: 4px;
+    gap: 1px;
+    flex-shrink: 0;
 }
 
+/* Smaller player photos in game cards */
+.tv-layout .player-photos img,
 .tv-player-photos img {
-    width: 28px;
-    height: 28px;
+    width: 16px;
+    height: 16px;
     object-fit: cover;
 }
 
+.tv-layout .team-players .player-photos {
+    margin-right: 8px !important;
+}
+
+.tv-layout .team-players .player-names {
+    flex: 1;
+    min-width: 0;
+}
+
+.tv-layout .player-names {
+    margin-left: 3px;
+}
+
 .tv-player-names {
-    font-size: 0.9rem;
+    font-size: 0.65rem;
     font-weight: 500;
     color: #ffffff;
+    line-height: 1.1;
+}
+
+.tv-layout .score-display {
+    min-width: 25px;
+    text-align: center;
+    margin-left: 3px !important;
+    flex-shrink: 0;
+}
+
+.tv-layout .score-display strong {
+    font-size: 0.85rem;
 }
 
 .tv-score {
-    min-width: 45px;
+    min-width: 28px;
     text-align: center;
 }
 
 .tv-score-display {
-    font-size: 1.6rem;
+    font-size: 1rem;
     font-weight: bold;
     color: #ffffff;
 }
 
 .tv-vs {
     text-align: center;
-    font-size: 0.8rem;
+    font-size: 0.55rem;
     color: #adb5bd;
-    margin: 3px 0;
+    margin: 1px 0;
     font-weight: bold;
 }
 
+.tv-layout .text-center small {
+    font-size: 0.55rem;
+}
+
 .tv-other-rounds {
-    max-height: 250px;
+    max-height: 180px;
     overflow-y: auto;
 }
 
 .tv-small-game {
-    padding: 8px;
-    border-radius: 4px;
+    padding: 3px;
+    border-radius: 2px;
 }
 
 .tv-small-court {
-    font-size: 0.85rem;
+    font-size: 0.65rem;
     font-weight: bold;
-    min-width: 60px;
+    min-width: 45px;
     color: #ffffff;
 }
 
 .tv-small-teams {
     flex: 1;
-    font-size: 0.8rem;
+    font-size: 0.6rem;
     text-align: center;
     color: #adb5bd;
 }
 
 .tv-small-score {
-    min-width: 80px;
+    min-width: 60px;
     text-align: right;
+}
+
+/* Compact completed rounds section */
+.tv-layout .col-3 {
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.tv-layout .card .card {
+    margin-bottom: 3px !important;
+}
+
+.tv-layout .fas,
+.tv-layout .fa {
+    font-size: 0.7rem;
+}
+
+.tv-layout small {
+    font-size: 0.55rem;
+}
+
+/* Mobile classification compact styles */
+.tv-layout .mobile-classification {
+    font-size: 0.65rem;
+}
+
+.tv-layout .mobile-classification .player-card {
+    padding: 2px 4px;
+    margin-bottom: 2px;
+}
+
+.tv-layout .mobile-classification .player-info img {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+}
+
+.tv-layout .mobile-classification .player-info span {
+    font-size: 0.65rem;
+}
+
+.tv-layout .mobile-classification .stats-container {
+    font-size: 0.65rem;
+}
+
+.tv-layout .mobile-classification .mx-2 {
+    margin-left: 3px !important;
+    margin-right: 3px !important;
+}
+
+/* Trophy icon spacing */
+.tv-layout .fa-trophy {
+    font-size: 0.7rem;
+    margin-right: 3px;
+}
+
+/* Ensure number columns are compact */
+.tv-classification .table td:first-child,
+.tv-classification .table th:first-child {
+    width: 25px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.tv-classification .table .points-col,
+.tv-classification .table .diff-col {
+    font-weight: bold;
+}
+
+/* Make player column flexible */
+.tv-classification .table .player-col {
+    max-width: 150px;
+}
+
+.tv-classification .player-info {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* Tighter spacing for text elements */
+.tv-layout .d-flex {
+    gap: 3px;
+}
+
+.tv-layout .align-items-center {
+    line-height: 1.2;
 }
 
 /* Remove scrollbars in current round */
