@@ -52,15 +52,19 @@
                         <!-- Random Pairing: Single column of players -->
                         <div class="row">
                             {% for i in range(event.ev_max_players) %}
-                                <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="col-md-6 col-lg-4 mb-3 position-relative">
                                     <label for="player_{{ i }}" class="form-label">{{ translate('Player') }} {{ i + 1 }}</label>
                                     {% set player_name = player_data.random[i] if i < player_data.random|length else '' %}
                                     <input type="text" 
-                                           class="form-control player-input" 
+                                           class="form-control player-input player-search" 
                                            id="player_{{ i }}" 
                                            name="player_{{ i }}" 
                                            value="{{ player_name }}"
+                                           autocomplete="off"
                                            placeholder="{{ translate('Enter player name') }}">
+                                    <div id="suggestions_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
+                                         style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
+                                    </div>
                                 </div>
                             {% endfor %}
                         </div>
@@ -78,23 +82,31 @@
                                         </div>
                                         <div class="card-body">
                                             {% set team_data = player_data.team[team_letter] if team_letter in player_data.team else {'player1': '', 'player2': ''} %}
-                                            <div class="form-group">
+                                            <div class="form-group position-relative">
                                                 <label for="team_{{ team_letter }}_player1">{{ translate('Player') }} 1</label>
                                                 <input type="text" 
-                                                       class="form-control player-input" 
+                                                       class="form-control player-input player-search" 
                                                        id="team_{{ team_letter }}_player1" 
                                                        name="team_{{ team_letter }}_player1" 
                                                        value="{{ team_data.player1 }}"
+                                                       autocomplete="off"
                                                        placeholder="{{ translate('Enter player name') }}">
+                                                <div id="suggestions_team_{{ team_letter }}_player1" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
+                                                     style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
+                                                </div>
                                             </div>
-                                            <div class="form-group mb-0">
+                                            <div class="form-group mb-0 position-relative">
                                                 <label for="team_{{ team_letter }}_player2">{{ translate('Player') }} 2</label>
                                                 <input type="text" 
-                                                       class="form-control player-input" 
+                                                       class="form-control player-input player-search" 
                                                        id="team_{{ team_letter }}_player2" 
                                                        name="team_{{ team_letter }}_player2" 
                                                        value="{{ team_data.player2 }}"
+                                                       autocomplete="off"
                                                        placeholder="{{ translate('Enter player name') }}">
+                                                <div id="suggestions_team_{{ team_letter }}_player2" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
+                                                     style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -114,15 +126,19 @@
                                     </div>
                                     <div class="card-body">
                                         {% for i in range(left_players) %}
-                                            <div class="form-group">
+                                            <div class="form-group position-relative">
                                                 <label for="left_player_{{ i }}">{{ translate('Left Player') }} {{ i + 1 }}</label>
                                                 {% set left_name = player_data.left[i] if i < player_data.left|length else '' %}
                                                 <input type="text" 
-                                                       class="form-control player-input" 
+                                                       class="form-control player-input player-search" 
                                                        id="left_player_{{ i }}" 
                                                        name="left_player_{{ i }}" 
                                                        value="{{ left_name }}"
+                                                       autocomplete="off"
                                                        placeholder="{{ translate('Enter player name') }}">
+                                                <div id="suggestions_left_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
+                                                     style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
+                                                </div>
                                             </div>
                                         {% endfor %}
                                     </div>
@@ -135,15 +151,19 @@
                                     </div>
                                     <div class="card-body">
                                         {% for i in range(right_players) %}
-                                            <div class="form-group">
+                                            <div class="form-group position-relative">
                                                 <label for="right_player_{{ i }}">{{ translate('Right Player') }} {{ i + 1 }}</label>
                                                 {% set right_name = player_data.right[i] if i < player_data.right|length else '' %}
                                                 <input type="text" 
-                                                       class="form-control player-input" 
+                                                       class="form-control player-input player-search" 
                                                        id="right_player_{{ i }}" 
                                                        name="right_player_{{ i }}" 
                                                        value="{{ right_name }}"
+                                                       autocomplete="off"
                                                        placeholder="{{ translate('Enter player name') }}">
+                                                <div id="suggestions_right_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
+                                                     style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
+                                                </div>
                                             </div>
                                         {% endfor %}
                                     </div>
@@ -191,6 +211,108 @@ document.getElementById('editPlayersForm').addEventListener('submit', function(e
         e.preventDefault();
         return false;
     }
+});
+
+// Player search autocomplete functionality
+const playerInputs = document.querySelectorAll('.player-search');
+let debounceTimers = {};
+
+// Helper function to highlight matching text
+function highlightMatch(text, query) {
+    if (!query) return text;
+    const regex = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return text.replace(regex, '<strong>$1</strong>');
+}
+
+playerInputs.forEach(function(input) {
+    const inputId = input.id;
+    const suggestionsDiv = document.getElementById('suggestions_' + inputId);
+    
+    if (!suggestionsDiv) return;
+    
+    // Handle input for searching
+    input.addEventListener('input', function(e) {
+        const query = this.value.trim();
+        
+        // Clear existing timer
+        if (debounceTimers[inputId]) {
+            clearTimeout(debounceTimers[inputId]);
+        }
+        
+        if (query.length < 3) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        // Debounce search requests
+        debounceTimers[inputId] = setTimeout(function() {
+            fetch('/search_users?query=' + encodeURIComponent(query))
+                .then(response => response.json())
+                .then(users => {
+                    if (users && users.length > 0) {
+                        let html = '';
+                        users.forEach(function(user) {
+                            html += `
+                                <div class="suggestion-item p-2 text-white d-flex align-items-center" 
+                                     data-name="${user.name}"
+                                     style="cursor: pointer; background-color: #2d3245; white-space: nowrap; overflow: hidden;">
+                                    <img src="/display_user_image/${user.id}" 
+                                         alt="${user.name}" 
+                                         class="rounded-circle mr-2" 
+                                         width="32" 
+                                         height="32" 
+                                         style="object-fit: cover;">
+                                    <span style="display: inline-block; min-width: 200px;">${highlightMatch(user.name, query)}</span>
+                                    <span style="display: inline-block; margin: 0 8px; color: rgba(255,255,255,0.5);">-</span>
+                                    <span style="display: inline-block; color: rgba(255,255,255,0.7);">${user.telephone || ''}</span>
+                                    <span style="display: inline-block; margin: 0 8px; color: rgba(255,255,255,0.5);">-</span>
+                                    <span style="display: inline-block; color: rgba(255,255,255,0.7);">${user.email || ''}</span>
+                                </div>
+                            `;
+                        });
+                        
+                        suggestionsDiv.innerHTML = html;
+                        suggestionsDiv.style.display = 'block';
+                        suggestionsDiv.style.backgroundColor = '#2d3245';
+                        suggestionsDiv.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+                        suggestionsDiv.style.borderTop = 'none';
+                        
+                        // Add hover effects
+                        const suggestionItems = suggestionsDiv.querySelectorAll('.suggestion-item');
+                        suggestionItems.forEach(function(item) {
+                            item.addEventListener('mouseenter', function() {
+                                this.style.backgroundColor = '#3d4255';
+                            });
+                            item.addEventListener('mouseleave', function() {
+                                this.style.backgroundColor = '#2d3245';
+                            });
+                            
+                            // Handle click on suggestion
+                            item.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const name = this.getAttribute('data-name');
+                                input.value = name;
+                                suggestionsDiv.style.display = 'none';
+                            });
+                        });
+                    } else {
+                        suggestionsDiv.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching user suggestions:', err);
+                    suggestionsDiv.style.display = 'none';
+                });
+        }, 300);
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!input.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
 });
 </script>
 {% endblock %}

@@ -1844,8 +1844,18 @@ def create_event_final():
         event_date_parsed = datetime.strptime(event_data['event_date'], "%Y-%m-%d").date()
         event_time_parsed = datetime.strptime(event_data['event_time'], "%H:%M").time()
         
-        # Use system user and public events club for public events (both ID 2)
-        system_user_id = 2
+        # Use system user and public events club for public events
+        # Try to use system user ID 2, but fallback if it doesn't exist
+        system_user = Users.query.get(2)
+        if system_user:
+            system_user_id = 2
+        else:
+            # Fallback: find first admin/superuser
+            admin_user = Users.query.filter(
+                (Users.us_is_admin == True) | (Users.us_is_superuser == True)
+            ).first()
+            system_user_id = admin_user.us_id if admin_user else 1
+        
         public_club_id = 2
         
         # Create the event with minimal required fields
@@ -2112,8 +2122,17 @@ def edit_event_public_step_register(event_id):
             EventPlayerNames.query.filter_by(epn_event_id=event_id).delete()
             EventRegistration.query.filter_by(er_event_id=event_id).delete()
             
-            # Use system user for public events
+            # Ensure we have a valid creator user ID
             creator_user_id = event.ev_created_by_id
+            if not creator_user_id:
+                # Fallback to current user or first admin
+                if current_user.is_authenticated:
+                    creator_user_id = current_user.us_id
+                else:
+                    admin_user = Users.query.filter(
+                        (Users.us_is_admin == True) | (Users.us_is_superuser == True)
+                    ).first()
+                    creator_user_id = admin_user.us_id if admin_user else 1
             
             # Re-create players using the update_event_players logic
             # This is handled by calling the existing update function
@@ -2692,6 +2711,72 @@ def edit_event_step1(event_id):
     
     return render_template("edit_event_step1.html", user=current_user, event=event, clubs=authorized_clubs, access_code=access_code)
 
+@views.route('/delete_event/<int:event_id>', methods=['POST'])
+@login_or_access_code_required
+def delete_event(event_id):
+    """Delete an event and all its related data (admin/superuser only)"""
+    
+    # Check if user is authenticated and has admin/superuser permissions
+    if not current_user.is_authenticated or (not current_user.us_is_superuser and not current_user.us_is_admin):
+        flash(translate('You do not have permission to delete events.'), 'error')
+        return redirect(url_for('views.detail_event', event_id=event_id))
+    
+    event = Event.query.get_or_404(event_id)
+    
+    # Double-check authorization for regular admins if event is not from public club
+    if not current_user.us_is_superuser and event.ev_club_id != 2:  # Not superuser and not public event
+        authorization = ClubAuthorization.query.filter_by(
+            ca_user_id=current_user.us_id, 
+            ca_club_id=event.ev_club_id
+        ).first()
+        
+        if not authorization:
+            flash(translate('You are not authorized to delete this event'), 'error')
+            return redirect(url_for('views.detail_event', event_id=event_id))
+    
+    event_title = event.ev_title
+    
+    try:
+        # Delete all event-related data in correct order (most dependent first)
+        
+        # 1. Delete ELO ranking history for games related to this event
+        event_games = Game.query.filter_by(gm_idEvent=event_id).all()
+        for game in event_games:
+            ELOrankingHist.query.filter_by(el_gm_id=game.gm_id).delete()
+        
+        # 2. Delete games related to this event
+        Game.query.filter_by(gm_idEvent=event_id).delete()
+        
+        # 3. Delete event classifications
+        EventClassification.query.filter_by(ec_event_id=event_id).delete()
+        
+        # 4. Delete event registrations
+        EventRegistration.query.filter_by(er_event_id=event_id).delete()
+        
+        # 5. Delete event courts
+        EventCourts.query.filter_by(evc_event_id=event_id).delete()
+        
+        # 6. Delete event player names
+        EventPlayerNames.query.filter_by(epn_event_id=event_id).delete()
+        
+        # 7. Delete Mexican configuration if it exists
+        MexicanConfig.query.filter_by(mc_event_id=event_id).delete()
+        
+        # 8. Finally delete the event itself
+        db.session.delete(event)
+        
+        # Commit all changes
+        db.session.commit()
+        
+        flash(translate('Event "{}" and all its data have been deleted successfully.').format(event_title), 'success')
+        return redirect(url_for('views.managementEvents'))
+        
+    except Exception as e:
+        # Rollback on any error
+        db.session.rollback()
+        flash(translate('An error occurred while deleting the event: {}').format(str(e)), 'error')
+        return redirect(url_for('views.edit_event_step1', event_id=event_id))
+
 @views.route('/edit_event_step2/<int:event_id>', methods=['GET', 'POST'])
 @login_or_access_code_required
 def edit_event_step2(event_id):
@@ -2725,6 +2810,40 @@ def edit_event_step2(event_id):
     
     if request.method == 'POST':
         try:
+            # Check if pairing type or max players are changing
+            old_pairing_type = event.ev_pairing_type
+            old_max_players = event.ev_max_players
+            new_pairing_type = request.form['pairing_type']
+            new_max_players = int(request.form['max_players'])
+            
+            pairing_changed = old_pairing_type != new_pairing_type
+            players_changed = old_max_players != new_max_players
+            
+            # If pairing or player count changed, check for existing games
+            if pairing_changed or players_changed:
+                existing_games = Game.query.filter_by(gm_idEvent=event_id).all()
+                if existing_games:
+                    # Check if all games are unplayed
+                    all_unplayed = all(
+                        (game.gm_result_A is None or game.gm_result_A == 0) and 
+                        (game.gm_result_B is None or game.gm_result_B == 0)
+                        for game in existing_games
+                    )
+                    
+                    if all_unplayed:
+                        # Delete all unplayed games so they can be recreated
+                        for game in existing_games:
+                            db.session.delete(game)
+                        flash(translate('Existing games deleted. New games will be created with updated settings.'), 'info')
+                    else:
+                        # Some games have been played, don't allow changes
+                        flash(translate('Cannot change pairing or player count - some games have already been played.'), 'error')
+                        access_code = session.get(f'event_{event_id}_access_code', '')
+                        return render_template("edit_event_step2.html", user=current_user, event=event, 
+                                              club=club, courts=all_courts, existing_event_courts=existing_event_courts,
+                                              event_types=EventType.query.filter(EventType.et_is_active == True).all(),
+                                              access_code=access_code)
+            
             # Update event type and pairing
             event_type_id = request.form.get('event_type_id')
             if event_type_id:
@@ -2786,16 +2905,22 @@ def update_event_players(event_id):
     if current_user.is_authenticated:
         creator_user_id = current_user.us_id
     else:
-        # For public events, use system user ID (2)
-        creator_user_id = 2
+        # For public events, use system user ID (2) or fallback to first admin user
+        system_user = Users.query.get(2)
+        if system_user:
+            creator_user_id = 2
+        else:
+            # Fallback: find first admin/superuser
+            admin_user = Users.query.filter(
+                (Users.us_is_admin == True) | (Users.us_is_superuser == True)
+            ).first()
+            creator_user_id = admin_user.us_id if admin_user else 1
     
     try:
         # Collect all player names first for validation
         all_player_names = []
         pairing_type = event.ev_pairing_type or 'Random'
         max_players = event.ev_max_players
-        
-        # Collect names based on pairing type
         if pairing_type == 'Random':
             for i in range(max_players):
                 player_name = request.form.get(f'player_{i}')
@@ -2862,6 +2987,29 @@ def update_event_players(event_id):
         # Clear existing player names and registrations for this event
         EventPlayerNames.query.filter_by(epn_event_id=event.ev_id).delete()
         EventRegistration.query.filter_by(er_event_id=event.ev_id).delete()
+        
+        # Check if games exist for this event
+        existing_games = Game.query.filter_by(gm_idEvent=event.ev_id).all()
+        if existing_games:
+            # Check if all games are unplayed (null scores or 0-0)
+            all_unplayed = all(
+                (game.gm_result_A is None or game.gm_result_A == 0) and 
+                (game.gm_result_B is None or game.gm_result_B == 0)
+                for game in existing_games
+            )
+            
+            if all_unplayed:
+                # All games are unplayed, safe to delete and recreate with new pairings
+                for game in existing_games:
+                    db.session.delete(game)
+                flash(translate('Existing games deleted. New games will be created with updated pairings.'), 'info')
+            else:
+                # Some games have been played, don't allow re-pairing
+                db.session.rollback()
+                session.pop(f'event_{event_id}_form_data', None)
+                flash(translate('Cannot change players - some games have already been played.'), 'error')
+                access_code = session.get(f'event_{event_id}_access_code', '')
+                return redirect(url_for('views.edit_event_step3', event_id=event_id, code=access_code) if access_code else url_for('views.edit_event_step3', event_id=event_id))
 
         players_registered = 0
         
@@ -3002,8 +3150,8 @@ def update_event_players(event_id):
         
         flash(translate('Event players updated successfully! {} players registered.').format(players_registered), 'success')
         
-        # Automatically create games if we have all players for a Mexicano event
-        if players_registered == event.ev_max_players and event.event_type and event.event_type.et_name == 'Mexicano':
+        # Automatically create games if we have all players for Mexicano or NonStop events
+        if players_registered == event.ev_max_players and event.event_type and event.event_type.et_name in ['Mexicano', 'NonStop']:
             # Check if games already exist
             existing_games = Game.query.filter_by(gm_idEvent=event_id).all()
             
@@ -3073,6 +3221,40 @@ def update_event_players(event_id):
         access_code = session.get(f'event_{event_id}_access_code', '')
         return redirect(url_for('views.edit_event_step3', event_id=event_id, code=access_code) if access_code else url_for('views.edit_event_step3', event_id=event_id))
 
+def generate_round_robin_schedule(num_teams):
+    """Generate a round-robin schedule where each team plays every other team exactly once.
+    
+    Args:
+        num_teams: Number of teams (must be even)
+    
+    Returns:
+        List of rounds, where each round is a list of matchups (team_index_a, team_index_b)
+    """
+    if num_teams % 2 != 0:
+        raise ValueError("Number of teams must be even for round-robin scheduling")
+    
+    # Using circle method for round-robin scheduling
+    # Fix team 0, rotate all others
+    teams = list(range(num_teams))
+    rounds = []
+    num_rounds = num_teams - 1
+    
+    for round_num in range(num_rounds):
+        round_matchups = []
+        # First matchup: team 0 vs last team in current rotation
+        round_matchups.append((teams[0], teams[-1]))
+        
+        # Remaining matchups: pair teams from opposite ends moving inward
+        for i in range(1, num_teams // 2):
+            round_matchups.append((teams[i], teams[num_teams - i - 1]))
+        
+        rounds.append(round_matchups)
+        
+        # Rotate teams (keep team 0 fixed, rotate others clockwise)
+        teams = [teams[0]] + [teams[-1]] + teams[1:-1]
+    
+    return rounds
+
 def create_games_for_event(event_id):
     """Helper function to create games for an event"""
     import random
@@ -3130,6 +3312,13 @@ def create_games_for_event(event_id):
             gp_idPlayer=registration.er_player_id
         )
         db.session.add(gameday_player)
+    
+    # Get event type
+    event_type = EventType.query.get(event.ev_type_id)
+    event_type_name = event_type.et_name if event_type else 'Unknown'
+    print(f"DEBUG create_games_for_event: Event type ID={event.ev_type_id}, Event type name='{event_type_name}'")
+    is_nonstop = event_type_name == 'NonStop'
+    print(f"DEBUG create_games_for_event: is_nonstop={is_nonstop}, checking against 'NonStop'")
     
     # Get player assignment based on pairing type
     pairing_type = event.ev_pairing_type
@@ -3191,36 +3380,135 @@ def create_games_for_event(event_id):
         player_ids = [reg.player.us_id for reg in registrations]
         random.shuffle(player_ids)
     
-    # Calculate number of games (4 players per game)
-    num_games = len(player_ids) // 4
-    
-    # Create games
-    game_time_start = time(9, 0)  # 09:00
-    game_time_end = time(9, 13)   # 09:13 (13 minute duration)
-    
-    for i in range(num_games):
-        court_index = i % len(event_courts)
-        court_id = event_courts[court_index].evc_court_id
+    # For NonStop events, create teams (pairs) that will stay fixed throughout
+    if is_nonstop:
+        print(f"DEBUG create_games_for_event: ENTERING NONSTOP CODE PATH - Creating all rounds")
+        # Group players into fixed teams (pairs)
+        teams = []
+        for i in range(0, len(player_ids), 2):
+            teams.append((player_ids[i], player_ids[i+1]))
         
-        # Get 4 players for this game
-        players_for_game = player_ids[i*4:(i+1)*4]
+        num_teams = len(teams)
         
-        game = Game(
-            gm_idLeague=dummy_league.lg_id,
-            gm_idGameDay=dummy_gameday.gd_id,
-            gm_idEvent=event_id,
-            gm_date=event.ev_date,
-            gm_timeStart=game_time_start,
-            gm_timeEnd=game_time_end,
-            gm_court=court_id,
-            gm_idPlayer_A1=players_for_game[0],
-            gm_idPlayer_A2=players_for_game[1],
-            gm_idPlayer_B1=players_for_game[2],
-            gm_idPlayer_B2=players_for_game[3],
-            gm_teamA='A',
-            gm_teamB='B'
-        )
-        db.session.add(game)
+        # Calculate timing based on player count
+        if event.ev_max_players == 8:
+            # 8 players: Start after 5min warmup, 25min rounds, 5min intervals
+            # Total: 5 + 25 + 5 + 25 + 5 + 25 = 90 minutes
+            warmup_minutes = 5
+            round_duration = 25
+            interval_minutes = 5
+            num_rounds = 3
+        elif event.ev_max_players == 12:
+            # 12 players: Start after 5min warmup, 20min rounds, 3.75min intervals (use 4)
+            # Total: 5 + 20 + 4 + 20 + 4 + 20 + 4 + 20 + 4 + 20 = 5 + 100 + 16 = 121 minutes
+            # Adjust to 3min intervals: 5 + 100 + 12 = 117 minutes
+            warmup_minutes = 5
+            round_duration = 20
+            interval_minutes = 3
+            num_rounds = 5
+        elif event.ev_max_players == 16:
+            # 16 players: Start immediately, 15min rounds, 2.5min intervals
+            # Total: 0 + 15*7 + 2.5*6 = 105 + 15 = 120 minutes
+            warmup_minutes = 0
+            round_duration = 15
+            interval_minutes = 2
+            num_rounds = 7
+        else:
+            # Default for other player counts
+            warmup_minutes = 5
+            round_duration = 20
+            interval_minutes = 5
+            num_rounds = event.ev_max_players // 2 - 1
+        
+        # Generate round-robin schedule
+        round_robin_schedule = generate_round_robin_schedule(num_teams)
+        
+        # Create games for all rounds
+        event_time = event.ev_start_time if event.ev_start_time else time(9, 0)
+        
+        total_games_created = 0
+        for round_idx, round_matchups in enumerate(round_robin_schedule):
+            # Calculate round start time
+            if round_idx == 0:
+                # First round starts after warmup
+                round_start_minutes = warmup_minutes
+            else:
+                # Subsequent rounds: warmup + (round_duration + interval) * round_idx
+                round_start_minutes = warmup_minutes + (round_duration + interval_minutes) * round_idx
+            
+            # Convert to time object
+            total_minutes = event_time.hour * 60 + event_time.minute + round_start_minutes
+            round_start_hour = (total_minutes // 60) % 24
+            round_start_minute = total_minutes % 60
+            round_start_time = time(round_start_hour, round_start_minute)
+            
+            # Calculate round end time
+            total_end_minutes = total_minutes + round_duration
+            round_end_hour = (total_end_minutes // 60) % 24
+            round_end_minute = total_end_minutes % 60
+            round_end_time = time(round_end_hour, round_end_minute)
+            
+            # Create games for this round
+            for game_idx, (team_a_idx, team_b_idx) in enumerate(round_matchups):
+                court_index = game_idx % len(event_courts)
+                court_id = event_courts[court_index].evc_court_id
+                
+                team_a = teams[team_a_idx]
+                team_b = teams[team_b_idx]
+                
+                game = Game(
+                    gm_idLeague=dummy_league.lg_id,
+                    gm_idGameDay=dummy_gameday.gd_id,
+                    gm_idEvent=event_id,
+                    gm_date=event.ev_date,
+                    gm_timeStart=round_start_time,
+                    gm_timeEnd=round_end_time,
+                    gm_court=court_id,
+                    gm_idPlayer_A1=team_a[0],
+                    gm_idPlayer_A2=team_a[1],
+                    gm_idPlayer_B1=team_b[0],
+                    gm_idPlayer_B2=team_b[1],
+                    gm_teamA='A',
+                    gm_teamB='B'
+                )
+                db.session.add(game)
+                total_games_created += 1
+        
+        num_games = total_games_created
+        print(f"DEBUG create_games_for_event: NonStop - Created {num_games} games total")
+    
+    else:
+        print(f"DEBUG create_games_for_event: ENTERING MEXICANO/AMERICANO CODE PATH - Creating only first round")
+        # For Mexicano/Americano: Create only first round (subsequent rounds created after scoring)
+        num_games = len(player_ids) // 4
+        
+        # Create games
+        game_time_start = time(9, 0)  # 09:00
+        game_time_end = time(9, 13)   # 09:13 (13 minute duration)
+        
+        for i in range(num_games):
+            court_index = i % len(event_courts)
+            court_id = event_courts[court_index].evc_court_id
+            
+            # Get 4 players for this game
+            players_for_game = player_ids[i*4:(i+1)*4]
+            
+            game = Game(
+                gm_idLeague=dummy_league.lg_id,
+                gm_idGameDay=dummy_gameday.gd_id,
+                gm_idEvent=event_id,
+                gm_date=event.ev_date,
+                gm_timeStart=game_time_start,
+                gm_timeEnd=game_time_end,
+                gm_court=court_id,
+                gm_idPlayer_A1=players_for_game[0],
+                gm_idPlayer_A2=players_for_game[1],
+                gm_idPlayer_B1=players_for_game[2],
+                gm_idPlayer_B2=players_for_game[3],
+                gm_teamA='A',
+                gm_teamB='B'
+            )
+            db.session.add(game)
     
     # Create initial classification records for all players (0 points)
     for registration in registrations:
@@ -3259,7 +3547,7 @@ def create_games_for_event(event_id):
 @views.route('/clear_event_round/<int:event_id>/<start_time>', methods=['POST'])
 @login_or_access_code_required
 def clear_event_round(event_id, start_time):
-    """Clear an entire round of games and all subsequent rounds"""
+    """Clear an entire round of games - behavior depends on event type"""
     print(f"DEBUG clear_event_round: Called with event_id={event_id}, start_time={start_time}")
     
     try:
@@ -3290,23 +3578,43 @@ def clear_event_round(event_id, start_time):
         target_hour, target_minute = map(int, start_time.split(':'))
         target_time = time(target_hour, target_minute)
         
+        # Check if this is a NonStop event
+        is_nonstop = event.event_type and event.event_type.et_name == 'NonStop'
+        print(f"DEBUG: Event type: {event.event_type.et_name if event.event_type else 'None'}, is_nonstop: {is_nonstop}")
+        
         # Get all games for this event
         all_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart).all()
-        
-        # Debug: Print all game times to see what we're working with
-        print(f"DEBUG: Looking for round at {start_time} (parsed as {target_time})")
-        for game in all_games:
-            # Handle both datetime and time objects
-            if hasattr(game.gm_timeStart, 'time'):
-                game_time = game.gm_timeStart.time()  # It's a datetime object
-            else:
-                game_time = game.gm_timeStart  # It's already a time object
-            print(f"DEBUG: Game {game.gm_id} starts at {game_time} (hour={game_time.hour}, minute={game_time.minute})")
         
         if not all_games:
             flash(translate('No games found for this event'), 'warning')
             access_code = session.get(f'event_{event_id}_access_code', '')
             return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+        
+        # For NonStop events, validate sequential clearing
+        if is_nonstop:
+            # Find the latest round with results
+            latest_round_with_results = None
+            unique_times = set()
+            
+            for game in all_games:
+                if hasattr(game.gm_timeStart, 'time'):
+                    game_time = game.gm_timeStart.time()
+                else:
+                    game_time = game.gm_timeStart
+                unique_times.add((game_time.hour, game_time.minute))
+                
+                # Check if this game has results
+                if game.gm_result_A is not None or game.gm_result_B is not None:
+                    if latest_round_with_results is None or (game_time.hour, game_time.minute) > latest_round_with_results:
+                        latest_round_with_results = (game_time.hour, game_time.minute)
+            
+            # Check if the requested round is the latest one with results
+            target_tuple = (target_time.hour, target_time.minute)
+            if latest_round_with_results and target_tuple != latest_round_with_results:
+                flash(translate('For NonStop events, you can only clear the latest round with results. Please clear round {}:{:02d} first.').format(
+                    latest_round_with_results[0], latest_round_with_results[1]), 'error')
+                access_code = session.get(f'event_{event_id}_access_code', '')
+                return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
         
         # Find games in the target round and all games that start after it
         target_round_games = []
@@ -3327,8 +3635,8 @@ def clear_event_round(event_id, start_time):
             if game_time.hour == target_time.hour and game_time.minute == target_time.minute:
                 print(f"DEBUG: Match found! Adding game {game.gm_id} to target_round_games")
                 target_round_games.append(game)
-            # If this game starts after the target round, mark for deletion
-            elif (game_time.hour > target_time.hour or 
+            # If this game starts after the target round, mark for deletion (except for NonStop)
+            elif not is_nonstop and (game_time.hour > target_time.hour or 
                   (game_time.hour == target_time.hour and game_time.minute > target_time.minute)):
                 print(f"DEBUG: Game {game.gm_id} is after target round, marking for deletion")
                 games_to_delete.append(game)
@@ -3345,9 +3653,10 @@ def clear_event_round(event_id, start_time):
             game.gm_result_A = None
             game.gm_result_B = None
         
-        # Delete all subsequent rounds
-        for game in games_to_delete:
-            db.session.delete(game)
+        # Delete subsequent rounds (except for NonStop events)
+        if not is_nonstop:
+            for game in games_to_delete:
+                db.session.delete(game)
         
         db.session.commit()
         
@@ -3355,9 +3664,12 @@ def clear_event_round(event_id, start_time):
         calculate_event_classifications(event_id)
         db.session.commit()
         
-        success_msg = translate('Round at {} cleared successfully!').format(start_time)
-        if games_to_delete:
-            success_msg += ' ' + translate('{} subsequent games were deleted.').format(len(games_to_delete))
+        if is_nonstop:
+            success_msg = translate('Round at {} cleared successfully! Scores reset to zero.').format(start_time)
+        else:
+            success_msg = translate('Round at {} cleared successfully!').format(start_time)
+            if games_to_delete:
+                success_msg += ' ' + translate('{} subsequent games were deleted.').format(len(games_to_delete))
         
         flash(success_msg, 'success')
         
@@ -3374,7 +3686,7 @@ def clear_event_round(event_id, start_time):
 @views.route('/get_round_deletion_info/<int:event_id>/<start_time>', methods=['GET'])
 @login_or_access_code_required
 def get_round_deletion_info(event_id, start_time):
-    """Get information about what will be affected when deleting a round"""
+    """Get information about what will be affected when clearing a round"""
     print(f"DEBUG get_round_deletion_info: Called with event_id={event_id}, start_time={start_time}")
     
     try:
@@ -3404,12 +3716,45 @@ def get_round_deletion_info(event_id, start_time):
         target_time = time(target_hour, target_minute)
         print(f"DEBUG get_round_deletion_info: Parsed time as {target_time}")
         
+        # Check if this is a NonStop event
+        is_nonstop = event.event_type and event.event_type.et_name == 'NonStop'
+        print(f"DEBUG: Event type: {event.event_type.et_name if event.event_type else 'None'}, is_nonstop: {is_nonstop}")
+        
         # Get all games for this event
         all_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart).all()
         print(f"DEBUG get_round_deletion_info: Found {len(all_games)} games")
         
         target_games = 0
         future_games = 0
+        
+        # For NonStop events, check sequential clearing logic
+        if is_nonstop:
+            # Find the latest round with results
+            latest_round_with_results = None
+            rounds_with_results = set()
+            
+            for game in all_games:
+                if hasattr(game.gm_timeStart, 'time'):
+                    game_time = game.gm_timeStart.time()
+                else:
+                    game_time = game.gm_timeStart
+                
+                # Check if this game has results
+                if game.gm_result_A is not None or game.gm_result_B is not None:
+                    time_tuple = (game_time.hour, game_time.minute)
+                    rounds_with_results.add(time_tuple)
+                    if latest_round_with_results is None or time_tuple > latest_round_with_results:
+                        latest_round_with_results = time_tuple
+            
+            target_tuple = (target_time.hour, target_time.minute)
+            
+            # Check if user can clear this round
+            if latest_round_with_results and target_tuple != latest_round_with_results:
+                return jsonify({
+                    'error': 'sequential_only',
+                    'latest_round': f"{latest_round_with_results[0]:02d}:{latest_round_with_results[1]:02d}",
+                    'requested_round': f"{target_time.hour:02d}:{target_time.minute:02d}"
+                }), 400
         
         for game in all_games:
             # Handle both datetime and time objects
@@ -3424,8 +3769,8 @@ def get_round_deletion_info(event_id, start_time):
             if game_time.hour == target_time.hour and game_time.minute == target_time.minute:
                 target_games += 1
                 print(f"DEBUG get_round_deletion_info: Found target game {game.gm_id}")
-            # Count games that start after the target round
-            elif (game_time.hour > target_time.hour or 
+            # Count games that start after the target round (only for non-NonStop)
+            elif not is_nonstop and (game_time.hour > target_time.hour or 
                   (game_time.hour == target_time.hour and game_time.minute > target_time.minute)):
                 future_games += 1
                 print(f"DEBUG get_round_deletion_info: Found future game {game.gm_id}")
@@ -3433,7 +3778,8 @@ def get_round_deletion_info(event_id, start_time):
         return jsonify({
             'target_games': target_games,
             'future_games': future_games,
-            'round_time': start_time
+            'round_time': start_time,
+            'is_nonstop': is_nonstop
         })
         
     except ValueError:
@@ -3571,20 +3917,9 @@ def update_all_game_scores(event_id):
             if event_type_name in ['Mexicano', 'Americano']:
                 # Mexicano and Americano have unlimited rounds - always create next round
                 should_create_next_round = True
-            elif event_type_name == 'Non-stop':
-                # Non-stop has a fixed number of rounds based on player count
-                # 8 players = 3 rounds, 12 players = 5 rounds, 16 players = 7 rounds
-                if event.ev_max_players == 8:
-                    total_rounds = 3
-                elif event.ev_max_players == 12:
-                    total_rounds = 5
-                elif event.ev_max_players == 16:
-                    total_rounds = 7
-                else:
-                    # Default calculation for other player counts
-                    total_rounds = event.ev_max_players // 4
-                
-                should_create_next_round = current_round < total_rounds
+            elif event_type_name == 'NonStop':
+                # NonStop rounds are all created upfront - never create new rounds dynamically
+                should_create_next_round = False
             
             if should_create_next_round:
                 next_round_games = create_next_round_games(event_id, classifications, current_round + 1)
@@ -5395,3 +5730,253 @@ def create_event_step3(event_id):
                            teams_needed=teams_needed,
                            team_letters=team_letters,
                            player_data=player_data)
+@views.route('/complete_event_creation/<int:event_id>', methods=['POST'])
+@login_required
+def complete_event_creation(event_id):
+    """Complete event creation: register players and create games"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Check authorization
+    if event.ev_club_id:
+        is_authorized = db.session.query(ClubAuthorization).filter(
+            ClubAuthorization.ca_user_id == current_user.us_id,
+            ClubAuthorization.ca_club_id == event.ev_club_id
+        ).first() is not None
+        
+        if not is_authorized:
+            flash(translate('You are not authorized to edit this event!'), 'error')
+            return redirect(url_for('views.managementEvents'))
+    else:
+        # Public event - check if current user is the creator
+        if event.ev_created_by_id != current_user.us_id:
+            flash(translate('You are not authorized to edit this event!'), 'error')
+            return redirect(url_for('views.managementEvents'))
+    
+    try:
+        # Process player registrations using the update_event_players logic
+        # We need to call this directly to handle the form processing
+        from .models import EventPlayerNames
+        
+        # Determine the user ID to use for created_by and registered_by
+        creator_user_id = current_user.us_id
+        
+        # Collect all player names first for validation
+        all_player_names = []
+        pairing_type = event.ev_pairing_type or 'Random'
+        max_players = event.ev_max_players
+        
+        # Collect names based on pairing type
+        if pairing_type == 'Random':
+            for i in range(max_players):
+                player_name = request.form.get(f'player_{i}')
+                if player_name and player_name.strip():
+                    all_player_names.append(player_name.strip())
+                    
+        elif pairing_type == 'Manual':
+            teams_needed = max_players // 2
+            for team_idx in range(teams_needed):
+                team_letter = chr(65 + team_idx)  # A, B, C...
+                player1_name = request.form.get(f'team_{team_letter}_player1')
+                player2_name = request.form.get(f'team_{team_letter}_player2')
+                
+                if player1_name and player1_name.strip():
+                    all_player_names.append(player1_name.strip())
+                if player2_name and player2_name.strip():
+                    all_player_names.append(player2_name.strip())
+                    
+        elif pairing_type == 'L&R Random':
+            left_players = max_players // 2
+            right_players = max_players // 2
+            
+            for i in range(left_players):
+                left_player = request.form.get(f'left_player_{i}')
+                if left_player and left_player.strip():
+                    all_player_names.append(left_player.strip())
+                    
+            for i in range(right_players):
+                right_player = request.form.get(f'right_player_{i}')
+                if right_player and right_player.strip():
+                    all_player_names.append(right_player.strip())
+        
+        # Validation: Check if we have the expected number of players
+        if len(all_player_names) != max_players:
+            flash(translate('Please enter all {} player names').format(max_players), 'error')
+            return redirect(url_for('views.create_event_step3', event_id=event_id))
+        
+        # Validation: Check for duplicate names (case insensitive)
+        names_lower = [name.lower() for name in all_player_names]
+        if len(names_lower) != len(set(names_lower)):
+            flash(translate('Duplicate player names found. Each player must have a unique name.'), 'error')
+            return redirect(url_for('views.create_event_step3', event_id=event_id))
+        
+        # Helper function to get or create user
+        def get_or_create_user(player_name):
+            """Get existing user or create new player user"""
+            if not player_name or not player_name.strip():
+                return None
+                
+            # Try to find existing user by name (case insensitive)
+            user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+            
+            if not user:
+                # Create new user as player
+                user = Users(
+                    us_name=player_name.strip(),
+                    us_email=f"{player_name.strip().lower().replace(' ', '.')}@temp.event",
+                    us_telephone=f"temp_{player_name.strip().lower().replace(' ', '')}",
+                    us_is_player=True,
+                    us_is_active=True
+                )
+                db.session.add(user)
+                db.session.flush()  # Get the user ID
+            
+            return user
+        
+        # Process players based on pairing type
+        players_registered = 0
+        
+        if pairing_type == 'Random':
+            for i in range(max_players):
+                player_name = request.form.get(f'player_{i}')
+                if player_name and player_name.strip():
+                    # Create/get user
+                    user = get_or_create_user(player_name.strip())
+                    if user:
+                        # Store player name
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=player_name.strip(),
+                            epn_position_type='random',
+                            epn_position_index=i
+                        )
+                        db.session.add(player_record)
+                        
+                        # Register player
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user.us_id,
+                            er_registered_by_id=creator_user_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+                        
+        elif pairing_type == 'Manual':
+            teams_needed = max_players // 2
+            for team_idx in range(teams_needed):
+                team_letter = chr(65 + team_idx)
+                
+                # Player 1
+                player1_name = request.form.get(f'team_{team_letter}_player1')
+                if player1_name and player1_name.strip():
+                    user = get_or_create_user(player1_name.strip())
+                    if user:
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=player1_name.strip(),
+                            epn_position_type='team',
+                            epn_team_identifier=team_letter,
+                            epn_team_position=1,
+                            epn_position_index=team_idx
+                        )
+                        db.session.add(player_record)
+                        
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user.us_id,
+                            er_registered_by_id=creator_user_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+                
+                # Player 2
+                player2_name = request.form.get(f'team_{team_letter}_player2')
+                if player2_name and player2_name.strip():
+                    user = get_or_create_user(player2_name.strip())
+                    if user:
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=player2_name.strip(),
+                            epn_position_type='team',
+                            epn_team_identifier=team_letter,
+                            epn_team_position=2,
+                            epn_position_index=team_idx
+                        )
+                        db.session.add(player_record)
+                        
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user.us_id,
+                            er_registered_by_id=creator_user_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+                        
+        elif pairing_type == 'L&R Random':
+            left_players = max_players // 2
+            right_players = max_players // 2
+            
+            # Process left players
+            for i in range(left_players):
+                left_player = request.form.get(f'left_player_{i}')
+                if left_player and left_player.strip():
+                    user = get_or_create_user(left_player.strip())
+                    if user:
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=left_player.strip(),
+                            epn_position_type='left',
+                            epn_position_index=i
+                        )
+                        db.session.add(player_record)
+                        
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user.us_id,
+                            er_registered_by_id=creator_user_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+            
+            # Process right players
+            for i in range(right_players):
+                right_player = request.form.get(f'right_player_{i}')
+                if right_player and right_player.strip():
+                    user = get_or_create_user(right_player.strip())
+                    if user:
+                        player_record = EventPlayerNames(
+                            epn_event_id=event.ev_id,
+                            epn_player_name=right_player.strip(),
+                            epn_position_type='right',
+                            epn_position_index=i
+                        )
+                        db.session.add(player_record)
+                        
+                        registration = EventRegistration(
+                            er_event_id=event.ev_id,
+                            er_player_id=user.us_id,
+                            er_registered_by_id=creator_user_id,
+                            er_is_substitute=False
+                        )
+                        db.session.add(registration)
+                        players_registered += 1
+        
+        # Commit player registrations
+        db.session.commit()
+        
+        # Now create the games
+        num_games = create_games_for_event(event_id)
+        db.session.commit()
+        
+        flash(translate('Event created successfully with {} players and {} games!').format(players_registered, num_games), 'success')
+        return redirect(url_for('views.detail_event', event_id=event_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        traceback.print_exc()
+        flash(translate('Error creating event: {}').format(str(e)), 'error')
+        return redirect(url_for('views.create_event_step3', event_id=event_id))

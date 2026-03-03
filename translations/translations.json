@@ -679,6 +679,86 @@
     "en": "Delete Event",
     "pt": "Excluir Evento"
   },
+  "This action cannot be undone.": {
+    "en": "This action cannot be undone.",
+    "pt": "Esta ação não pode ser desfeita."
+  },
+  "Are you sure you want to delete this event?": {
+    "en": "Are you sure you want to delete this event?",
+    "pt": "Tem certeza que deseja excluir este evento?"
+  },
+  "This will permanently remove:": {
+    "en": "This will permanently remove:",
+    "pt": "Isto removerá permanentemente:"
+  },
+  "All player registrations": {
+    "en": "All player registrations",
+    "pt": "Todas as inscrições de jogadores"
+  },
+  "All games and results": {
+    "en": "All games and results",
+    "pt": "Todos os jogos e resultados"
+  },
+  "All classifications": {
+    "en": "All classifications",
+    "pt": "Todas as classificações"
+  },
+  "All event data": {
+    "en": "All event data",
+    "pt": "Todos os dados do evento"
+  },
+  "Event \"{0}\" and all its data have been deleted successfully.": {
+    "en": "Event \"{0}\" and all its data have been deleted successfully.",
+    "pt": "Evento \"{0}\" e todos os seus dados foram excluídos com sucesso."
+  },
+  "You do not have permission to delete events.": {
+    "en": "You do not have permission to delete events.",
+    "pt": "Não tem permissão para excluir eventos."
+  },
+  "You are not authorized to delete this event": {
+    "en": "You are not authorized to delete this event",
+    "pt": "Não está autorizado a excluir este evento"
+  },
+  "An error occurred while deleting the event: {0}": {
+    "en": "An error occurred while deleting the event: {0}",
+    "pt": "Ocorreu um erro ao excluir o evento: {0}"
+  },
+  "For NonStop events, you can only clear the latest round with results. Please clear round {}:{:02d} first.": {
+    "en": "For NonStop events, you can only clear the latest round with results. Please clear round {}:{:02d} first.",
+    "pt": "Para eventos NonStop, só pode limpar a última ronda com resultados. Limpe primeiro a ronda {}:{:02d}."
+  },
+  "Round at {} cleared successfully! Scores reset to zero.": {
+    "en": "Round at {} cleared successfully! Scores reset to zero.", 
+    "pt": "Ronda às {} limpa com sucesso! Pontuações redefinidas para zero."
+  },
+  "For NonStop events, you can only clear the latest round with results.": {
+    "en": "For NonStop events, you can only clear the latest round with results.",
+    "pt": "Para eventos NonStop, só pode limpar a última ronda com resultados."
+  },
+  "Please clear round": {
+    "en": "Please clear round",
+    "pt": "Limpe primeiro a ronda"
+  },
+  "first": {
+    "en": "first", 
+    "pt": "primeiro"
+  },
+  "Reset scores to zero for": {
+    "en": "Reset scores to zero for",
+    "pt": "Redefinir pontuações para zero para"
+  },
+  "Recalculate classifications": {
+    "en": "Recalculate classifications",
+    "pt": "Recalcular classificações"
+  },
+  "⚠️ Games will NOT be deleted - only scores will be reset.": {
+    "en": "⚠️ Games will NOT be deleted - only scores will be reset.",
+    "pt": "⚠️ Os jogos NÃO serão eliminados - apenas as pontuações serão redefinidas."
+  },
+  "Reset scores for this round (NonStop: only latest round allowed)": {
+    "en": "Reset scores for this round (NonStop: only latest round allowed)",
+    "pt": "Redefinir pontuações desta ronda (NonStop: apenas última ronda permitida)"
+  },
   "Packages": {
     "en": "Packages",
     "pt": "Pacotes"
@@ -1602,5 +1682,49 @@
   "No players entered. This will remove all players from the event. Continue?": {
     "en": "No players entered. This will remove all players from the event. Continue?",
     "pt": "Nenhum jogador inserido. Isto irá remover todos os jogadores do evento. Continuar?"
+  },
+  "Existing games deleted. New games will be created with updated pairings.": {
+    "en": "Existing games deleted. New games will be created with updated pairings.",
+    "pt": "Jogos existentes eliminados. Novos jogos serão criados com os novos emparelhamentos."
+  },
+  "Cannot change players - some games have already been played.": {
+    "en": "Cannot change players - some games have already been played.",
+    "pt": "Não é possível alterar jogadores - alguns jogos já foram jogados."
+  },
+  "Existing games deleted. New games will be created with updated settings.": {
+    "en": "Existing games deleted. New games will be created with updated settings.",
+    "pt": "Jogos existentes eliminados. Novos jogos serão criados com as novas configurações."
+  },
+  "Cannot change pairing or player count - some games have already been played.": {
+    "en": "Cannot change pairing or player count - some games have already been played.",
+    "pt": "Não é possível alterar o emparelhamento ou número de jogadores - alguns jogos já foram jogados."
+  },
+  "Event created successfully with {} players and {} games!": {
+    "en": "Event created successfully with {} players and {} games!",
+    "pt": "Evento criado com sucesso com {} jogadores e {} jogos!"
+  },
+  "Error creating event: {}": {
+    "en": "Error creating event: {}",
+    "pt": "Erro ao criar evento: {}"
+  },
+  "Please enter all {} player names": {
+    "en": "Please enter all {} player names",
+    "pt": "Por favor introduza os nomes de todos os {} jogadores"
+  },
+  "Create all games for this NonStop event? This will generate ": {
+    "en": "Create all games for this NonStop event? This will generate ",
+    "pt": "Criar todos os jogos para este evento NonStop? Isto irá gerar "
+  },
+  " games across ": {
+    "en": " games across ",
+    "pt": " jogos ao longo de "
+  },
+  " rounds based on round-robin scheduling.": {
+    "en": " rounds based on round-robin scheduling.",
+    "pt": " rondas com base num sistema de todos contra todos."
+  },
+  "Create All Games": {
+    "en": "Create All Games",
+    "pt": "Criar Todos os Jogos"
   }
 }

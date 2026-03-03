@@ -156,20 +156,16 @@
                         <div class="mt-3">
                             {% if not event_games %}
                                 <!-- Show Create Games button if no games exist and event has enough players -->
+                                <!-- For NonStop events, games are created automatically when players are registered -->
                                 {% set regular_count = regular_players|length %}
                                 {% set min_players_needed = event.ev_max_players %}
-                                {% if regular_count >= min_players_needed and event.event_type and event.event_type.et_name == 'Mexicano' %}
+                                {% if regular_count >= min_players_needed and event.event_type and event.event_type.et_name != 'NonStop' %}
                                     <form action="{{ url_for('views.create_event_games', event_id=event.ev_id) }}" method="POST" class="d-inline">
                                         <button type="submit" class="btn btn-primary" 
                                                 onclick="return confirm('{{ translate('Create the first round of games for this event? This will generate ') }}{{ (event.ev_max_players // 4) }}{{ translate(' games based on the pairing rules.') }}')">
                                             <i class="fa fa-play"></i> {{ translate('Create First Round Games') }}
                                         </button>
                                     </form>
-                                {% elif event.event_type and event.event_type.et_name != 'Mexicano' %}
-                                    <div class="alert alert-info">
-                                        <i class="fa fa-info-circle"></i>
-                                        {{ translate('Game creation is currently only supported for Mexicano events') }}
-                                    </div>
                                 {% endif %}
                             {% endif %}
                         </div>
@@ -250,7 +246,7 @@
                                 {% if round_has_results and event.ev_status != 'event_ended' %}
                                 <button type="button" class="btn btn-outline-warning btn-sm" 
                                         onclick="confirmClearRound('{{ round_time }}', '{{ event.ev_id }}')"
-                                        title="{{ translate('Clear this round and all subsequent rounds') }}">
+                                        title="{% if event.event_type and event.event_type.et_name == 'NonStop' %}{{ translate('Reset scores for this round (NonStop: only latest round allowed)') }}{% else %}{{ translate('Clear this round and all subsequent rounds') }}{% endif %}">
                                     <i class="fas fa-undo"></i> {{ translate('Clear Round') }}
                                 </button>
                                 {% endif %}
@@ -739,18 +735,39 @@ function confirmClearRound(roundTime, eventId) {
     fetch(`/get_round_deletion_info/${eventId}/${roundTime}`)
         .then(response => response.json())
         .then(data => {
+            // Check if this is a sequential clearing error for NonStop
+            if (data.error === 'sequential_only') {
+                alert(`{{ translate("For NonStop events, you can only clear the latest round with results.") }}\n\n` +
+                      `{{ translate("Please clear round") }} ${data.latest_round} {{ translate("first") }}.`);
+                return;
+            }
+            
+            if (data.error) {
+                alert('{{ translate("Error getting round information") }}: ' + data.error);
+                return;
+            }
+            
             let message = '{{ translate("Are you sure you want to clear the round at") }} ' + roundTime + '?\\n\\n';
             
             if (data.target_games > 0) {
                 message += '{{ translate("This will:") }}\\n';
-                message += '• {{ translate("Reset scores for") }} ' + data.target_games + ' {{ translate("games in this round") }}\\n';
                 
-                if (data.future_games > 0) {
-                    message += '• {{ translate("DELETE") }} ' + data.future_games + ' {{ translate("games from subsequent rounds") }}\\n';
-                    message += '  {{ translate("(Rounds after") }} ' + roundTime + ')\\n\\n';
-                    message += '{{ translate("⚠️ DELETED GAMES CANNOT BE RECOVERED!") }}\\n';
+                if (data.is_nonstop) {
+                    // NonStop event - only reset scores
+                    message += '• {{ translate("Reset scores to zero for") }} ' + data.target_games + ' {{ translate("games in this round") }}\\n';
+                    message += '• {{ translate("Recalculate classifications") }}\\n\\n';
+                    message += '{{ translate("⚠️ Games will NOT be deleted - only scores will be reset.") }}\\n';
                 } else {
-                    message += '• {{ translate("No future rounds will be affected") }}\\n';
+                    // Mexican/other events - reset scores and potentially delete future games
+                    message += '• {{ translate("Reset scores for") }} ' + data.target_games + ' {{ translate("games in this round") }}\\n';
+                    
+                    if (data.future_games > 0) {
+                        message += '• {{ translate("DELETE") }} ' + data.future_games + ' {{ translate("games from subsequent rounds") }}\\n';
+                        message += '  {{ translate("(Rounds after") }} ' + roundTime + ')\\n\\n';
+                        message += '{{ translate("⚠️ DELETED GAMES CANNOT BE RECOVERED!") }}\\n';
+                    } else {
+                        message += '• {{ translate("No future rounds will be affected") }}\\n';
+                    }
                 }
                 
                 message += '\\n{{ translate("This action CANNOT be undone!") }}';
