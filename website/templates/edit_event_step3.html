@@ -169,7 +169,7 @@
 
 <script>
 document.getElementById('editPlayersForm').addEventListener('submit', function(e) {
-    // Basic validation - ensure at least some players are entered
+    // Count how many players are entered
     const playerInputs = document.querySelectorAll('.player-input');
     let playersEntered = 0;
     
@@ -179,14 +179,15 @@ document.getElementById('editPlayersForm').addEventListener('submit', function(e
         }
     });
     
+    // Confirm the update with appropriate message
+    let confirmMessage;
     if (playersEntered === 0) {
-        e.preventDefault();
-        alert('{{ translate("Please enter at least one player name") }}');
-        return false;
+        confirmMessage = '{{ translate("No players entered. This will remove all players from the event. Continue?") }}';
+    } else {
+        confirmMessage = '{{ translate("Update event with these players? This will replace all existing registrations.") }}';
     }
     
-    // Confirm the update
-    if (!confirm('{{ translate("Update event with these players? This will replace all existing registrations.") }}')) {
+    if (!confirm(confirmMessage)) {
         e.preventDefault();
         return false;
     }

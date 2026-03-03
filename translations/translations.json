@@ -1406,5 +1406,201 @@
   "GA": {
     "en": "GA",
     "pt": "JC"
+  },
+  "Event Closed": {
+    "en": "Event Closed",
+    "pt": "Evento Encerrado"
+  },
+  "TV Display Mode": {
+    "en": "TV Display Mode",
+    "pt": "Modo de Exibição TV"
+  },
+  "View this event optimized for large TV screens with live updates": {
+    "en": "View this event optimized for large TV screens with live updates",
+    "pt": "Ver este evento otimizado para ecrãs grandes de TV com atualizações em tempo real"
+  },
+  "Open TV View": {
+    "en": "Open TV View",
+    "pt": "Abrir Vista TV"
+  },
+  "Courts & Game Settings": {
+    "en": "Courts & Game Settings",
+    "pt": "Campos e Configurações de Jogo"
+  },
+  "Player Registration": {
+    "en": "Player Registration",
+    "pt": "Registo de Jogadores"
+  },
+  "No Club - Independent Event": {
+    "en": "No Club - Independent Event",
+    "pt": "Sem Clube - Evento Independente"
+  },
+  "Optional": {
+    "en": "Optional",
+    "pt": "Opcional"
+  },
+  "Select a club if this event is associated with one of your clubs, or leave as independent": {
+    "en": "Select a club if this event is associated with one of your clubs, or leave as independent",
+    "pt": "Selecione um clube se este evento estiver associado a um dos seus clubes, ou deixe como independente"
+  },
+  "Event Title": {
+    "en": "Event Title",
+    "pt": "Título do Evento"
+  },
+  "Enter event title": {
+    "en": "Enter event title",
+    "pt": "Introduza o título do evento"
+  },
+  "Event location or address": {
+    "en": "Event location or address",
+    "pt": "Local ou morada do evento"
+  },
+  "Event Time": {
+    "en": "Event Time",
+    "pt": "Hora do Evento"
+  },
+  "Event Type": {
+    "en": "Event Type",
+    "pt": "Tipo de Evento"
+  },
+  "Select event type": {
+    "en": "Select event type",
+    "pt": "Selecione o tipo de evento"
+  },
+  "Must be a multiple of 4": {
+    "en": "Must be a multiple of 4",
+    "pt": "Deve ser um múltiplo de 4"
+  },
+  "Registration Period": {
+    "en": "Registration Period",
+    "pt": "Período de Inscrição"
+  },
+  "Registration Opens": {
+    "en": "Registration Opens",
+    "pt": "Inscrições Abrem"
+  },
+  "Registration Closes": {
+    "en": "Registration Closes",
+    "pt": "Inscrições Fecham"
+  },
+  "Court Names": {
+    "en": "Court Names",
+    "pt": "Nomes dos Campos"
+  },
+  "Show/Hide Event Information": {
+    "en": "Show/Hide Event Information",
+    "pt": "Mostrar/Ocultar Informação do Evento"
+  },
+  "Based on": {
+    "en": "Based on",
+    "pt": "Com base em"
+  },
+  "players, you need": {
+    "en": "players, you need",
+    "pt": "jogadores, precisa de"
+  },
+  "Pairing Settings": {
+    "en": "Pairing Settings",
+    "pt": "Configurações de Emparelhamento"
+  },
+  "Pairing Type": {
+    "en": "Pairing Type",
+    "pt": "Tipo de Emparelhamento"
+  },
+  "Players are paired completely randomly": {
+    "en": "Players are paired completely randomly",
+    "pt": "Os jogadores são emparelhados completamente aleatoriamente"
+  },
+  "Organizer manually assigns all pairs for the first round": {
+    "en": "Organizer manually assigns all pairs for the first round",
+    "pt": "O organizador atribui manualmente todos os pares para a primeira ronda"
+  },
+  "L&R Random": {
+    "en": "L&R Random",
+    "pt": "Esquerda/Direita Aleatório"
+  },
+  "Players choose left/right side, then random pairing within each side for the first round": {
+    "en": "Players choose left/right side, then random pairing within each side for the first round",
+    "pt": "Os jogadores escolhem o lado esquerdo/direito, depois emparelhamento aleatório dentro de cada lado para a primeira ronda"
+  },
+  "Next: Player Registration": {
+    "en": "Next: Player Registration",
+    "pt": "Seguinte: Registo de Jogadores"
+  },
+  "Full": {
+    "en": "Full",
+    "pt": "Completo"
+  },
+  "Completed": {
+    "en": "Completed",
+    "pt": "Concluído"
+  },
+  "Type": {
+    "en": "Type",
+    "pt": "Tipo"
+  },
+  "Step 1 of 3": {
+    "en": "Step 1 of 3",
+    "pt": "Passo 1 de 3"
+  },
+  "End Time": {
+    "en": "End Time",
+    "pt": "Hora de Fim"
+  },
+  "Next": {
+    "en": "Next",
+    "pt": "Seguinte"
+  },
+  "Previous": {
+    "en": "Previous",
+    "pt": "Anterior"
+  },
+  "Court Configuration": {
+    "en": "Court Configuration",
+    "pt": "Configuração de Campos"
+  },
+  "Event Type & Player Settings": {
+    "en": "Event Type & Player Settings",
+    "pt": "Tipo de Evento e Configurações de Jogadores"
+  },
+  "Configure courts for this event": {
+    "en": "Configure courts for this event",
+    "pt": "Configure os campos para este evento"
+  },
+  "Number of Courts": {
+    "en": "Number of Courts",
+    "pt": "Número de Campos"
+  },
+  "How Pairing Works": {
+    "en": "How Pairing Works",
+    "pt": "Como Funciona o Emparelhamento"
+  },
+  "Players are ranked by performance and paired accordingly each round. Better players will tend to play together as the tournament progresses.": {
+    "en": "Players are ranked by performance and paired accordingly each round. Better players will tend to play together as the tournament progresses.",
+    "pt": "Os jogadores são classificados por desempenho e emparelhados em conformidade em cada ronda. Os melhores jogadores tenderão a jogar juntos à medida que o torneio progride."
+  },
+  "Enter player names. If a name doesn't exist in the system, a new player account will be created.": {
+    "en": "Enter player names. If a name doesn't exist in the system, a new player account will be created.",
+    "pt": "Introduza os nomes dos jogadores. Se um nome não existir no sistema, será criada uma nova conta de jogador."
+  },
+  "Enter player name": {
+    "en": "Enter player name",
+    "pt": "Introduza o nome do jogador"
+  },
+  "Courts & Settings": {
+    "en": "Courts & Settings",
+    "pt": "Campos e Configurações"
+  },
+  "Update Event & Players": {
+    "en": "Update Event & Players",
+    "pt": "Atualizar Evento e Jogadores"
+  },
+  "All players have been removed from this event.": {
+    "en": "All players have been removed from this event.",
+    "pt": "Todos os jogadores foram removidos deste evento."
+  },
+  "No players entered. This will remove all players from the event. Continue?": {
+    "en": "No players entered. This will remove all players from the event. Continue?",
+    "pt": "Nenhum jogador inserido. Isto irá remover todos os jogadores do evento. Continuar?"
   }
 }

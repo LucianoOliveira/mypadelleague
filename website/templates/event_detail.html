@@ -8,44 +8,56 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div>
-                        <h1 class="mb-1">{{ event.ev_title }}</h1>
-                        <div class="d-flex align-items-center">
-                            {% if event.ev_status == 'announced' %}
-                                <span class="badge badge-secondary">{{ translate('Announced') }}</span>
-                            {% elif event.ev_status == 'registration_started' %}
-                                <span class="badge badge-success">{{ translate('Registration Open') }}</span>
-                            {% elif event.ev_status == 'registration_ended' %}
-                                <span class="badge badge-warning">{{ translate('Registration Closed') }}</span>
-                            {% elif event.ev_status == 'event_started' %}
-                                <span class="badge badge-info">{{ translate('In Progress') }}</span>
-                            {% elif event.ev_status == 'event_ended' %}
-                                <span class="badge badge-dark">{{ translate('Completed') }}</span>
-                            {% else %}
-                                <span class="badge badge-light">{{ event.ev_status }}</span>
-                            {% endif %}
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap">
+                        <div class="mb-2 mb-md-0">
+                            <h1 class="mb-1">{{ event.ev_title }}</h1>
+                            <div class="d-flex align-items-center">
+                                {% if event.ev_status == 'announced' %}
+                                    <span class="badge badge-secondary">{{ translate('Announced') }}</span>
+                                {% elif event.ev_status == 'registration_started' %}
+                                    <span class="badge badge-success">{{ translate('Registration Open') }}</span>
+                                {% elif event.ev_status == 'registration_ended' %}
+                                    <span class="badge badge-warning">{{ translate('Registration Closed') }}</span>
+                                {% elif event.ev_status == 'event_started' %}
+                                    <span class="badge badge-info">{{ translate('In Progress') }}</span>
+                                {% elif event.ev_status == 'event_ended' %}
+                                    <span class="badge badge-dark">{{ translate('Completed') }}</span>
+                                {% else %}
+                                    <span class="badge badge-light">{{ event.ev_status }}</span>
+                                {% endif %}
 
-                            {% if event.event_type and event.event_type.et_name == 'NonStop' %}
-                                <span class="badge badge-info ml-2">{{ translate('Non-Stop') }}</span>
-                            {% elif event.event_type and event.event_type.et_name == 'Americano' %}
-                                <span class="badge badge-success ml-2">{{ translate('Americano') }}</span>
-                            {% elif event.event_type and event.event_type.et_name == 'Mexicano' %}
-                                <span class="badge badge-warning ml-2">{{ translate('Mexicano') }}</span>
-                            {% endif %}
+                                {% if event.event_type and event.event_type.et_name == 'NonStop' %}
+                                    <span class="badge badge-info ml-2">{{ translate('Non-Stop') }}</span>
+                                {% elif event.event_type and event.event_type.et_name == 'Americano' %}
+                                    <span class="badge badge-success ml-2">{{ translate('Americano') }}</span>
+                                {% elif event.event_type and event.event_type.et_name == 'Mexicano' %}
+                                    <span class="badge badge-warning ml-2">{{ translate('Mexicano') }}</span>
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <!-- Edit button only for superusers or admin users with club authorization -->
-                        {% if current_user.is_authenticated and user_is_authorized %}
-                            <div class="btn-group" role="group">
-                                <a href="{{ url_for('views.edit_event', event_id=event.ev_id) }}" class="btn btn-outline-primary">
-                                    <i class="fa fa-edit"></i> {{ translate('Edit Event') }}
-                                </a>
-                                <a href="{{ url_for('views.detail_event_tv', event_id=event.ev_id) }}" class="btn btn-outline-info">
-                                    <i class="fa fa-tv"></i> {{ translate('TV View') }}
-                                </a>
-                                
+                        <div class="ml-auto">
+                            <!-- Edit button only for superusers or admin users with club authorization -->
+                            {% if current_user.is_authenticated and user_is_authorized %}
+                                <div class="btn-group btn-group-sm" role="group">
+                                    {% if event.ev_status != 'event_ended' %}
+                                        <a href="{{ url_for('views.edit_event', event_id=event.ev_id) }}" class="btn btn-outline-primary" title="{{ translate('Edit Event') }}">
+                                            <i class="fa fa-edit"></i> <span class="d-none d-lg-inline">{{ translate('Edit Event') }}</span>
+                                        </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('views.detail_event_tv', event_id=event.ev_id) }}" class="btn btn-outline-info d-none d-md-inline-block" title="{{ translate('TV View') }}">
+                                        <i class="fa fa-tv"></i> <span class="d-none d-lg-inline">{{ translate('TV View') }}</span>
+                                    </a>
+                                    
+                                    {% if can_close_event %}
+                                        <form action="{{ url_for('views.close_event', event_id=event.ev_id) }}" method="POST" class="d-inline" 
+                                              onsubmit="return confirm('{{ translate('Close this event? This will: 1) Delete rounds with all 0-0 scores, 2) Lock the event from further edits, 3) Mark it as completed. This action cannot be undone.') }}')">
+                                            <button type="submit" class="btn btn-outline-success" title="{{ translate('Close Event') }}">
+                                                <i class="fa fa-check-circle"></i> <span class="d-none d-lg-inline">{{ translate('Close Event') }}</span>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                    
                                 {# Delete button - only show if event can be safely deleted 
                                 {% if can_delete %}
                                     <form action="{{ url_for('views.delete_event', event_id=event.ev_id) }}" method="POST" class="d-inline" 
@@ -77,8 +89,9 @@
                                         <i class="fa fa-info-circle"></i>
                                     </button>
                                 {% endif %} #}
-                            </div>
-                        {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
@@ -152,11 +165,6 @@
                                             <i class="fa fa-play"></i> {{ translate('Create First Round Games') }}
                                         </button>
                                     </form>
-                                {% elif regular_count < min_players_needed %}
-                                    <div class="alert alert-warning">
-                                        <i class="fa fa-exclamation-triangle"></i>
-                                        {{ translate('Need') }} {{ min_players_needed - regular_count }} {{ translate('more players to create games') }}
-                                    </div>
                                 {% elif event.event_type and event.event_type.et_name != 'Mexicano' %}
                                     <div class="alert alert-info">
                                         <i class="fa fa-info-circle"></i>
@@ -203,9 +211,13 @@
                     <form id="saveAllScoresForm" action="{{ url_for('views.update_all_game_scores', event_id=event.ev_id) }}" method="POST">
                         <div class="mb-3 d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">{{ translate('Event Matches') }}</h5>
-                            <button type="submit" class="btn btn-success">
-                                <i class="fa fa-save"></i> {{ translate('Save All Results') }}
-                            </button>
+                            {% if event.ev_status != 'event_ended' %}
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fa fa-save"></i> {{ translate('Save All Results') }}
+                                </button>
+                            {% else %}
+                                <span class="badge badge-dark">{{ translate('Event Closed') }}</span>
+                            {% endif %}
                         </div>
                         
                         <!-- Group games by rounds (start time) -->
@@ -235,7 +247,7 @@
                                 
                                 <!-- Round Actions -->
                                 {% set round_has_results = round_games | selectattr('gm_result_A', 'ne', none) | selectattr('gm_result_B', 'ne', none) | list | length > 0 %}
-                                {% if round_has_results %}
+                                {% if round_has_results and event.ev_status != 'event_ended' %}
                                 <button type="button" class="btn btn-outline-warning btn-sm" 
                                         onclick="confirmClearRound('{{ round_time }}', '{{ event.ev_id }}')"
                                         title="{{ translate('Clear this round and all subsequent rounds') }}">
@@ -291,10 +303,16 @@
                                                                 {% endif %}
                                                             {% endif %}
                                                         </div>
-                                                        <input type="number" name="scores[{{ game.gm_id }}][A]" 
-                                                               value="{{ game.gm_result_A if game.gm_result_A is not none else '' }}" 
-                                                               class="form-control score-input text-center ml-2" style="width: 60px;" 
-                                                               min="0" max="99" placeholder="0">
+                                                        {% if event.ev_status != 'event_ended' %}
+                                                            <input type="number" name="scores[{{ game.gm_id }}][A]" 
+                                                                   value="{{ game.gm_result_A if game.gm_result_A is not none else '' }}" 
+                                                                   class="form-control score-input text-center ml-2" style="width: 60px;" 
+                                                                   min="0" max="99" placeholder="0">
+                                                        {% else %}
+                                                            <div class="score-display ml-2" style="width: 60px; text-align: center; font-size: 1.5rem; font-weight: bold;">
+                                                                {{ game.gm_result_A if game.gm_result_A is not none else '-' }}
+                                                            </div>
+                                                        {% endif %}
                                                     </div>
                                                 </div>
                                                 
@@ -333,10 +351,16 @@
                                                                 {% endif %}
                                                             {% endif %}
                                                         </div>
-                                                        <input type="number" name="scores[{{ game.gm_id }}][B]" 
-                                                               value="{{ game.gm_result_B if game.gm_result_B is not none else '' }}" 
-                                                               class="form-control score-input text-center ml-2" style="width: 60px;" 
-                                                               min="0" max="99" placeholder="0">
+                                                        {% if event.ev_status != 'event_ended' %}
+                                                            <input type="number" name="scores[{{ game.gm_id }}][B]" 
+                                                                   value="{{ game.gm_result_B if game.gm_result_B is not none else '' }}" 
+                                                                   class="form-control score-input text-center ml-2" style="width: 60px;" 
+                                                                   min="0" max="99" placeholder="0">
+                                                        {% else %}
+                                                            <div class="score-display ml-2" style="width: 60px; text-align: center; font-size: 1.5rem; font-weight: bold;">
+                                                                {{ game.gm_result_B if game.gm_result_B is not none else '-' }}
+                                                            </div>
+                                                        {% endif %}
                                                     </div>
                                                 </div>
                                             </div>
@@ -348,11 +372,13 @@
                         </div>
                         {% endfor %}
                         
-                        <div class="mt-3 text-right">
-                            <button type="submit" class="btn btn-success">
-                                <i class="fa fa-save"></i> {{ translate('Save All Results') }}
-                            </button>
-                        </div>
+                        {% if event.ev_status != 'event_ended' %}
+                            <div class="mt-3 text-right">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fa fa-save"></i> {{ translate('Save All Results') }}
+                                </button>
+                            </div>
+                        {% endif %}
                     </form>
                     {% else %}
                         <!-- Read-only view for non-authorized users -->
@@ -679,7 +705,7 @@
 {% endif %}
 
 <!-- TV View Access Button -->
-<div class="container mt-4 mb-4">
+<div class="container mt-4 mb-4 d-none d-md-block">
     <div class="row">
         <div class="col-12 text-center">
             <div class="card">

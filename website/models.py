@@ -544,6 +544,18 @@ class Event(db.Model):
                 self.current_player_count < self.ev_max_players and 
                 (not self.registration_end_utc or now <= self.registration_end_utc))
 
+    def is_registration_open(self):
+        """Check if registration is currently open"""
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        
+        # Update status first
+        self.update_status()
+        
+        return (self.ev_status == "registration_started" and 
+                self.current_player_count < self.ev_max_players and 
+                (not self.registration_end_utc or now <= self.registration_end_utc))
+
     def validate_player_limits(self):
         """Validate current registrations don't exceed limits"""
         current_players = self.current_player_count
