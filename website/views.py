@@ -2431,11 +2431,14 @@ def edit_event(event_id):
                 
                 # Clear existing event courts
                 EventCourts.query.filter_by(evc_event_id=event_id).delete()
-                
+
+                # Determine fallback court (first available for this club)
+                fallback_court_id = all_courts[0].ct_id if all_courts else None
+
                 # Add selected courts
                 court_count = int(request.form.get('court_count', 1))
                 for i in range(court_count):
-                    court_id = request.form.get(f'court_{i}')
+                    court_id = request.form.get(f'court_{i}') or fallback_court_id
                     
                     if court_id:
                         event_court = EventCourts(
@@ -2861,20 +2864,28 @@ def edit_event_step2(event_id):
             event.ev_pairing_type = request.form['pairing_type']
             event.ev_max_players = int(request.form['max_players'])
             
-            # Clear existing event courts
-            EventCourts.query.filter_by(evc_event_id=event_id).delete()
-            
-            # Add selected courts
-            court_count = int(request.form.get('court_count', 1))
+            # Collect court IDs from form
+            fallback_court_id = all_courts[0].ct_id if all_courts else None
+            court_count = int(request.form.get('court_count', 2))
+            selected_court_ids = []
             for i in range(court_count):
-                court_id = request.form.get(f'court_{i}')
-                
+                court_id = request.form.get(f'court_{i}') or str(fallback_court_id)
                 if court_id:
-                    event_court = EventCourts(
-                        evc_event_id=event_id,
-                        evc_court_id=court_id
-                    )
-                    db.session.add(event_court)
+                    selected_court_ids.append(court_id)
+
+            # Server-side duplicate guard
+            if len(selected_court_ids) != len(set(selected_court_ids)):
+                flash(translate('Each court must be different. Please select a unique court for each slot.'), 'error')
+                access_code = session.get(f'event_{event_id}_access_code', '')
+                return render_template("edit_event_step2.html", user=current_user, event=event,
+                                      club=club, courts=all_courts, existing_event_courts=existing_event_courts,
+                                      event_types=EventType.query.filter(EventType.et_is_active == True).all(),
+                                      access_code=access_code)
+
+            # Clear existing event courts and save new ones
+            EventCourts.query.filter_by(evc_event_id=event_id).delete()
+            for court_id in selected_court_ids:
+                db.session.add(EventCourts(evc_event_id=event_id, evc_court_id=court_id))
             
             db.session.commit()
             # flash(translate('Court configuration updated!'), 'success')

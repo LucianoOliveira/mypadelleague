@@ -5,7 +5,9 @@
         <div class="card-header">
             <h4>{{ translate('Manage Clubs') }}</h4>
             <div class="d-flex justify-content-end">
+                {% if current_user.is_authenticated and (current_user.us_is_admin or current_user.us_is_superuser) %}
                 <a href="/create_club" class="btn btn-light px-5"><i class="icon-plus"></i> {{ translate('Create Club') }}</a>
+                {% endif %}
             </div>
         </div>
         <div class="card-body">

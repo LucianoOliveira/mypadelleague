@@ -41,13 +41,15 @@
                             {% if current_user.is_authenticated and user_is_authorized %}
                                 <div class="btn-group btn-group-sm" role="group">
                                     {% if event.ev_status != 'event_ended' %}
-                                        <a href="{{ url_for('views.edit_event', event_id=event.ev_id) }}" class="btn btn-outline-primary" title="{{ translate('Edit Event') }}">
+                                        <a href="{{ url_for('views.edit_event_step1', event_id=event.ev_id) }}" class="btn btn-outline-primary" title="{{ translate('Edit Event') }}">
                                             <i class="fa fa-edit"></i> <span class="d-none d-lg-inline">{{ translate('Edit Event') }}</span>
                                         </a>
                                     {% endif %}
+                                    {% if event.ev_status != 'event_ended' %}
                                     <a href="{{ url_for('views.detail_event_tv', event_id=event.ev_id) }}" class="btn btn-outline-info d-none d-md-inline-block" title="{{ translate('TV View') }}">
                                         <i class="fa fa-tv"></i> <span class="d-none d-lg-inline">{{ translate('TV View') }}</span>
                                     </a>
+                                    {% endif %}
                                     
                                     {% if can_close_event %}
                                         <form action="{{ url_for('views.close_event', event_id=event.ev_id) }}" method="POST" class="d-inline" 
@@ -701,6 +703,7 @@
 {% endif %}
 
 <!-- TV View Access Button -->
+{% if event.ev_status != 'event_ended' %}
 <div class="container mt-4 mb-4 d-none d-md-block">
     <div class="row">
         <div class="col-12 text-center">
@@ -722,6 +725,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <script>
 // Initialize tooltips

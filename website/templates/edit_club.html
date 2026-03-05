@@ -138,6 +138,10 @@
                         </thead>
                         <tbody>
                             {% for auth in club.authorized_users %}
+                            {# Hide users with higher authorization than the current user #}
+                            {% if (current_user.us_is_superuser) or
+                                  (current_user.us_is_admin and not auth.user.us_is_superuser) or
+                                  (current_user.us_is_manager and not auth.user.us_is_admin and not auth.user.us_is_superuser) %}
                             <tr>
                                 <td>{{ auth.user.us_name }}</td>
                                 <td>{{ auth.user.us_email }}</td>
@@ -153,6 +157,7 @@
                                     {% endif %}
                                 </td>
                             </tr>
+                            {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>

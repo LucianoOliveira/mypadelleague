@@ -39,8 +39,11 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="max_players">{{ translate('Maximum Players') }} <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="max_players" name="max_players" 
-                                       value="{{ event.ev_max_players }}" min="4" max="32" step="2" required>
+                                <select class="form-control" id="max_players" name="max_players" required>
+                                    <option value="8"  {% if event.ev_max_players == 8  %}selected{% endif %}>8</option>
+                                    <option value="12" {% if event.ev_max_players == 12 %}selected{% endif %}>12</option>
+                                    <option value="16" {% if event.ev_max_players == 16 %}selected{% endif %}>16</option>
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -71,9 +74,14 @@
                     <div class="form-group">
                         <label for="court_count">{{ translate('Number of Courts') }} <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" id="court_count" name="court_count" 
-                               value="{{ existing_event_courts|length or 1 }}" min="1" max="10" required>
+                               value="{{ existing_event_courts|length or 2 }}" min="2" max="4" required>
                     </div>
-                    
+
+                    <div class="alert alert-danger" id="courtDuplicateError" style="display:none;">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        {{ translate('Each court must be different. Please select a unique court for each slot.') }}
+                    </div>
+
                     <div id="courtsContainer">
                         {% for i in range(existing_event_courts|length or 1) %}
                         <div class="court-row row mb-3">
@@ -111,7 +119,7 @@
 <script>
 // Update pairing descriptions based on event type
 function updatePairingDescription() {
-    const eventType = document.getElementById('event_type').value;
+    const eventType = document.getElementById('event_type_id').value;
     const pairingType = document.getElementById('pairing_type').value;
     const descriptionDiv = document.getElementById('pairingDescription');
     
@@ -134,35 +142,128 @@ function updatePairingDescription() {
     descriptionDiv.innerHTML = description;
 }
 
-// Update court configuration
+// All available court options rendered once server-side
+const COURT_OPTIONS = [
+    {% for court in courts %}
+    { id: "{{ court.ct_id }}", name: "{{ court.ct_name }}" },
+    {% endfor %}
+];
+
+// Valid player counts and their matching court counts
+const VALID_PLAYERS = [8, 12, 16];
+
+// Read currently selected court IDs from the DOM (in order)
+function getSavedSelections() {
+    return Array.from(document.querySelectorAll('#courtsContainer select')).map(s => s.value);
+}
+
+// Rebuild court rows.
+// - Existing rows keep their current selection.
+// - New rows are auto-assigned the first court not already used.
 function updateCourts() {
     const courtCount = parseInt(document.getElementById('court_count').value);
+    if (isNaN(courtCount) || courtCount < 1) return;
+
+    const saved = getSavedSelections(); // selections before rebuild
     const container = document.getElementById('courtsContainer');
     container.innerHTML = '';
-    
+
+    const assigned = []; // track which court IDs are used as we build rows
+
     for (let i = 0; i < courtCount; i++) {
+        let selectedId;
+
+        if (i < saved.length && saved[i]) {
+            // Preserve the existing selection for this slot
+            selectedId = saved[i];
+        } else {
+            // New slot: pick the first court not yet assigned in this rebuild
+            const available = COURT_OPTIONS.find(c => !assigned.includes(c.id));
+            selectedId = available ? available.id : COURT_OPTIONS[0].id;
+        }
+        assigned.push(selectedId);
+
+        const options = COURT_OPTIONS.map(c =>
+            `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${c.name}</option>`
+        ).join('');
+
         const courtRow = document.createElement('div');
         courtRow.className = 'court-row row mb-3';
         courtRow.innerHTML = `
             <div class="col-md-12">
                 <label for="court_${i}">{{ translate('Court') }} ${i + 1}</label>
                 <select class="form-control" id="court_${i}" name="court_${i}" required>
-                    {% for court in courts %}
-                    <option value="{{ court.ct_id }}">{{ court.ct_name }}</option>
-                    {% endfor %}
+                    ${options}
                 </select>
             </div>
         `;
         container.appendChild(courtRow);
     }
+    // Hide any lingering duplicate error after a rebuild
+    document.getElementById('courtDuplicateError').style.display = 'none';
 }
+
+// Returns true if all court selects have unique values
+function courtsAreUnique() {
+    const vals = getSavedSelections();
+    return new Set(vals).size === vals.length;
+}
+
+// Sync max_players select -> court_count
+function syncCourtsFromPlayers() {
+    const maxPlayers = parseInt(document.getElementById('max_players').value);
+    if (!isNaN(maxPlayers) && maxPlayers >= 4) {
+        document.getElementById('court_count').value = Math.floor(maxPlayers / 4);
+        updateCourts();
+    }
+}
+
+// Sync court_count -> max_players select (snap to nearest valid option)
+function syncPlayersFromCourts() {
+    const courtCount = parseInt(document.getElementById('court_count').value);
+    if (isNaN(courtCount) || courtCount < 1) return;
+    const target = courtCount * 4;
+    const nearest = VALID_PLAYERS.reduce((prev, curr) =>
+        Math.abs(curr - target) < Math.abs(prev - target) ? curr : prev
+    );
+    document.getElementById('max_players').value = nearest;
+}
+
+// Submit guard: rebuild selects if count drifted, then block on duplicates
+document.getElementById('editEventForm').addEventListener('submit', function(e) {
+    // Ensure the correct number of court selects exist in the DOM
+    const declaredCount = parseInt(document.getElementById('court_count').value) || 2;
+    if (document.querySelectorAll('#courtsContainer select').length !== declaredCount) {
+        updateCourts();
+    }
+    // Block submission if any two courts are the same
+    if (!courtsAreUnique()) {
+        e.preventDefault();
+        document.getElementById('courtDuplicateError').style.display = 'block';
+        document.getElementById('courtDuplicateError').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+});
+
+// Show inline duplicate warning as the user changes a court select
+document.getElementById('courtsContainer').addEventListener('change', function() {
+    if (!courtsAreUnique()) {
+        document.getElementById('courtDuplicateError').style.display = 'block';
+    } else {
+        document.getElementById('courtDuplicateError').style.display = 'none';
+    }
+});
 
 // Initialize
 updatePairingDescription();
+updateCourts(); // align DOM with server-rendered court count on page load
 
 // Event listeners
-document.getElementById('event_type').addEventListener('change', updatePairingDescription);
+document.getElementById('event_type_id').addEventListener('change', updatePairingDescription);
 document.getElementById('pairing_type').addEventListener('change', updatePairingDescription);
-document.getElementById('court_count').addEventListener('change', updateCourts);
+document.getElementById('court_count').addEventListener('input', function() {
+    syncPlayersFromCourts();
+    updateCourts();
+});
+document.getElementById('max_players').addEventListener('change', syncCourtsFromPlayers);
 </script>
 {% endblock %}
