@@ -71,9 +71,9 @@
                     <div class="form-group">
                         <label for="pairing_type">{{ translate('Pairing Type') }} <span class="text-danger">*</span></label>
                         <select class="form-control" id="pairing_type" name="pairing_type" required>
-                            <option value="Random" selected>{{ translate('Random') }}</option>
-                            <option value="Manual">{{ translate('Manual') }}</option>
-                            <option value="L&R Random">{{ translate('L&R Random') }}</option>
+                            <option value="Random" {% if preset_pairing == 'Random' or not preset_pairing %}selected{% endif %}>{{ translate('Random') }}</option>
+                            <option value="Manual" {% if preset_pairing == 'Manual' %}selected{% endif %}>{{ translate('Manual') }}</option>
+                            <option value="L&R Random" {% if preset_pairing == 'L&R Random' %}selected{% endif %}>{{ translate('L&R Random') }}</option>
                         </select>
                         <small class="form-text text-muted">
                             <strong>{{ translate('Random') }}:</strong> {{ translate('Players are paired completely randomly') }}<br>

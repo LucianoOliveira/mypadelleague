@@ -11,7 +11,7 @@
     <div class="col-md-6 text-right">
         {% if current_user.is_authenticated %}
         {% if current_user.us_is_admin or current_user.us_is_superuser %}
-        <a href="{{ url_for('views.create_event') }}" class="btn btn-light px-5">
+        <a href="{{ url_for('views.create_event_choose') }}" class="btn btn-light px-5">
             <i class="icon-plus"></i> {{ translate('Create Event') }}
         </a>
         {% endif %}

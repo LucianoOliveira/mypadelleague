@@ -1726,5 +1726,25 @@
   "Create All Games": {
     "en": "Create All Games",
     "pt": "Criar Todos os Jogos"
+  },
+  "Choose a preset or set up manually": {
+    "en": "Choose a preset or set up manually",
+    "pt": "Escolher um modelo ou configurar manualmente"
+  },
+  "L&R Random Pairing": {
+    "en": "L&R Random Pairing",
+    "pt": "Emparelhamento Aleatório E/D"
+  },
+  "Up-Down": {
+    "en": "Up-Down",
+    "pt": "Sobe e Desce"
+  },
+  "Custom configuration": {
+    "en": "Custom configuration",
+    "pt": "Configuração personalizada"
+  },
+  "Back": {
+    "en": "Back",
+    "pt": "Voltar"
   }
 }

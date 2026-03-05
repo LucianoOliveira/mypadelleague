@@ -19,6 +19,7 @@
             </div>
 
             <form action="{{ url_for('views.create_event') }}" method="post" id="eventForm">
+                <input type="hidden" name="preset_pairing" value="{{ preset_pairing }}">
                 <div class="form-group">
                     <label for="club_id">{{ translate('Club') }} <span class="text-muted">({{ translate('Optional') }})</span></label>
                     <select class="form-control" id="club_id" name="club_id">
@@ -62,7 +63,7 @@
                             <select class="form-control" id="event_type_id" name="event_type_id" required>
                                 <option value="">{{ translate('Select event type') }}...</option>
                                 {% for event_type in event_types %}
-                                <option value="{{ event_type.et_id }}">{{ translate(event_type.et_name) }}</option>
+                                <option value="{{ event_type.et_id }}" {% if preset_type_id and preset_type_id == event_type.et_id %}selected{% endif %}>{{ translate(event_type.et_name) }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -70,7 +71,7 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="max_players">{{ translate('Maximum Players') }} <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="max_players" name="max_players" min="4" max="64" step="4" placeholder="8" required>
+                            <input type="number" class="form-control" id="max_players" name="max_players" min="4" max="64" step="4" placeholder="8" value="{{ preset_players }}" required>
                             <small class="form-text text-muted">{{ translate('Must be a multiple of 4') }}</small>
                         </div>
                     </div>

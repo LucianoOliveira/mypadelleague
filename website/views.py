@@ -1466,6 +1466,114 @@ def display_event_main_image(eventID, packageID):
         print(f"Error displaying image: {e}")
         return "Error loading image", 500
 
+@views.route('/create_event_choose')
+@login_required
+def create_event_choose():
+    """Landing page with preset event configuration cards"""
+    authorized_clubs = Club.query.join(ClubAuthorization).filter(
+        ClubAuthorization.ca_user_id == current_user.us_id
+    ).all()
+    return render_template('create_event_choose.html', user=current_user, clubs=authorized_clubs)
+
+
+@views.route('/create_event_quick_form')
+@login_required
+def create_event_quick_form():
+    """Simple form page for a quick-create event (title/date/time/location/club only)."""
+    preset_type    = request.args.get('type', 'NonStop')
+    preset_players = request.args.get('players', '8')
+    preset_courts  = request.args.get('courts', '2')
+    preset_pairing = request.args.get('pairing', 'Random')
+    authorized_clubs = Club.query.join(ClubAuthorization).filter(
+        ClubAuthorization.ca_user_id == current_user.us_id
+    ).all()
+    from datetime import date as _date
+    return render_template(
+        'create_event_quick_form.html',
+        user=current_user,
+        clubs=authorized_clubs,
+        preset_type=preset_type,
+        preset_players=preset_players,
+        preset_courts=preset_courts,
+        preset_pairing=preset_pairing,
+        today=_date.today().isoformat(),
+    )
+
+
+@views.route('/create_event_quick', methods=['POST'])
+@login_required
+def create_event_quick():
+    """Create event from a preset, skipping step 1 & 2 forms, go straight to player registration"""
+    title          = request.form.get('title', '').strip()
+    location       = request.form.get('location', '').strip()
+    event_date     = request.form.get('event_date', '').strip()
+    event_time     = request.form.get('event_time', '').strip()
+    club_id        = request.form.get('club_id') or None
+    preset_type    = request.form.get('preset_type', '')
+    preset_players = int(request.form.get('preset_players', 8))
+    preset_pairing = request.form.get('preset_pairing', 'Random')
+
+    if not all([title, location, event_date, event_time, preset_type]):
+        flash(translate('Please fill in all required fields!'), 'error')
+        return redirect(url_for('views.create_event_choose'))
+
+    # Validate club authorisation
+    if club_id:
+        authorized = ClubAuthorization.query.filter_by(
+            ca_user_id=current_user.us_id, ca_club_id=int(club_id)
+        ).first()
+        if not authorized:
+            flash(translate('You are not authorized to create events for this club!'), 'error')
+            return redirect(url_for('views.create_event_choose'))
+
+    # Resolve event type
+    event_type = EventType.query.filter_by(et_name=preset_type, et_is_active=True).first()
+    if not event_type:
+        flash(translate('Invalid event type!'), 'error')
+        return redirect(url_for('views.create_event_choose'))
+
+    try:
+        event_date_parsed = datetime.strptime(event_date, "%Y-%m-%d").date()
+        event_time_parsed = datetime.strptime(event_time, "%H:%M").time()
+
+        new_event = Event(
+            ev_title=title,
+            ev_location=location,
+            ev_date=event_date_parsed,
+            ev_start_time=event_time_parsed,
+            ev_club_id=int(club_id) if club_id else None,
+            ev_type_id=event_type.et_id,
+            ev_max_players=preset_players,
+            ev_pairing_type=preset_pairing,
+            ev_status='announced',
+            ev_created_by_id=current_user.us_id
+        )
+        db.session.add(new_event)
+        db.session.flush()  # get ev_id before commit
+
+        # Auto-create courts ("Court 1", "Court 2", …) and link them
+        courts_needed = preset_players // 4
+        for i in range(courts_needed):
+            court_name = f"Court {i + 1}"
+            if club_id:
+                court = Court.query.filter_by(
+                    ct_name=court_name, ct_club_id=int(club_id)
+                ).first()
+                if not court:
+                    court = Court(ct_name=court_name, ct_sport='Padel', ct_club_id=int(club_id))
+                    db.session.add(court)
+                    db.session.flush()
+                db.session.add(EventCourts(evc_event_id=new_event.ev_id, evc_court_id=court.ct_id))
+
+        db.session.commit()
+        return redirect(url_for('views.create_event_step3', event_id=new_event.ev_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(translate('Error creating event: {}').format(str(e)), 'error')
+        return redirect(url_for('views.create_event_choose'))
+
+
 @views.route('/create_event', methods=['GET', 'POST'])
 @login_required
 def create_event():
@@ -1477,6 +1585,19 @@ def create_event():
     
     # Get available event types for the form
     event_types = EventType.query.filter(EventType.et_is_active == True).order_by(EventType.et_order).all()
+
+    # Read preset query params (GET only, used to pre-fill the form)
+    preset_type    = request.args.get('preset_type', '')
+    preset_players = request.args.get('preset_players', '')
+    preset_courts  = request.args.get('preset_courts', '')
+    preset_pairing = request.args.get('preset_pairing', '')
+
+    # Resolve preset event type to its DB id
+    preset_type_id = ''
+    if preset_type:
+        et = EventType.query.filter_by(et_name=preset_type, et_is_active=True).first()
+        if et:
+            preset_type_id = et.et_id
 
     if request.method == 'POST':
         # Get form data
@@ -1493,7 +1614,8 @@ def create_event():
         # Validate required fields (club_id is now optional)
         if not all([title, location, event_date, event_time, event_type_id, max_players]):
             flash(translate('Please fill in all required fields!'), 'error')
-            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types)
+            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types,
+                                   preset_type_id='', preset_players='', preset_courts='', preset_pairing='')
         
         # Check club authorization only if club is selected
         if club_id:
@@ -1506,7 +1628,8 @@ def create_event():
         event_type = EventType.query.filter_by(et_id=int(event_type_id), et_is_active=True).first()
         if not event_type:
             flash(translate('Invalid event type selected!'), 'error')
-            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types)
+            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types,
+                                   preset_type_id='', preset_players='', preset_courts='', preset_pairing='')
 
         try:
             # Parse date and time - try multiple formats
@@ -1581,22 +1704,31 @@ def create_event():
             db.session.commit()
 
             flash(translate('Event created successfully! Now configure courts and game settings.'), 'success')
+            # Carry preset_pairing into step 2 via session
+            preset_pairing_val = request.form.get('preset_pairing', '')
+            if preset_pairing_val:
+                session[f'preset_pairing_{new_event.ev_id}'] = preset_pairing_val
             return redirect(url_for('views.create_event_step2', event_id=new_event.ev_id))
 
         except ValueError as e:
             flash(f"Invalid date/time format! {str(e)}", 'error')
-            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types)
+            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types,
+                                   preset_type_id='', preset_players='', preset_courts='', preset_pairing='')
         except Exception as e:
             db.session.rollback()
             flash(translate('Error creating event!'), 'error')
-            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types)
+            return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types,
+                                   preset_type_id='', preset_players='', preset_courts='', preset_pairing='')
 
     # Pre-select club if user manages only one club
     selected_club_id = None
     if len(authorized_clubs) == 1:
         selected_club_id = authorized_clubs[0].cl_id
     
-    return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types, selected_club_id=selected_club_id)
+    return render_template("create_event.html", user=current_user, clubs=authorized_clubs, event_types=event_types,
+                           selected_club_id=selected_club_id,
+                           preset_type_id=preset_type_id, preset_players=preset_players,
+                           preset_courts=preset_courts, preset_pairing=preset_pairing)
 
 @views.route('/create_event_public', methods=['GET'])
 def create_event_public():
@@ -3283,7 +3415,15 @@ def create_games_for_event(event_id):
     player_names_list = [reg.player.us_name.strip().lower() for reg in registrations]
     if len(player_names_list) != len(set(player_names_list)):
         raise Exception(translate('Duplicate player names found. Each player must have a unique name.'))
-    
+
+    # Validation 3: UpDown requires exactly 8, 12, or 16 players
+    event_type_check = EventType.query.get(event.ev_type_id)
+    if event_type_check and event_type_check.et_name == 'UpDown':
+        if event.ev_max_players not in (8, 12, 16):
+            raise Exception(
+                translate('Up-Down format requires exactly 8, 12, or 16 players. Got {}.').format(event.ev_max_players)
+            )
+
     # Get event courts
     event_courts = EventCourts.query.filter_by(evc_event_id=event_id).all()
     if not event_courts:
@@ -3924,16 +4064,22 @@ def update_all_game_scores(event_id):
             
             # Check if we should create next round based on event type
             should_create_next_round = False
-            
-            if event_type_name in ['Mexicano', 'Americano']:
-                # Mexicano and Americano have unlimited rounds - always create next round
+
+            if event_type_name in ['Mexicano', 'Americano', 'UpDown']:
+                # Unlimited rounds – always create next round after all results are in
                 should_create_next_round = True
             elif event_type_name == 'NonStop':
-                # NonStop rounds are all created upfront - never create new rounds dynamically
+                # NonStop rounds are all created upfront – never create new rounds dynamically
                 should_create_next_round = False
-            
+
             if should_create_next_round:
-                next_round_games = create_next_round_games(event_id, classifications, current_round + 1)
+                if event_type_name == 'UpDown':
+                    from .updown import create_updown_next_round_games
+                    next_round_games = create_updown_next_round_games(
+                        event_id, classifications, current_round + 1
+                    )
+                else:
+                    next_round_games = create_next_round_games(event_id, classifications, current_round + 1)
                 flash(translate('Scores updated! Round {} completed. {} games created for next round.').format(current_round, next_round_games), 'success')
             else:
                 flash(translate('Tournament completed! Final results are now available.'), 'success')
@@ -4083,11 +4229,15 @@ def create_next_round_games(event_id, classifications, round_number):
         c.player.us_name.lower()  # Alphabetical by name (A before C)
     ))
     
-    if len(sorted_classifications) != 16:
-        raise Exception(translate('Need exactly 16 players for Mexicano tournament'))
-    
+    num_courts_needed = len(event_courts)
+    expected_players = num_courts_needed * 4
+    if len(sorted_classifications) != expected_players:
+        raise Exception(translate('Need exactly {} players for this tournament. Have {}.').format(
+            expected_players, len(sorted_classifications)
+        ))
+
     # Get the start time for new games (14 minutes after the last round)
-    last_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart.desc()).limit(4).all()
+    last_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart.desc()).limit(num_courts_needed).all()
     if last_games:
         last_start_time = last_games[0].gm_timeStart
         # Convert to datetime, add 14 minutes, convert back to time
@@ -4114,16 +4264,12 @@ def create_next_round_games(event_id, classifications, round_number):
         raise Exception(translate('No gameday found for this event'))
     
     # Create pairings according to Mexicano rules:
-    # Court 1: 1st & 4th vs 2nd & 3rd
-    # Court 2: 5th & 8th vs 6th & 7th  
-    # Court 3: 9th & 12th vs 10th & 11th
-    # Court 4: 13th & 16th vs 14th & 15th
-    
+    # For each court k (0-based): positions 4k, 4k+3 vs 4k+1, 4k+2
+    # e.g. Court 0 (8p): 1st & 4th vs 2nd & 3rd
+    #      Court 0 (16p): same; Court 1: 5th & 8th vs 6th & 7th … etc.
     pairings = [
-        (0, 3, 1, 2),  # Court 1: 1st & 4th vs 2nd & 3rd (0-based indices)
-        (4, 7, 5, 6),  # Court 2: 5th & 8th vs 6th & 7th
-        (8, 11, 9, 10),  # Court 3: 9th & 12th vs 10th & 11th
-        (12, 15, 13, 14)  # Court 4: 13th & 16th vs 14th & 15th
+        (4 * k, 4 * k + 3, 4 * k + 1, 4 * k + 2)
+        for k in range(num_courts_needed)
     ]
     
     games_created = 0
@@ -5580,12 +5726,16 @@ def create_event_step2(event_id):
     
     # Calculate number of courts needed (max_players / 4)
     courts_needed = event.ev_max_players // 4
+
+    # Read preset pairing from session if set by the choose page
+    preset_pairing = session.pop(f'preset_pairing_{event_id}', '')
     
     return render_template('create_event_step2.html', 
                            user=current_user, 
                            event=event, 
                            courts_needed=courts_needed,
-                           club_name=club_name)
+                           club_name=club_name,
+                           preset_pairing=preset_pairing)
 
 @views.route('/create_event_step2/<int:event_id>', methods=['POST'])
 @login_required
