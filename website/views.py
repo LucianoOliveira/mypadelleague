@@ -343,7 +343,23 @@ def updateUser(userID):
     pass_user = Users.query.get_or_404(userID)
     user_Name = request.form.get('user_name')
     user_Email = request.form.get('user_email')
+    user_Telephone = request.form.get('user_telephone')
     user_birthday = request.form.get('user_birthday')
+
+    if user_Telephone:
+        user_Telephone = user_Telephone.strip()
+
+    if not user_Telephone:
+        flash(translate('Telephone number is required.'), 'error')
+        return render_template("user_info.html", user=current_user, p_user=pass_user)
+
+    existing_phone = Users.query.filter(
+        Users.us_telephone == user_Telephone,
+        Users.us_id != userID
+    ).first()
+    if existing_phone:
+        flash(translate('A user with this telephone number already exists!'), 'error')
+        return render_template("user_info.html", user=current_user, p_user=pass_user)
     
     # Convert empty string to None for birthday field
     if user_birthday == '':
@@ -386,8 +402,8 @@ def updateUser(userID):
     # Update User
     try:
         db.session.execute(
-        text(f"UPDATE tb_users SET us_name=:user_Name, us_email=:user_Email, us_birthday=:user_birthday, us_is_active=:user_is_active, us_is_player=:user_is_player, us_is_manager=:user_is_manager, us_is_admin=:user_is_admin, us_is_superuser=:user_is_superuser WHERE us_id=:user_id"),
-            {"user_Name": user_Name, "user_Email": user_Email, "user_id": user_id, "user_birthday": user_birthday, "user_is_active": user_is_active, "user_is_player": user_is_player, "user_is_manager": user_is_manager, "user_is_admin": user_is_admin, "user_is_superuser": user_is_superuser}
+        text(f"UPDATE tb_users SET us_name=:user_Name, us_email=:user_Email, us_telephone=:user_telephone, us_birthday=:user_birthday, us_is_active=:user_is_active, us_is_player=:user_is_player, us_is_manager=:user_is_manager, us_is_admin=:user_is_admin, us_is_superuser=:user_is_superuser WHERE us_id=:user_id"),
+            {"user_Name": user_Name, "user_Email": user_Email, "user_telephone": user_Telephone, "user_id": user_id, "user_birthday": user_birthday, "user_is_active": user_is_active, "user_is_player": user_is_player, "user_is_manager": user_is_manager, "user_is_admin": user_is_admin, "user_is_superuser": user_is_superuser}
         )
         db.session.commit()
     except Exception as e:
