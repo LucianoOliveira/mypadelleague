@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}{{ club.cl_name }}{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4>{{ translate('Club Information') }}</h4>
+            {% if user.is_authenticated and user.us_is_superuser %}
+                <a href="{{ url_for('views.edit_club', club_id=club.cl_id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fa fa-edit"></i> {{ translate('Edit Club') }}
+                </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="row gutters-sm">
+                <!-- Club Photo & Name -->
+                <div class="col-md-4 mb-3">
+                    <div class="text-center">
+                        <img src="{{ url_for('views.display_club_main_image', clubID=club.cl_id) }}"
+                             alt="{{ club.cl_name }}"
+                             class="rounded-circle mb-3"
+                             width="150" height="150"
+                             style="object-fit: cover;">
+                        <h4>{{ club.cl_name }}</h4>
+                        {% if club.cl_active %}
+                            <span class="badge badge-success">{{ translate('Active') }}</span>
+                        {% else %}
+                            <span class="badge badge-secondary">{{ translate('Inactive') }}</span>
+                        {% endif %}
+                    </div>
+
+                    {% if courts %}
+                    <div class="mt-4">
+                        <h6 class="text-muted text-uppercase mb-2">{{ translate('Courts') }}</h6>
+                        <ul class="list-group list-group-flush">
+                            {% for court in courts %}
+                            <li class="list-group-item px-0">
+                                <i class="fa fa-circle text-success mr-2" style="font-size:0.6rem;"></i>
+                                {{ court.ct_name }}
+                                <small class="text-muted ml-1">({{ court.ct_sport }})</small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Club Details -->
+                <div class="col-md-8">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <h6 class="mb-0">{{ translate('Club Name') }}</h6>
+                                </div>
+                                <div class="col-sm-9 text-secondary">
+                                    {{ club.cl_name }}
+                                </div>
+                            </div>
+
+                            {% if club.cl_email %}
+                            <hr>
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <h6 class="mb-0">{{ translate('Email') }}</h6>
+                                </div>
+                                <div class="col-sm-9 text-secondary">
+                                    <a href="mailto:{{ club.cl_email }}">{{ club.cl_email }}</a>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if club.cl_phone %}
+                            <hr>
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <h6 class="mb-0">{{ translate('Phone') }}</h6>
+                                </div>
+                                <div class="col-sm-9 text-secondary">
+                                    {{ club.cl_phone }}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if club.cl_address %}
+                            <hr>
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <h6 class="mb-0">{{ translate('Address') }}</h6>
+                                </div>
+                                <div class="col-sm-9 text-secondary">
+                                    {{ club.cl_address }}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if active_events %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">{{ translate('Events') }}</h6>
+                        </div>
+                        <div class="list-group list-group-flush">
+                            {% for event in active_events %}
+                            <a href="{{ url_for('views.detail_event', event_id=event.ev_id) }}"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ event.ev_title }}</strong>
+                                    <small class="d-block text-muted">{{ event.ev_date.strftime('%d %b %Y') }}</small>
+                                </div>
+                                {% if event.ev_status == 'event_ended' %}
+                                    <span class="badge badge-dark">{{ translate('Completed') }}</span>
+                                {% elif event.ev_status == 'event_started' %}
+                                    <span class="badge badge-info">{{ translate('In Progress') }}</span>
+                                {% elif event.ev_status == 'registration_started' %}
+                                    <span class="badge badge-success">{{ translate('Registration Open') }}</span>
+                                {% elif event.ev_status == 'registration_ended' %}
+                                    <span class="badge badge-warning">{{ translate('Registration Closed') }}</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ translate('Announced') }}</span>
+                                {% endif %}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

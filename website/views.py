@@ -260,7 +260,7 @@ def add_league_player(league_id):
 @views.route('/managementUsersSU', methods=['GET', 'POST'])
 @login_required
 def managementUsersSU():
-    result_data = Users.query.order_by(Users.us_id.desc()).all()
+    result_data = Users.query.order_by(Users.us_name.asc()).all()
     return render_template("managementUsersSU.html", user=current_user, result=result_data)
 
 @views.route('/managementUsersAdmin', methods=['GET', 'POST'])
@@ -1312,6 +1312,61 @@ def close_event(event_id):
         import traceback
         traceback.print_exc()
         flash(translate('Error closing event: {}').format(str(e)), 'error')
+    
+    return redirect(url_for('views.detail_event', event_id=event_id))
+
+@views.route('/close_mexicano/<int:event_id>', methods=['POST'])
+@login_required
+def close_mexicano(event_id):
+    """Close a Mexicano event - delete games without results, mark as completed"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Check authorization
+    user_is_authorized = False
+    if current_user.us_is_superuser == 1:
+        user_is_authorized = True
+    else:
+        is_public_event = event.ev_club_id == 2
+        if not is_public_event:
+            authorization = ClubAuthorization.query.filter_by(
+                ca_user_id=current_user.us_id, 
+                ca_club_id=event.ev_club_id
+            ).first()
+            user_is_authorized = authorization is not None
+    
+    if not user_is_authorized:
+        flash(translate('You are not authorized to close this event'), 'error')
+        return redirect(url_for('views.detail_event', event_id=event_id))
+    
+    try:
+        # Delete all games without results (either score is null)
+        games_without_results = Game.query.filter_by(gm_idEvent=event_id).filter(
+            db.or_(Game.gm_result_A == None, Game.gm_result_B == None)
+        ).all()
+        
+        deleted_count = len(games_without_results)
+        for game in games_without_results:
+            db.session.delete(game)
+        
+        # Recalculate classifications after deleting games
+        if deleted_count > 0:
+            calculate_event_classifications(event_id)
+        
+        # Mark event as completed
+        event.ev_status = 'event_ended'
+        
+        db.session.commit()
+        
+        if deleted_count > 0:
+            flash(translate('Mexicano closed successfully! {} unplayed game(s) removed.').format(deleted_count), 'success')
+        else:
+            flash(translate('Mexicano closed successfully!'), 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        traceback.print_exc()
+        flash(translate('Error closing Mexicano: {}').format(str(e)), 'error')
     
     return redirect(url_for('views.detail_event', event_id=event_id))
 
@@ -5199,6 +5254,96 @@ def search_users():
         return jsonify(results)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@views.route('/search', methods=['GET'])
+def search():
+    """Global search across users, events and clubs with fuzzy matching."""
+    import difflib
+
+    query = request.args.get('query', '').strip()
+    referrer = request.referrer or url_for('views.home')
+
+    if not query:
+        return redirect(referrer)
+
+    query_lower = query.lower()
+
+    def score(name):
+        """Return a match score: 1.0 for substring, difflib ratio otherwise."""
+        name_lower = name.lower()
+        if query_lower in name_lower:
+            # Prefer shorter names (closer to query length) for substring matches
+            return 1.0 - (len(name_lower) - len(query_lower)) * 0.001
+        return difflib.SequenceMatcher(None, query_lower, name_lower).ratio()
+
+    MIN_SCORE = 0.35
+    best_score = 0
+    best_type = None
+    best_obj = None
+
+    # --- Search events (available to all users) ---
+    events = Event.query.filter(Event.ev_status != 'canceled').all()
+    for ev in events:
+        s = score(ev.ev_title)
+        if s > best_score:
+            best_score = s
+            best_type = 'event'
+            best_obj = ev
+
+    # --- Search users and clubs only for authenticated users ---
+    if current_user.is_authenticated:
+        users = Users.query.filter(Users.us_is_active == True).all()
+        for u in users:
+            s = score(u.us_name)
+            if s > best_score:
+                best_score = s
+                best_type = 'user'
+                best_obj = u
+
+        clubs = Club.query.filter(Club.cl_active == True).all()
+        for cl in clubs:
+            s = score(cl.cl_name)
+            if s > best_score:
+                best_score = s
+                best_type = 'club'
+                best_obj = cl
+
+    if best_score < MIN_SCORE or best_obj is None:
+        flash(translate('No results found for "{}".').format(query), 'warning')
+        return redirect(referrer)
+
+    is_superuser = current_user.is_authenticated and current_user.us_is_superuser
+
+    if best_type == 'event':
+        return redirect(url_for('views.detail_event', event_id=best_obj.ev_id))
+
+    if best_type == 'user':
+        if is_superuser:
+            return redirect(url_for('views.editUser', user_id=best_obj.us_id))
+        return redirect(url_for('views.player_info', user_id=best_obj.us_id))
+
+    if best_type == 'club':
+        if is_superuser:
+            return redirect(url_for('views.edit_club', club_id=best_obj.cl_id))
+        return redirect(url_for('views.club_detail', club_id=best_obj.cl_id))
+
+    return redirect(referrer)
+
+
+@views.route('/club_detail/<int:club_id>', methods=['GET'])
+def club_detail(club_id):
+    """Public read-only view of a club's information."""
+    club = Club.query.get_or_404(club_id)
+    active_events = Event.query.filter_by(ev_club_id=club_id).filter(
+        Event.ev_status.notin_(['canceled'])
+    ).order_by(Event.ev_date.desc()).limit(10).all()
+    courts = club.courts
+    return render_template('club_detail.html',
+                           user=current_user,
+                           club=club,
+                           active_events=active_events,
+                           courts=courts)
+
 
 @views.route('/player_info/<int:user_id>', methods=['GET'])
 def player_info(user_id):
