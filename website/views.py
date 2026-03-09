@@ -504,6 +504,14 @@ def deleteUser(userID):
         
         # Delete user's ELO ranking data
         ELOranking.query.filter_by(pl_id=userID).delete()
+        ELOrankingHist.query.filter_by(el_pl_id=userID).delete()
+        
+        # Delete user's gameday player records
+        GameDayPlayer.query.filter_by(gp_idPlayer=userID).delete()
+        
+        # Delete user's event registrations and classifications
+        EventRegistration.query.filter_by(er_player_id=userID).delete()
+        EventClassification.query.filter_by(ec_player_id=userID).delete()
         
         # Delete user's club authorizations
         ClubAuthorization.query.filter_by(ca_user_id=userID).delete()
@@ -1954,10 +1962,18 @@ def create_event_final():
             # Create or find users for players and register them
             player_users = []
             for player_name in event_data['players']:
-                user = Users.query.filter(Users.us_name.ilike(player_name)).first()
+                user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+                if not user:
+                    # Try word-by-word match (e.g. "Luciano Oliveira" matches "Luciano \"Fugi\" Oliveira")
+                    words = [w for w in player_name.strip().split() if w]
+                    if words:
+                        q = Users.query
+                        for word in words:
+                            q = q.filter(Users.us_name.ilike(f'%{word}%'))
+                        user = q.first()
                 if not user:
                     user = Users(
-                        us_name=player_name,
+                        us_name=player_name.strip(),
                         us_email=f"{player_name.lower().replace(' ', '.')}@temp.event",
                         us_telephone=f"temp_{player_name.lower().replace(' ', '')}",
                         us_is_player=True,
@@ -2221,6 +2237,14 @@ def edit_event_public_step_register(event_id):
                 if not player_name or not player_name.strip():
                     return None
                 user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+                if not user:
+                    # Try word-by-word match (e.g. "Luciano Oliveira" matches "Luciano \"Fugi\" Oliveira")
+                    words = [w for w in player_name.strip().split() if w]
+                    if words:
+                        q = Users.query
+                        for word in words:
+                            q = q.filter(Users.us_name.ilike(f'%{word}%'))
+                        user = q.first()
                 if not user:
                     user = Users(
                         us_name=player_name.strip(),
@@ -2570,6 +2594,14 @@ def update_event_players_with_locking(event_id):
                 
             # Try to find existing user by name (case insensitive)
             user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+            if not user:
+                # Try word-by-word match (e.g. "Luciano Oliveira" matches "Luciano \"Fugi\" Oliveira")
+                words = [w for w in player_name.strip().split() if w]
+                if words:
+                    q = Users.query
+                    for word in words:
+                        q = q.filter(Users.us_name.ilike(f'%{word}%'))
+                    user = q.first()
             
             if not user:
                 # Create new user as player
@@ -3102,6 +3134,14 @@ def update_event_players(event_id):
                 
             # Try to find existing user by name (case insensitive)
             user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+            if not user:
+                # Try word-by-word match (e.g. "Luciano Oliveira" matches "Luciano \"Fugi\" Oliveira")
+                words = [w for w in player_name.strip().split() if w]
+                if words:
+                    q = Users.query
+                    for word in words:
+                        q = q.filter(Users.us_name.ilike(f'%{word}%'))
+                    user = q.first()
             
             if not user:
                 # Create new user as player
@@ -6083,6 +6123,14 @@ def complete_event_creation(event_id):
                 
             # Try to find existing user by name (case insensitive)
             user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+            if not user:
+                # Try word-by-word match (e.g. "Luciano Oliveira" matches "Luciano \"Fugi\" Oliveira")
+                words = [w for w in player_name.strip().split() if w]
+                if words:
+                    q = Users.query
+                    for word in words:
+                        q = q.filter(Users.us_name.ilike(f'%{word}%'))
+                    user = q.first()
             
             if not user:
                 # Create new user as player
