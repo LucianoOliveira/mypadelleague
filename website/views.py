@@ -2483,6 +2483,12 @@ def edit_event(event_id):
             flash(translate('You are not authorized to edit this event'), 'error')
             return redirect(url_for('views.managementEvents'))
 
+    # Check if event can be deleted (no games with results)
+    event_games = Game.query.filter_by(gm_idEvent=event_id).all()
+    games_with_results = [g for g in event_games if g.gm_result_A is not None or g.gm_result_B is not None]
+    can_delete_event = len(games_with_results) == 0
+    delete_message = '' if can_delete_event else translate('Cannot delete event with completed games')
+
     # Get data needed for the template
     if current_user.us_is_superuser == 1:
         authorized_clubs = Club.query.filter_by(cl_active=True).all()
@@ -2639,7 +2645,9 @@ def edit_event(event_id):
                          courts=all_courts,
                          existing_event_courts=existing_event_courts,
                          event_types=event_types,
-                         player_data=player_data)
+                         player_data=player_data,
+                         can_delete_event=can_delete_event,
+                         delete_message=delete_message)
 
 def update_event_players_with_locking(event_id):
     """Update event players with pair locking functionality"""
@@ -2887,28 +2895,33 @@ def edit_event_step1(event_id):
 
     # Get access code from session if editing public event
     access_code = session.get(f'event_{event_id}_access_code', '')
-    
-    return render_template("edit_event_step1.html", user=current_user, event=event, clubs=authorized_clubs, access_code=access_code)
+
+    # Check if event can be deleted (no games with results)
+    event_games_all = Game.query.filter_by(gm_idEvent=event_id).all()
+    games_with_results = [g for g in event_games_all if g.gm_result_A is not None or g.gm_result_B is not None]
+    can_delete_event = len(games_with_results) == 0
+    delete_message = '' if can_delete_event else translate('Cannot delete event with completed games')
+
+    return render_template("edit_event_step1.html", user=current_user, event=event, clubs=authorized_clubs, access_code=access_code,
+                           can_delete_event=can_delete_event, delete_message=delete_message)
 
 @views.route('/delete_event/<int:event_id>', methods=['POST'])
 @login_or_access_code_required
 def delete_event(event_id):
     """Delete an event and all its related data (admin/superuser only)"""
     
-    # Check if user is authenticated and has admin/superuser permissions
-    if not current_user.is_authenticated or (not current_user.us_is_superuser and not current_user.us_is_admin):
+    if not current_user.is_authenticated:
         flash(translate('You do not have permission to delete events.'), 'error')
         return redirect(url_for('views.detail_event', event_id=event_id))
-    
+
     event = Event.query.get_or_404(event_id)
-    
-    # Double-check authorization for regular admins if event is not from public club
-    if not current_user.us_is_superuser and event.ev_club_id != 2:  # Not superuser and not public event
+
+    # Superusers can delete anything; others must be authorized for the event's club
+    if not current_user.us_is_superuser:
         authorization = ClubAuthorization.query.filter_by(
-            ca_user_id=current_user.us_id, 
+            ca_user_id=current_user.us_id,
             ca_club_id=event.ev_club_id
         ).first()
-        
         if not authorization:
             flash(translate('You are not authorized to delete this event'), 'error')
             return redirect(url_for('views.detail_event', event_id=event_id))
@@ -4545,7 +4558,7 @@ def hide_event(event_id):
         db.session.rollback()
         flash(translate('Error updating event status'), category='error')
     
-    return redirect(url_for('views.edit_event', event_id=event_id))
+    return redirect(url_for('views.edit_event_step1', event_id=event_id))
 
 # League management routes
 @views.route('/managementLeagues', methods=['GET', 'POST'])
