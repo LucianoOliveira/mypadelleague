@@ -3593,6 +3593,10 @@ def create_games_for_event(event_id):
             db.session.add(game)
     
     # Create initial classification records for all players (0 points)
+    # Always wipe existing ones first to avoid UNIQUE constraint violations on re-creation
+    EventClassification.query.filter_by(ec_event_id=event_id).delete()
+    GameDayClassification.query.filter_by(gc_idGameDay=dummy_gameday.gd_id).delete()
+
     for registration in registrations:
         # Create EventClassification for overall event results
         event_classification = EventClassification(
@@ -6096,7 +6100,8 @@ def complete_event_creation(event_id):
                             epn_event_id=event.ev_id,
                             epn_player_name=player_name.strip(),
                             epn_position_type='random',
-                            epn_position_index=i
+                            epn_position_index=i,
+                            epn_created_by_id=creator_user_id
                         )
                         db.session.add(player_record)
                         
@@ -6126,7 +6131,8 @@ def complete_event_creation(event_id):
                             epn_position_type='team',
                             epn_team_identifier=team_letter,
                             epn_team_position=1,
-                            epn_position_index=team_idx
+                            epn_position_index=team_idx,
+                            epn_created_by_id=creator_user_id
                         )
                         db.session.add(player_record)
                         
@@ -6150,7 +6156,8 @@ def complete_event_creation(event_id):
                             epn_position_type='team',
                             epn_team_identifier=team_letter,
                             epn_team_position=2,
-                            epn_position_index=team_idx
+                            epn_position_index=team_idx,
+                            epn_created_by_id=creator_user_id
                         )
                         db.session.add(player_record)
                         
@@ -6177,7 +6184,8 @@ def complete_event_creation(event_id):
                             epn_event_id=event.ev_id,
                             epn_player_name=left_player.strip(),
                             epn_position_type='left',
-                            epn_position_index=i
+                            epn_position_index=i,
+                            epn_created_by_id=creator_user_id
                         )
                         db.session.add(player_record)
                         
@@ -6200,7 +6208,8 @@ def complete_event_creation(event_id):
                             epn_event_id=event.ev_id,
                             epn_player_name=right_player.strip(),
                             epn_position_type='right',
-                            epn_position_index=i
+                            epn_position_index=i,
+                            epn_created_by_id=creator_user_id
                         )
                         db.session.add(player_record)
                         
