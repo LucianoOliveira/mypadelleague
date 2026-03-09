@@ -5786,6 +5786,19 @@ def player_info(user_id):
                          rankingELO_histShort=rankingELO_histShort)
 
 
+@views.route('/elo_ranking', methods=['GET'])
+@login_required
+def elo_ranking():
+    """Public ELO ranking leaderboard for players"""
+    rankings = db.session.query(ELOranking).join(
+        Users, ELOranking.pl_id == Users.us_id
+    ).filter(
+        Users.us_is_player == 1,
+        Users.us_is_active == 1
+    ).order_by(ELOranking.pl_rankingNow.desc()).all()
+    return render_template('elo_ranking.html', user=current_user, rankings=rankings)
+
+
 @views.route('/recalculate_ELO_full', methods=['GET', 'POST'])
 @login_required
 def recalculate_ELO_full():
