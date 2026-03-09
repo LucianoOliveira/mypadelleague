@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}{{ club.cl_name }}{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+
+    <!-- Club Header Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <img src="{{ url_for('views.display_club_main_image', clubID=club.cl_id) }}"
+                         alt="{{ club.cl_name }}"
+                         class="rounded-circle"
+                         width="100" height="100"
+                         style="object-fit: cover; border: 3px solid #eee;">
+                </div>
+                <div class="col">
+                    <h3 class="mb-1">{{ club.cl_name }}</h3>
+                    <div class="mb-1">
+                        {% if club.cl_active %}
+                            <span class="badge badge-success">{{ translate('Active') }}</span>
+                        {% else %}
+                            <span class="badge badge-secondary">{{ translate('Inactive') }}</span>
+                        {% endif %}
+                    </div>
+                    {% if club.cl_address %}
+                        <small class="text-muted"><i class="zmdi zmdi-pin zmdi-hc-fw"></i> {{ club.cl_address }}</small>
+                    {% endif %}
+                </div>
+                <div class="col-md-4 text-md-right mt-3 mt-md-0">
+                    {% if club.cl_phone %}
+                        <div><i class="zmdi zmdi-phone zmdi-hc-fw text-muted"></i> <span>{{ club.cl_phone }}</span></div>
+                    {% endif %}
+                    {% if club.cl_email %}
+                        <div><i class="zmdi zmdi-email zmdi-hc-fw text-muted"></i> <a href="mailto:{{ club.cl_email }}">{{ club.cl_email }}</a></div>
+                    {% endif %}
+                    {% if courts %}
+                        <div class="mt-2">
+                            <i class="zmdi zmdi-grid zmdi-hc-fw text-muted"></i>
+                            {% for court in courts %}<span class="badge badge-light">{{ court.ct_name }}</span> {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if user.is_authenticated and user.us_is_superuser %}
+                        <a href="{{ url_for('views.edit_club', club_id=club.cl_id) }}" class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="fa fa-edit"></i> {{ translate('Edit Club') }}
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Events Tabs -->
+    <div class="row px-2 mt-2">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="clubEventsTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="active-tab" data-toggle="tab" href="#active" role="tab">
+                        {{ translate('Active Events') }} <span class="badge badge-primary">{{ active_events|length }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="past-tab" data-toggle="tab" href="#past" role="tab">
+                        {{ translate('Past Events') }} <span class="badge badge-secondary">{{ past_events|length }}</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tab-content mt-3" id="clubEventsTabContent">
+
+        <!-- Active Events -->
+        <div class="tab-pane fade show active" id="active" role="tabpanel">
+            <div class="row justify-content-center">
+                {% if active_events %}
+                    {% for event in active_events %}
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
+                        <a href="{{ url_for('views.detail_event', event_id=event.ev_id) }}" class="card h-100 text-decoration-none">
+                            <div class="card-img-top position-relative bg-primary d-flex align-items-center justify-content-center" style="height: 160px;">
+                                {% if event.event_type and event.event_type.et_name == 'NonStop' %}
+                                    <div class="text-center text-white">
+                                        <i class="zmdi zmdi-refresh zmdi-hc-3x mb-2"></i>
+                                        <div class="badge badge-light">{{ translate('Non-Stop') }}</div>
+                                    </div>
+                                {% elif event.event_type and event.event_type.et_name == 'Americano' %}
+                                    <div class="text-center text-white">
+                                        <i class="zmdi zmdi-shuffle zmdi-hc-3x mb-2"></i>
+                                        <div class="badge badge-light">{{ translate('Americano') }}</div>
+                                    </div>
+                                {% elif event.event_type and event.event_type.et_name == 'Mexicano' %}
+                                    <div class="text-center text-white">
+                                        <i class="zmdi zmdi-trending-up zmdi-hc-3x mb-2"></i>
+                                        <div class="badge badge-light">{{ translate('Mexicano') }}</div>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center text-white">
+                                        <i class="zmdi zmdi-calendar-note zmdi-hc-3x mb-2"></i>
+                                        <div class="badge badge-light">{{ event.event_type.et_name if event.event_type else '' }}</div>
+                                    </div>
+                                {% endif %}
+                                <img src="{{ url_for('views.display_club_main_image', clubID=event.ev_club_id) }}"
+                                     alt="Club logo"
+                                     class="position-absolute"
+                                     style="bottom: -25px; left: 50%; transform: translateX(-50%); width: 50px; height: 50px; border-radius: 50%; border: 3px solid #fff;">
+                            </div>
+                            <div class="card-body pt-4 text-center">
+                                <h6 class="card-title">{{ event.ev_title }}</h6>
+                                <div class="mb-1">
+                                    <small class="text-muted"><i class="zmdi zmdi-calendar zmdi-hc-fw"></i> {{ event.ev_date.strftime('%d %b %Y') }}</small>
+                                </div>
+                                {% if event.ev_start_time %}
+                                <div class="mb-1">
+                                    <small class="text-muted"><i class="zmdi zmdi-time zmdi-hc-fw"></i> {{ event.ev_start_time.strftime('%H:%M') }}</small>
+                                </div>
+                                {% endif %}
+                                {% if event.ev_location %}
+                                <div class="mb-1">
+                                    <small class="text-muted"><i class="zmdi zmdi-pin zmdi-hc-fw"></i> {{ event.ev_location }}</small>
+                                </div>
+                                {% endif %}
+                                <div class="mt-2">
+                                    {% if event.ev_status == 'announced' %}
+                                        <span class="badge badge-secondary">{{ translate('Announced') }}</span>
+                                    {% elif event.ev_status == 'registration_started' %}
+                                        <span class="badge badge-success">{{ translate('Registration Open') }}</span>
+                                    {% elif event.ev_status == 'registration_ended' %}
+                                        <span class="badge badge-warning">{{ translate('Registration Closed') }}</span>
+                                    {% elif event.ev_status == 'event_started' %}
+                                        <span class="badge badge-info">{{ translate('In Progress') }}</span>
+                                    {% else %}
+                                        <span class="badge badge-light">{{ event.ev_status }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if event.ev_max_players %}
+                                <div class="mt-1">
+                                    <small class="text-muted">
+                                        <i class="zmdi zmdi-accounts zmdi-hc-fw"></i>
+                                        {{ event.registrations|length if event.registrations else 0 }} / {{ event.ev_max_players }} {{ translate('players') }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center py-5">
+                        <i class="zmdi zmdi-calendar-note zmdi-hc-5x text-muted mb-3"></i>
+                        <p class="text-muted">{{ translate('No active events available') }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Past Events -->
+        <div class="tab-pane fade" id="past" role="tabpanel">
+            <div class="row justify-content-center">
+                {% if past_events %}
+                    {% for event in past_events %}
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
+                        <a href="{{ url_for('views.detail_event', event_id=event.ev_id) }}" class="card h-100 text-decoration-none" style="opacity: 0.8;">
+                            <div class="card-img-top position-relative bg-secondary d-flex align-items-center justify-content-center" style="height: 160px;">
+                                {% if event.event_type and event.event_type.et_name == 'NonStop' %}
+                                    <div class="text-center text-white">
+                                        <i class="zmdi zmdi-refresh zmdi-hc-3x mb-2"></i>
+                                        <div class="badge badge-light">{{ translate('Non-Stop') }}</div>
+                                    </div>
+                                {% elif event.event_type and event.event_type.et_name == 'Americano' %}
+                                    <div class="text-center text-white">
+                                        <i class="zmdi zmdi-shuffle zmdi-hc-3x mb-2"></i>
+                                        <div class="badge badge-light">{{ translate('Americano') }}</div>
+                                    </div>
+                                {% elif event.event_type and event.event_type.et_name == 'Mexicano' %}
+                                    <div class="text-center text-white">
+                                        <i class="zmdi zmdi-trending-up zmdi-hc-3x mb-2"></i>
+                                        <div class="badge badge-light">{{ translate('Mexicano') }}</div>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center text-white">
+                                        <i class="zmdi zmdi-calendar-note zmdi-hc-3x mb-2"></i>
+                                        <div class="badge badge-light">{{ event.event_type.et_name if event.event_type else '' }}</div>
+                                    </div>
+                                {% endif %}
+                                <img src="{{ url_for('views.display_club_main_image', clubID=event.ev_club_id) }}"
+                                     alt="Club logo"
+                                     class="position-absolute"
+                                     style="bottom: -25px; left: 50%; transform: translateX(-50%); width: 50px; height: 50px; border-radius: 50%; border: 3px solid #fff;">
+                            </div>
+                            <div class="card-body pt-4 text-center">
+                                <h6 class="card-title">{{ event.ev_title }}</h6>
+                                <div class="mb-1">
+                                    <small class="text-muted"><i class="zmdi zmdi-calendar zmdi-hc-fw"></i> {{ event.ev_date.strftime('%d %b %Y') }}</small>
+                                </div>
+                                {% if event.ev_start_time %}
+                                <div class="mb-1">
+                                    <small class="text-muted"><i class="zmdi zmdi-time zmdi-hc-fw"></i> {{ event.ev_start_time.strftime('%H:%M') }}</small>
+                                </div>
+                                {% endif %}
+                                <div class="mt-2">
+                                    <span class="badge badge-dark">{{ translate('Completed') }}</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center py-5">
+                        <i class="zmdi zmdi-calendar-check zmdi-hc-5x text-muted mb-3"></i>
+                        <p class="text-muted">{{ translate('No past events') }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

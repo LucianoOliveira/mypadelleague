@@ -700,6 +700,23 @@
 </div>
 {% endif %}
 
+<!-- Close Mexicano Button -->
+{% if user_is_authorized and event.event_type and event.event_type.et_name == 'Mexicano' and event.ev_status != 'event_ended' %}
+<div class="container mt-4 mb-2">
+    <div class="row">
+        <div class="col-12 text-center">
+            <form action="{{ url_for('views.close_mexicano', event_id=event.ev_id) }}" method="POST" class="d-inline"
+                  onsubmit="return confirm('{{ translate("Close this Mexicano? This will delete all unplayed games and mark the event as completed. This action cannot be undone.") }}')">
+                <button type="submit" class="btn btn-warning btn-lg">
+                    <i class="fa fa-flag-checkered mr-2"></i>
+                    {{ translate('Close Mexicano') }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- TV View Access Button -->
 <div class="container mt-4 mb-4 d-none d-md-block">
     <div class="row">
