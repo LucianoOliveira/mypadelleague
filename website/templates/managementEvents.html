@@ -6,7 +6,7 @@
         <div class="card-header">
             <h4>{{ translate('Manage Events') }}</h4>
             <div class="d-flex justify-content-end">
-                <a href="/create_event" class="btn btn-light px-5"><i class="icon-plus"></i> {{ translate('Create Event') }}</a>
+                <a href="{{ url_for('views.create_event_choose') }}" class="btn btn-light px-5"><i class="icon-plus"></i> {{ translate('Create Event') }}</a>
             </div>
         </div>
         <div class="card-body">
