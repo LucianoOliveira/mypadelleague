@@ -5290,23 +5290,23 @@ def search():
             best_type = 'event'
             best_obj = ev
 
-    # --- Search users and clubs only for authenticated users ---
-    if current_user.is_authenticated:
-        users = Users.query.filter(Users.us_is_active == True).all()
-        for u in users:
-            s = score(u.us_name)
-            if s > best_score:
-                best_score = s
-                best_type = 'user'
-                best_obj = u
+    # --- Search users/players (available to all users including anonymous) ---
+    users = Users.query.filter(Users.us_is_active == True).all()
+    for u in users:
+        s = score(u.us_name)
+        if s > best_score:
+            best_score = s
+            best_type = 'user'
+            best_obj = u
 
-        clubs = Club.query.filter(Club.cl_active == True).all()
-        for cl in clubs:
-            s = score(cl.cl_name)
-            if s > best_score:
-                best_score = s
-                best_type = 'club'
-                best_obj = cl
+    # --- Search clubs (available to all users including anonymous) ---
+    clubs = Club.query.filter(Club.cl_active == True).all()
+    for cl in clubs:
+        s = score(cl.cl_name)
+        if s > best_score:
+            best_score = s
+            best_type = 'club'
+            best_obj = cl
 
     if best_score < MIN_SCORE or best_obj is None:
         flash(translate('No results found for "{}".').format(query), 'warning')
@@ -5320,7 +5320,7 @@ def search():
     if best_type == 'user':
         if is_superuser:
             return redirect(url_for('views.editUser', user_id=best_obj.us_id))
-        return redirect(url_for('views.player_info', user_id=best_obj.us_id))
+        return redirect(url_for('views.player_profile', user_id=best_obj.us_id))
 
     if best_type == 'club':
         if is_superuser:
@@ -5335,14 +5335,91 @@ def club_detail(club_id):
     """Public read-only view of a club's information."""
     club = Club.query.get_or_404(club_id)
     active_events = Event.query.filter_by(ev_club_id=club_id).filter(
-        Event.ev_status.notin_(['canceled'])
-    ).order_by(Event.ev_date.desc()).limit(10).all()
+        Event.ev_status.notin_(['canceled', 'event_ended'])
+    ).order_by(Event.ev_date.desc()).all()
+    past_events = Event.query.filter_by(ev_club_id=club_id).filter(
+        Event.ev_status == 'event_ended'
+    ).order_by(Event.ev_date.desc()).all()
     courts = club.courts
     return render_template('club_detail.html',
                            user=current_user,
                            club=club,
                            active_events=active_events,
+                           past_events=past_events,
                            courts=courts)
+
+
+@views.route('/player_profile/<int:user_id>', methods=['GET'])
+def player_profile(user_id):
+    """Public read-only player profile with basic info and game history."""
+    p_user = Users.query.get_or_404(user_id)
+
+    # Fetch all games involving this player with results, newest first
+    games_raw = Game.query.filter(
+        db.or_(
+            Game.gm_idPlayer_A1 == user_id,
+            Game.gm_idPlayer_A2 == user_id,
+            Game.gm_idPlayer_B1 == user_id,
+            Game.gm_idPlayer_B2 == user_id,
+        ),
+        Game.gm_result_A != None,
+        Game.gm_result_B != None,
+    ).order_by(Game.gm_date.desc(), Game.gm_timeStart.desc()).all()
+
+    def pname(u):
+        return u.us_name if u else '?'
+
+    def pid(u):
+        return u.us_id if u else None
+
+    games = []
+    total = 0
+    wins = 0
+    for g in games_raw:
+        on_team_a = g.gm_idPlayer_A1 == user_id or g.gm_idPlayer_A2 == user_id
+        won = (g.gm_result_A > g.gm_result_B) if on_team_a else (g.gm_result_B > g.gm_result_A)
+        draw = g.gm_result_A == g.gm_result_B
+        total += 1
+        if won:
+            wins += 1
+
+        games.append({
+            'date': g.gm_date,
+            'time_start': g.gm_timeStart,
+            'time_end': g.gm_timeEnd,
+            'event_id': g.gm_idEvent,
+            'court': g.court.ct_name if g.court else None,
+            'won': won,
+            'draw': draw,
+            'team_a': {
+                'players': [
+                    {'id': pid(g.player_A1), 'name': pname(g.player_A1)},
+                    {'id': pid(g.player_A2), 'name': pname(g.player_A2)},
+                ],
+                'score': g.gm_result_A,
+                'is_mine': on_team_a,
+            },
+            'team_b': {
+                'players': [
+                    {'id': pid(g.player_B1), 'name': pname(g.player_B1)},
+                    {'id': pid(g.player_B2), 'name': pname(g.player_B2)},
+                ],
+                'score': g.gm_result_B,
+                'is_mine': not on_team_a,
+            },
+        })
+
+    losses = total - wins
+    win_rate = round(wins * 100 / total) if total else 0
+
+    return render_template('player_profile.html',
+                           user=current_user,
+                           p_user=p_user,
+                           games=games,
+                           total=total,
+                           wins=wins,
+                           losses=losses,
+                           win_rate=win_rate)
 
 
 @views.route('/player_info/<int:user_id>', methods=['GET'])
