@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_, func, cast, String, text, desc, case, literal_column
 from flask import render_template, Blueprint
 from website import db
-from website.models import League, Club, Users, GameDay, GameDayPlayer, Game, LeagueClassification, GameDayClassification, ELOranking, ELOrankingHist, LeagueCourts
+from website.models import League, Club, Users, GameDay, GameDayPlayer, Game, LeagueClassification, GameDayClassification, ELOranking, ELOrankingHist, LeagueCourts, Event
 from PIL import Image
 from datetime import datetime, date, timedelta
 
@@ -583,6 +583,97 @@ def func_calculate_ELO_parcial():
         print("Error99:", e)
 
     #print("Print from end of ELO calc")
+
+
+def func_calculate_ELO_by_club(club_id):
+    """Calculate ELO rankings for all players at a specific club, computed from
+    scratch in chronological order. Each player starts at 1000 when first seen.
+    K = ev_max_players * 2.5 per game (consistent with lg_eloK convention).
+    Returns a list of dicts sorted by rankingNow desc."""
+    games = (
+        db.session.query(Game)
+        .join(Event, Game.gm_idEvent == Event.ev_id)
+        .filter(
+            Event.ev_club_id == club_id,
+            Event.ev_exclude_from_elo != True,
+            Game.gm_result_A != None,
+            Game.gm_result_B != None,
+            Game.gm_idPlayer_A1 != None,
+            Game.gm_idPlayer_A2 != None,
+            Game.gm_idPlayer_B1 != None,
+            Game.gm_idPlayer_B2 != None,
+        )
+        .order_by(Game.gm_date.asc(), Game.gm_timeStart.asc())
+        .all()
+    )
+
+    elo = {}  # player_id -> {'rankingNow', 'wins', 'losses', 'totalGames'}
+
+    def ensure(pid):
+        if pid not in elo:
+            elo[pid] = {'rankingNow': 1000.0, 'wins': 0, 'losses': 0, 'totalGames': 0}
+
+    for game in games:
+        A1, A2, B1, B2 = (
+            game.gm_idPlayer_A1,
+            game.gm_idPlayer_A2,
+            game.gm_idPlayer_B1,
+            game.gm_idPlayer_B2,
+        )
+        for pid in (A1, A2, B1, B2):
+            ensure(pid)
+
+        rA1, rA2 = elo[A1]['rankingNow'], elo[A2]['rankingNow']
+        rB1, rB2 = elo[B1]['rankingNow'], elo[B2]['rankingNow']
+        team_A_avg = (rA1 + rA2) / 2.0
+        team_B_avg = (rB1 + rB2) / 2.0
+
+        score_A, score_B = game.gm_result_A, game.gm_result_B
+        if score_A == 0 and score_B == 0:
+            continue  # Skip 0-0 games
+
+        # Use the league's eloK when explicitly set; fall back to ev_max_players * 2.5
+        # for new-format games stored under the generic "Event System" league (eloK=None).
+        league_k = game.league.lg_eloK if game.league and game.league.lg_eloK else None
+        K = league_k if league_k else (game.event.ev_max_players or 16) * 2.5
+
+        if score_A > score_B:
+            outcome_A, outcome_B = 1, 0
+        elif score_B > score_A:
+            outcome_A, outcome_B = 0, 1
+        else:
+            outcome_A, outcome_B = 0.5, 0.5
+
+        for pid, r, opp_avg, outcome in (
+            (A1, rA1, team_B_avg, outcome_A),
+            (A2, rA2, team_B_avg, outcome_A),
+            (B1, rB1, team_A_avg, outcome_B),
+            (B2, rB2, team_A_avg, outcome_B),
+        ):
+            E = 1.0 / (1.0 + 10.0 ** ((opp_avg - r) / 400.0))
+            delta = K * (outcome - E)
+            elo[pid]['rankingNow'] += delta
+            elo[pid]['totalGames'] += 1
+            if outcome == 1:
+                elo[pid]['wins'] += 1
+            elif outcome == 0:
+                elo[pid]['losses'] += 1
+
+    result = []
+    for player_id, stats in elo.items():
+        player = Users.query.get(player_id)
+        if player and player.us_is_player == 1 and player.us_is_active == 1 and not player.us_hide_from_elo:
+            result.append({
+                'player': player,
+                'rankingNow': stats['rankingNow'],
+                'wins': stats['wins'],
+                'losses': stats['losses'],
+                'totalGames': stats['totalGames'],
+            })
+
+    result.sort(key=lambda x: x['rankingNow'], reverse=True)
+    return result
+
 
 def func_create_gameday_games(league_id, gameday_id):
     """Helper function to create games for a gameday

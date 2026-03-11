@@ -54,7 +54,7 @@
                                    id="court_name_{{ i }}" 
                                    name="court_name_{{ i }}" 
                                    placeholder="{{ translate('Enter court name') }}" 
-                                   value="Court {{ i + 1 }}"
+                                   value="{% if club_courts|length >= courts_needed %}{{ club_courts[i].ct_name }}{% else %}Court {{ i + 1 }}{% endif %}"
                                    required>
                         </div>
                         {% endfor %}

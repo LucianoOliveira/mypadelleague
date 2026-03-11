@@ -314,6 +314,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const regex = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
         return text.replace(regex, '<strong>$1</strong>');
     }
+
+    // Helper to escape values safely for use inside HTML attributes
+    function escapeAttr(str) {
+        return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
     
     playerInputs.forEach(function(input) {
         const inputId = input.id;
@@ -345,10 +350,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             users.forEach(function(user) {
                                 html += `
                                     <div class="suggestion-item p-2 text-white d-flex align-items-center" 
-                                         data-name="${user.name}"
+                                         data-name="${escapeAttr(user.name)}"
                                          style="cursor: pointer; background-color: #2d3245; white-space: nowrap; overflow: hidden;">
                                         <img src="/display_user_image/${user.id}" 
-                                             alt="${user.name}" 
+                                             alt="${escapeAttr(user.name)}" 
                                              class="rounded-circle mr-2" 
                                              width="32" 
                                              height="32" 

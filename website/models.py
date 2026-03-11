@@ -16,6 +16,7 @@ class Users(db.Model, UserMixin):
     us_is_admin = db.Column(db.Boolean, default=False)
     us_is_superuser = db.Column(db.Boolean, default=False)
     us_is_active = db.Column(db.Boolean, default=True)
+    us_hide_from_elo = db.Column(db.Boolean, default=False, nullable=False, server_default='0')
 
     def get_id(self):
         return str(self.us_id)
@@ -71,6 +72,19 @@ class ClubAuthorization(db.Model):
     club = db.relationship('Club', backref=db.backref('authorized_users', lazy=True))
 
     __table_args__ = (db.UniqueConstraint('ca_user_id', 'ca_club_id', name='uq_user_club'),)
+
+class PlayerClubNickname(db.Model):
+    """Stores a player's nickname within a specific club."""
+    __tablename__ = 'tb_player_nickname'
+    pcn_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    pcn_user_id = db.Column(db.Integer, db.ForeignKey('tb_users.us_id'), nullable=False)
+    pcn_club_id = db.Column(db.Integer, db.ForeignKey('tb_club.cl_id'), nullable=False)
+    pcn_nickname = db.Column(db.String(50), nullable=False)
+
+    user = db.relationship('Users', backref=db.backref('club_nicknames', lazy=True))
+    club = db.relationship('Club', backref=db.backref('player_nicknames', lazy=True))
+
+    __table_args__ = (db.UniqueConstraint('pcn_user_id', 'pcn_club_id', name='uq_player_club_nickname'),)
 
 class Court(db.Model):
     __tablename__ = 'tb_court'
@@ -455,6 +469,7 @@ class Event(db.Model):
     ev_winner2_id = db.Column(db.Integer, db.ForeignKey('tb_users.us_id', name='fk_event_winner2'), nullable=True)
     ev_created_by_id = db.Column(db.Integer, db.ForeignKey('tb_users.us_id', name='fk_event_created_by'), nullable=False)
     ev_created_at = db.Column(db.DateTime(timezone=True), default=func.now())
+    ev_exclude_from_elo = db.Column(db.Boolean, default=False, nullable=False, server_default='0')
 
     # Relationships
     club = db.relationship('Club', backref=db.backref('events', lazy=True))

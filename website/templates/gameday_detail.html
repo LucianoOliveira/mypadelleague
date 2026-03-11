@@ -251,7 +251,7 @@
                                             </div>
                                             <div class="player-names">
                                                 {% if game.player_A1 %}
-                                                    {{ game.player_A1.us_name }} / {{ game.player_A2.us_name }}
+                                                    {{ (nickname_map.get(game.player_A1.us_id) or game.player_A1.us_name) }} / {{ (nickname_map.get(game.player_A2.us_id) or game.player_A2.us_name) }}
                                                 {% else %}
                                                     -
                                                 {% endif %}
@@ -275,7 +275,7 @@
                                             </div>
                                             <div class="player-names">
                                                 {% if game.player_B1 %}
-                                                    {{ game.player_B1.us_name }} / {{ game.player_B2.us_name }}
+                                                    {{ (nickname_map.get(game.player_B1.us_id) or game.player_B1.us_name) }} / {{ (nickname_map.get(game.player_B2.us_id) or game.player_B2.us_name) }}
                                                 {% else %}
                                                     -
                                                 {% endif %}

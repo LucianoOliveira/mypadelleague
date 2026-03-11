@@ -5,73 +5,35 @@
     <div class="card">
         <div class="card-header">
             <h4><i class="fa fa-trophy mr-2"></i>{{ translate('ELO Ranking') }}</h4>
-            <p class="mb-0 text-muted">{{ translate('Player rankings based on match performance') }}</p>
+            <p class="mb-0 text-muted">{{ translate('Select a club to view its player rankings') }}</p>
         </div>
-        <div class="card-body p-0">
-            {% if rankings %}
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="thead-light">
-                        <tr>
-                            <th style="width:60px;" class="text-center">#</th>
-                            <th></th>
-                            <th>{{ translate('Player') }}</th>
-                            <th class="text-center">{{ translate('ELO') }}</th>
-                            <th class="text-center">{{ translate('Games') }}</th>
-                            <th class="text-center">{{ translate('Wins') }}</th>
-                            <th class="text-center">{{ translate('Losses') }}</th>
-                            <th class="text-center">{{ translate('Win %') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for r in rankings %}
-                        {% set pos = loop.index %}
-                        <tr {% if r.player.us_id == current_user.us_id %}class="table-primary font-weight-bold"{% endif %}>
-                            <td class="text-center align-middle">
-                                {% if pos == 1 %}
-                                    <span class="text-warning" style="font-size:1.3rem;"><i class="fa fa-trophy"></i></span>
-                                {% elif pos == 2 %}
-                                    <span class="text-secondary" style="font-size:1.1rem;"><i class="fa fa-trophy"></i></span>
-                                {% elif pos == 3 %}
-                                    <span style="color:#cd7f32;font-size:1.1rem;"><i class="fa fa-trophy"></i></span>
-                                {% else %}
-                                    <span class="text-muted">{{ pos }}</span>
+        <div class="card-body">
+            {% if clubs %}
+            <div class="row">
+                {% for club in clubs %}
+                <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
+                    <a href="{{ url_for('views.elo_club_ranking', club_id=club.cl_id) }}" class="text-decoration-none">
+                        <div class="card h-100 text-center" style="transition: box-shadow 0.2s; cursor: pointer;"
+                             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.18)'"
+                             onmouseout="this.style.boxShadow=''">
+                            <div class="card-body py-4">
+                                <img src="{{ url_for('views.display_club_main_image', clubID=club.cl_id) }}"
+                                     onerror="this.src='{{ url_for('static', filename='photos/clubs/nophoto.jpg') }}'"
+                                     class="rounded-circle mb-3"
+                                     width="72" height="72"
+                                     style="object-fit:cover; border: 3px solid #dee2e6;">
+                                <h5 class="card-title mb-1">{{ club.cl_name }}</h5>
+                                {% if club.cl_address %}
+                                    <small class="text-muted"><i class="zmdi zmdi-pin zmdi-hc-fw"></i> {{ club.cl_address }}</small>
                                 {% endif %}
-                            </td>
-                            <td class="align-middle" style="width:42px;">
-                                {% set photo_path = 'photos/users/' ~ r.player.us_id ~ '/main.jpg' %}
-                                <img src="{{ url_for('static', filename=photo_path) }}"
-                                     onerror="this.src='{{ url_for('static', filename='photos/users/default.jpg') }}'"
-                                     class="rounded-circle" width="36" height="36" style="object-fit:cover;">
-                            </td>
-                            <td class="align-middle">
-                                <a href="{{ url_for('views.player_profile', user_id=r.player.us_id) }}" class="text-dark">
-                                    {{ r.player.us_name }}
-                                </a>
-                            </td>
-                            <td class="text-center align-middle">
-                                <strong>{{ "%.0f"|format(r.pl_rankingNow) }}</strong>
-                            </td>
-                            <td class="text-center align-middle">{{ r.pl_totalGames }}</td>
-                            <td class="text-center align-middle text-success">{{ r.pl_wins }}</td>
-                            <td class="text-center align-middle text-danger">{{ r.pl_losses }}</td>
-                            <td class="text-center align-middle">
-                                {% if r.pl_totalGames > 0 %}
-                                {% set win_pct = (r.pl_wins / r.pl_totalGames * 100) %}
-                                <div class="progress" style="height:18px;min-width:60px;">
-                                    <div class="progress-bar {% if win_pct >= 60 %}bg-success{% elif win_pct >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
-                                         role="progressbar" style="width:{{ win_pct }}%">
-                                        {{ "%.0f"|format(win_pct) }}%
-                                    </div>
-                                </div>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            </div>
+                            <div class="card-footer">
+                                <span class="text-primary"><i class="fa fa-bar-chart mr-1"></i>{{ translate('View Ranking') }}</span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
             </div>
             {% else %}
             <div class="text-center py-5 text-muted">

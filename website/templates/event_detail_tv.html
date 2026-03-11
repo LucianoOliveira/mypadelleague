@@ -216,7 +216,7 @@
                                                 </div>
                                                 <div class="player-names flex-grow-1">
                                                     {% if game.player_A1 and game.player_A2 %}
-                                                        {{ game.player_A1.us_name }} / {{ game.player_A2.us_name }}
+                                                        {{ (nickname_map.get(game.player_A1.us_id) or game.player_A1.us_name) }} / {{ (nickname_map.get(game.player_A2.us_id) or game.player_A2.us_name) }}
                                                     {% else %}
                                                         {% set player_names = game_player_names.get(game.gm_id, {}) %}
                                                         {% if player_names.get('A1') and player_names.get('A2') %}
@@ -261,7 +261,7 @@
                                                 </div>
                                                 <div class="player-names flex-grow-1">
                                                     {% if game.player_B1 and game.player_B2 %}
-                                                        {{ game.player_B1.us_name }} / {{ game.player_B2.us_name }}
+                                                        {{ (nickname_map.get(game.player_B1.us_id) or game.player_B1.us_name) }} / {{ (nickname_map.get(game.player_B2.us_id) or game.player_B2.us_name) }}
                                                     {% else %}
                                                         {% set player_names = game_player_names.get(game.gm_id, {}) %}
                                                         {% if player_names.get('B1') and player_names.get('B2') %}
@@ -362,7 +362,7 @@
                                                         </div>
                                                         <div class="player-names flex-grow-1">
                                                             {% if game.player_A1 and game.player_A2 %}
-                                                                {{ game.player_A1.us_name }} / {{ game.player_A2.us_name }}
+                                                                {{ (nickname_map.get(game.player_A1.us_id) or game.player_A1.us_name) }} / {{ (nickname_map.get(game.player_A2.us_id) or game.player_A2.us_name) }}
                                                             {% else %}
                                                                 {% set player_names = game_player_names.get(game.gm_id, {}) %}
                                                                 {% if player_names.get('A1') and player_names.get('A2') %}
@@ -407,7 +407,7 @@
                                                         </div>
                                                         <div class="player-names flex-grow-1">
                                                             {% if game.player_B1 and game.player_B2 %}
-                                                                {{ game.player_B1.us_name }} / {{ game.player_B2.us_name }}
+                                                                {{ (nickname_map.get(game.player_B1.us_id) or game.player_B1.us_name) }} / {{ (nickname_map.get(game.player_B2.us_id) or game.player_B2.us_name) }}
                                                             {% else %}
                                                                 {% set player_names = game_player_names.get(game.gm_id, {}) %}
                                                                 {% if player_names.get('B1') and player_names.get('B2') %}
