@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ translate('ELO Ranking') }} - {{ config.TITLE }}{% endblock %}
+{% block content %}
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4><i class="fa fa-trophy mr-2"></i>{{ translate('ELO Ranking') }}</h4>
+            <p class="mb-0 text-muted">{{ translate('Select a club to view its player rankings') }}</p>
+        </div>
+        <div class="card-body">
+            {% if clubs %}
+            <div class="row">
+                {% for club in clubs %}
+                <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
+                    <a href="{{ url_for('views.elo_club_ranking', club_id=club.cl_id) }}" class="text-decoration-none">
+                        <div class="card h-100 text-center" style="transition: box-shadow 0.2s; cursor: pointer;"
+                             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.18)'"
+                             onmouseout="this.style.boxShadow=''">
+                            <div class="card-body py-4">
+                                <img src="{{ url_for('views.display_club_main_image', clubID=club.cl_id) }}"
+                                     onerror="this.src='{{ url_for('static', filename='photos/clubs/nophoto.jpg') }}'"
+                                     class="rounded-circle mb-3"
+                                     width="72" height="72"
+                                     style="object-fit:cover; border: 3px solid #dee2e6;">
+                                <h5 class="card-title mb-1">{{ club.cl_name }}</h5>
+                                {% if club.cl_address %}
+                                    <small class="text-muted"><i class="zmdi zmdi-pin zmdi-hc-fw"></i> {{ club.cl_address }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="card-footer">
+                                <span class="text-primary"><i class="fa fa-bar-chart mr-1"></i>{{ translate('View Ranking') }}</span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fa fa-trophy fa-3x mb-3"></i>
+                <p>{{ translate('No ranking data available yet.') }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

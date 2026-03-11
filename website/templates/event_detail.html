@@ -40,6 +40,13 @@
                             <!-- Edit button only for superusers or admin users with club authorization -->
                             {% if current_user.is_authenticated and user_is_authorized %}
                                 <div class="btn-group btn-group-sm" role="group">
+                                    {% if current_user.us_is_superuser == 1 %}
+                                        <form action="{{ url_for('views.toggle_event_elo', event_id=event.ev_id) }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if event.ev_exclude_from_elo %}btn-warning{% else %}btn-outline-secondary{% endif %}" title="{% if event.ev_exclude_from_elo %}{{ translate('Excluded from ELO — click to include') }}{% else %}{{ translate('Included in ELO — click to exclude') }}{% endif %}">
+                                                <i class="fa fa-bar-chart"></i> {% if event.ev_exclude_from_elo %}<s>ELO</s>{% else %}ELO{% endif %}
+                                            </button>
+                                        </form>
+                                    {% endif %}
                                     {% if event.ev_status != 'event_ended' %}
                                         <a href="{{ url_for('views.edit_event_step1', event_id=event.ev_id) }}" class="btn btn-outline-primary" title="{{ translate('Edit Event') }}">
                                             <i class="fa fa-edit"></i> <span class="d-none d-lg-inline">{{ translate('Edit Event') }}</span>
@@ -291,7 +298,7 @@
                                                         </div>
                                                         <div class="player-names flex-grow-1">
                                                             {% if game.player_A1 and game.player_A2 %}
-                                                                {{ game.player_A1.us_name }} / {{ game.player_A2.us_name }}
+                                                                {{ (nickname_map.get(game.player_A1.us_id) or game.player_A1.us_name) }} / {{ (nickname_map.get(game.player_A2.us_id) or game.player_A2.us_name) }}
                                                             {% else %}
                                                                 {% set player_names = game_player_names.get(game.gm_id, {}) %}
                                                                 {% if player_names.get('A1') and player_names.get('A2') %}
@@ -339,7 +346,7 @@
                                                         </div>
                                                         <div class="player-names flex-grow-1">
                                                             {% if game.player_B1 and game.player_B2 %}
-                                                                {{ game.player_B1.us_name }} / {{ game.player_B2.us_name }}
+                                                                {{ (nickname_map.get(game.player_B1.us_id) or game.player_B1.us_name) }} / {{ (nickname_map.get(game.player_B2.us_id) or game.player_B2.us_name) }}
                                                             {% else %}
                                                                 {% set player_names = game_player_names.get(game.gm_id, {}) %}
                                                                 {% if player_names.get('B1') and player_names.get('B2') %}
@@ -445,7 +452,7 @@
                                                         </div>
                                                         <div class="player-names flex-grow-1">
                                                             {% if game.player_A1 and game.player_A2 %}
-                                                                {{ game.player_A1.us_name }} / {{ game.player_A2.us_name }}
+                                                                {{ (nickname_map.get(game.player_A1.us_id) or game.player_A1.us_name) }} / {{ (nickname_map.get(game.player_A2.us_id) or game.player_A2.us_name) }}
                                                             {% else %}
                                                                 {% set player_names = game_player_names.get(game.gm_id, {}) %}
                                                                 {% if player_names.get('A1') and player_names.get('A2') %}
@@ -490,7 +497,7 @@
                                                         </div>
                                                         <div class="player-names flex-grow-1">
                                                             {% if game.player_B1 and game.player_B2 %}
-                                                                {{ game.player_B1.us_name }} / {{ game.player_B2.us_name }}
+                                                                {{ (nickname_map.get(game.player_B1.us_id) or game.player_B1.us_name) }} / {{ (nickname_map.get(game.player_B2.us_id) or game.player_B2.us_name) }}
                                                             {% else %}
                                                                 {% set player_names = game_player_names.get(game.gm_id, {}) %}
                                                                 {% if player_names.get('B1') and player_names.get('B2') %}
@@ -634,9 +641,9 @@
                                         <div class="player-info">
                                             <img src="{{ url_for('views.display_user_image', userID=classification.ec_player_id) }}"
                                                  onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
-                                                 alt="{{ classification.player.us_name }}"
+                                                 alt="{{ (nickname_map.get(classification.ec_player_id) or classification.player.us_name) }}"
                                                  class="rounded-circle">
-                                            <span>{{ classification.player.us_name }}</span>
+                                            <span>{{ (nickname_map.get(classification.ec_player_id) or classification.player.us_name) }}</span>
                                         </div>
                                     </td>
                                     <td class="points-col"><strong>{{ classification.ec_points }}</strong></td>
@@ -678,9 +685,9 @@
                                         {% endif %}
                                         <img src="{{ url_for('views.display_user_image', userID=classification.ec_player_id) }}"
                                              onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
-                                             alt="{{ classification.player.us_name }}"
+                                             alt="{{ (nickname_map.get(classification.ec_player_id) or classification.player.us_name) }}"
                                              class="rounded-circle">
-                                        <span class="text-truncate">{{ classification.player.us_name }}</span>
+                                        <span class="text-truncate">{{ (nickname_map.get(classification.ec_player_id) or classification.player.us_name) }}</span>
                                     </div>
                                     <div class="d-flex align-items-center stats-container">
                                         <div class="text-center mx-2">
@@ -712,6 +719,23 @@
                 <button type="submit" class="btn btn-warning btn-lg">
                     <i class="fa fa-flag-checkered mr-2"></i>
                     {{ translate('Close Mexicano') }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Close NonStop Button -->
+{% if user_is_authorized and event.event_type and event.event_type.et_name == 'NonStop' and event.ev_status != 'event_ended' %}
+<div class="container mt-4 mb-2">
+    <div class="row">
+        <div class="col-12 text-center">
+            <form action="{{ url_for('views.close_event', event_id=event.ev_id) }}" method="POST" class="d-inline"
+                  onsubmit="return confirm('{{ translate("Close this Non-Stop? This will delete rounds with all 0-0 scores and mark the event as completed. This action cannot be undone.") }}')">
+                <button type="submit" class="btn btn-warning btn-lg">
+                    <i class="fa fa-flag-checkered mr-2"></i>
+                    {{ translate('Close Non-Stop') }}
                 </button>
             </form>
         </div>

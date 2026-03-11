@@ -129,7 +129,6 @@ document.getElementById('eventForm').addEventListener('submit', function(e) {
     const eventTime = document.getElementById('event_time').value;
     const eventDateTime = new Date(eventDate + 'T' + eventTime);
     const now = new Date();
-    
     if (eventDateTime <= now) {
         e.preventDefault();
         alert('{{ translate("Event date and time must be in the future") }}');
@@ -137,7 +136,6 @@ document.getElementById('eventForm').addEventListener('submit', function(e) {
     }
 });
 
-// Set minimum date to today
 document.getElementById('event_date').min = new Date().toISOString().split('T')[0];
 </script>
 {% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ club.cl_name }} - {{ translate('ELO Ranking') }} - {{ config.TITLE }}{% endblock %}
+{% block content %}
+<div class="mt-4">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('views.elo_ranking') }}"><i class="fa fa-trophy mr-1"></i>{{ translate('ELO Ranking') }}</a>
+            </li>
+            <li class="breadcrumb-item active">{{ club.cl_name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Club header -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="d-flex align-items-center">
+                <img src="{{ url_for('views.display_club_main_image', clubID=club.cl_id) }}"
+                     onerror="this.src='{{ url_for('static', filename='photos/clubs/nophoto.jpg') }}'"
+                     class="rounded-circle mr-3"
+                     width="60" height="60"
+                     style="object-fit:cover; border: 3px solid #dee2e6;">
+                <div>
+                    <h4 class="mb-0">{{ club.cl_name }}</h4>
+                    <p class="mb-0 text-muted small">{{ translate('Player rankings based on match performance') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rankings table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fa fa-list-ol mr-2"></i>{{ translate('ELO Ranking') }}</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if rankings %}
+            <div class="table-responsive">
+                <table class="table desktop-classification mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width:50px;" class="text-center">#</th>
+                            <th class="player-col">{{ translate('Player') }}</th>
+                            <th class="text-center">{{ translate('ELO') }}</th>
+                            <th class="text-center">{{ translate('Games') }}</th>
+                            <th class="text-center">{{ translate('W') }}</th>
+                            <th class="text-center">{{ translate('L') }}</th>
+                            <th class="text-center">{{ translate('Win %') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in rankings %}
+                        {% set pos = loop.index %}
+                        <tr {% if current_user.us_is_superuser == 1 %}
+                            onclick="window.location='{{ url_for('views.editUser', user_id=r.player.us_id) }}';"
+                            {% endif %}>
+                            <td class="text-center align-middle">
+                                {{ pos }}
+                            </td>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center">
+                                    {% set photo_path = 'photos/users/' ~ r.player.us_id ~ '/main.jpg' %}
+                                    <img src="{{ url_for('static', filename=photo_path) }}"
+                                         onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                         class="rounded-circle mr-2" width="30" height="30" style="object-fit:cover; flex-shrink:0;">
+                                    <a href="{{ url_for('views.player_profile', user_id=r.player.us_id) }}">
+                                        {{ nickname_map.get(r.player.us_id) or r.player.us_name }}
+                                    </a>
+                                </div>
+                            </td>
+                            <td class="text-center align-middle">
+                                <strong>{{ "%.2f"|format(r.rankingNow) }}</strong>
+                            </td>
+                            <td class="text-center align-middle">{{ r.totalGames }}</td>
+                            <td class="text-center align-middle">{{ r.wins }}</td>
+                            <td class="text-center align-middle">{{ r.losses }}</td>
+                            <td class="text-center align-middle">
+                                {% if r.totalGames > 0 %}
+                                {% set win_pct = (r.wins / r.totalGames * 100) %}
+                                <div class="progress" style="height:18px;min-width:60px;">
+                                    <div class="progress-bar {% if win_pct >= 60 %}bg-success{% elif win_pct >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
+                                         role="progressbar" style="width:{{ win_pct }}%">
+                                        {{ "%.0f"|format(win_pct) }}%
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fa fa-trophy fa-3x mb-3"></i>
+                <p>{{ translate('No ranking data available yet.') }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

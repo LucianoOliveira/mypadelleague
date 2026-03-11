@@ -2,11 +2,11 @@ from flask import Blueprint, render_template, request, flash, jsonify, redirect,
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from .models import (Users, UserRequests, Messages, League, Club, ClubAuthorization, 
-                    Court, GameDay, LeagueCourts, Game, GameDayPlayer, GameDayClassification, 
+from .models import (Users, UserRequests, Messages, League, Club, ClubAuthorization,
+                    Court, GameDay, LeagueCourts, Game, GameDayPlayer, GameDayClassification,
                     LeagueClassification, ELOranking, ELOrankingHist, LeaguePlayers, GameDayRegistration,
                     Event, EventRegistration, EventClassification, EventCourts, EventPlayerNames,
-                    EventType, MexicanConfig)
+                    EventType, MexicanConfig, PlayerClubNickname)
 from . import db
 import json, os, threading, hashlib
 from datetime import datetime, date, timedelta, timezone
@@ -456,8 +456,59 @@ def editUser(user_id):
             Game.gm_idPlayer_B2 == user_id
         )
     ).first() is not None
+
+    # Load all clubs and existing nicknames for this user
+    all_clubs = Club.query.order_by(Club.cl_name).all()
+    user_nicknames = {n.pcn_club_id: n for n in PlayerClubNickname.query.filter_by(pcn_user_id=user_id).all()}
     
-    return render_template('user_info.html', user=current_user, p_user=p_user, has_games=has_games)
+    return render_template('user_info.html', user=current_user, p_user=p_user, has_games=has_games,
+                           all_clubs=all_clubs, user_nicknames=user_nicknames)
+
+@views.route('/saveNickname/<int:user_id>', methods=['POST'])
+@login_required
+def saveNickname(user_id):
+    if not current_user.us_is_superuser and current_user.us_id != user_id:
+        flash(translate('You do not have permission to edit this user.'), 'error')
+        return redirect(url_for('views.home'))
+    club_id = request.form.get('club_id', type=int)
+    nickname = request.form.get('nickname', '').strip()
+    if not club_id or not nickname:
+        flash(translate('Club and nickname are required.'), 'error')
+        return redirect(url_for('views.editUser', user_id=user_id))
+    existing = PlayerClubNickname.query.filter_by(pcn_user_id=user_id, pcn_club_id=club_id).first()
+    if existing:
+        existing.pcn_nickname = nickname
+    else:
+        db.session.add(PlayerClubNickname(pcn_user_id=user_id, pcn_club_id=club_id, pcn_nickname=nickname))
+    db.session.commit()
+    flash(translate('Nickname saved.'), 'success')
+    return redirect(url_for('views.editUser', user_id=user_id))
+
+@views.route('/deleteNickname/<int:user_id>/<int:club_id>', methods=['POST'])
+@login_required
+def deleteNickname(user_id, club_id):
+    if not current_user.us_is_superuser and current_user.us_id != user_id:
+        flash(translate('You do not have permission to edit this user.'), 'error')
+        return redirect(url_for('views.home'))
+    PlayerClubNickname.query.filter_by(pcn_user_id=user_id, pcn_club_id=club_id).delete()
+    db.session.commit()
+    flash(translate('Nickname deleted.'), 'success')
+    return redirect(url_for('views.editUser', user_id=user_id))
+
+@views.route('/toggle_user_elo/<int:user_id>', methods=['POST'])
+@login_required
+def toggle_user_elo(user_id):
+    """Superuser-only: hide or show a user in ELO rankings."""
+    if not current_user.us_is_superuser:
+        flash(translate('Not authorized'), 'error')
+        return redirect(url_for('views.editUser', user_id=user_id))
+    target = Users.query.get_or_404(user_id)
+    target.us_hide_from_elo = not bool(target.us_hide_from_elo)
+    db.session.commit()
+    state = translate('hidden from') if target.us_hide_from_elo else translate('visible in')
+    flash(translate('User {} ELO ranking.').format(state), 'success')
+    return redirect(url_for('views.editUser', user_id=user_id))
+
 
 @views.route('/deleteUser/<int:userID>', methods=['POST'])
 @login_required
@@ -504,6 +555,14 @@ def deleteUser(userID):
         
         # Delete user's ELO ranking data
         ELOranking.query.filter_by(pl_id=userID).delete()
+        ELOrankingHist.query.filter_by(el_pl_id=userID).delete()
+        
+        # Delete user's gameday player records
+        GameDayPlayer.query.filter_by(gp_idPlayer=userID).delete()
+        
+        # Delete user's event registrations and classifications
+        EventRegistration.query.filter_by(er_player_id=userID).delete()
+        EventClassification.query.filter_by(ec_player_id=userID).delete()
         
         # Delete user's club authorizations
         ClubAuthorization.query.filter_by(ca_user_id=userID).delete()
@@ -1207,6 +1266,12 @@ def detail_event_tv(event_id):
     # Get game player names for fallback display
     game_player_names = {}
     player_names = EventPlayerNames.query.filter_by(epn_event_id=event_id).all()
+
+    # Build nickname map: {user_id: nickname} for the event's club
+    nickname_map = {}
+    if event.ev_club_id:
+        nicknames = PlayerClubNickname.query.filter_by(pcn_club_id=event.ev_club_id).all()
+        nickname_map = {n.pcn_user_id: n.pcn_nickname for n in nicknames}
     
     # Get event classifications with proper sorting (same as regular page)
     classifications = EventClassification.query.filter_by(ec_event_id=event_id).order_by(
@@ -1229,7 +1294,23 @@ def detail_event_tv(event_id):
                          substitute_players=substitute_players,
                          classifications=classifications,
                          user_is_authorized=user_is_authorized,
-                         user=current_user)
+                         user=current_user,
+                         nickname_map=nickname_map)
+
+@views.route('/toggle_event_elo/<int:event_id>', methods=['POST'])
+@login_required
+def toggle_event_elo(event_id):
+    """Superuser-only: toggle whether an event is excluded from ELO calculations."""
+    if current_user.us_is_superuser != 1:
+        flash(translate('Not authorized'), 'error')
+        return redirect(url_for('views.detail_event', event_id=event_id))
+    event = Event.query.get_or_404(event_id)
+    event.ev_exclude_from_elo = not bool(event.ev_exclude_from_elo)
+    db.session.commit()
+    state = translate('excluded from') if event.ev_exclude_from_elo else translate('included in')
+    flash(translate('Event {} ELO ranking.').format(state), 'success')
+    return redirect(url_for('views.detail_event', event_id=event_id))
+
 
 @views.route('/close_event/<int:event_id>', methods=['POST'])
 @login_required
@@ -1445,6 +1526,12 @@ def detail_event(event_id):
     # Get game player names for display (in case some games use names instead of user IDs)
     game_player_names = {}
     player_names = EventPlayerNames.query.filter_by(epn_event_id=event_id).all()
+
+    # Build nickname map: {user_id: nickname} for the event's club
+    nickname_map = {}
+    if event.ev_club_id:
+        nicknames = PlayerClubNickname.query.filter_by(pcn_club_id=event.ev_club_id).all()
+        nickname_map = {n.pcn_user_id: n.pcn_nickname for n in nicknames}
     
     return render_template('event_detail.html', 
                          event=event,
@@ -1460,7 +1547,8 @@ def detail_event(event_id):
                          classifications=classifications,
                          user_registration=user_registration,
                          can_register=can_register,
-                         game_player_names=game_player_names)
+                         game_player_names=game_player_names,
+                         nickname_map=nickname_map)
 
 # Events public page
 @views.route('/Events', methods=['GET'])
@@ -1954,10 +2042,18 @@ def create_event_final():
             # Create or find users for players and register them
             player_users = []
             for player_name in event_data['players']:
-                user = Users.query.filter(Users.us_name.ilike(player_name)).first()
+                user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+                if not user:
+                    # Try word-by-word match (e.g. "Luciano Oliveira" matches "Luciano \"Fugi\" Oliveira")
+                    words = [w for w in player_name.strip().split() if w]
+                    if words:
+                        q = Users.query
+                        for word in words:
+                            q = q.filter(Users.us_name.ilike(f'%{word}%'))
+                        user = q.first()
                 if not user:
                     user = Users(
-                        us_name=player_name,
+                        us_name=player_name.strip(),
                         us_email=f"{player_name.lower().replace(' ', '.')}@temp.event",
                         us_telephone=f"temp_{player_name.lower().replace(' ', '')}",
                         us_is_player=True,
@@ -2221,6 +2317,14 @@ def edit_event_public_step_register(event_id):
                 if not player_name or not player_name.strip():
                     return None
                 user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+                if not user:
+                    # Try word-by-word match (e.g. "Luciano Oliveira" matches "Luciano \"Fugi\" Oliveira")
+                    words = [w for w in player_name.strip().split() if w]
+                    if words:
+                        q = Users.query
+                        for word in words:
+                            q = q.filter(Users.us_name.ilike(f'%{word}%'))
+                        user = q.first()
                 if not user:
                     user = Users(
                         us_name=player_name.strip(),
@@ -2570,6 +2674,14 @@ def update_event_players_with_locking(event_id):
                 
             # Try to find existing user by name (case insensitive)
             user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+            if not user:
+                # Try word-by-word match (e.g. "Luciano Oliveira" matches "Luciano \"Fugi\" Oliveira")
+                words = [w for w in player_name.strip().split() if w]
+                if words:
+                    q = Users.query
+                    for word in words:
+                        q = q.filter(Users.us_name.ilike(f'%{word}%'))
+                    user = q.first()
             
             if not user:
                 # Create new user as player
@@ -3102,6 +3214,14 @@ def update_event_players(event_id):
                 
             # Try to find existing user by name (case insensitive)
             user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+            if not user:
+                # Try word-by-word match (e.g. "Luciano Oliveira" matches "Luciano \"Fugi\" Oliveira")
+                words = [w for w in player_name.strip().split() if w]
+                if words:
+                    q = Users.query
+                    for word in words:
+                        q = q.filter(Users.us_name.ilike(f'%{word}%'))
+                    user = q.first()
             
             if not user:
                 # Create new user as player
@@ -3959,7 +4079,6 @@ def update_all_game_scores(event_id):
         
         # Update games with scores
         games_updated = 0
-        current_round_games = []
         
         for game_id, game_scores in scores_data.items():
             game = Game.query.get(game_id)
@@ -3968,21 +4087,61 @@ def update_all_game_scores(event_id):
                     game.gm_result_A = game_scores['A']
                     game.gm_result_B = game_scores['B']
                     games_updated += 1
-                    current_round_games.append(game)
         
         if games_updated == 0:
             flash(translate('No valid game scores were updated'), 'warning')
             access_code = session.get(f'event_{event_id}_access_code', '')
             return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
-        
-        # Calculate and update classifications
-        calculate_event_classifications(event_id)
-        
-        # Check if this completes a round - create next round if needed
+
+        # Flush so the updates are visible in queries below
+        db.session.flush()
+
+        # ------------------------------------------------------------------
+        # Determine whether the current round is fully complete.
+        # A "round" = all games sharing the same gm_timeStart.
+        # We work with the LATEST round that has at least one result.
+        # ------------------------------------------------------------------
         all_event_games = Game.query.filter_by(gm_idEvent=event_id).all()
+
+        # Group games by start time
+        rounds_by_time = {}
+        for g in all_event_games:
+            rounds_by_time.setdefault(g.gm_timeStart, []).append(g)
+
+        # Find the latest round with at least one result
+        latest_round_time = None
+        for t in sorted(rounds_by_time.keys(), reverse=True):
+            if any(g.gm_result_A is not None for g in rounds_by_time[t]):
+                latest_round_time = t
+                break
+
+        if latest_round_time is None:
+            # Nothing has a result yet — just commit and return
+            db.session.commit()
+            flash(translate('{} game score(s) saved.').format(games_updated), 'success')
+            access_code = session.get(f'event_{event_id}_access_code', '')
+            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+
+        current_round_games = rounds_by_time[latest_round_time]
+        round_complete = all(
+            g.gm_result_A is not None and g.gm_result_B is not None
+            for g in current_round_games
+        )
+
+        if not round_complete:
+            # Round is still in progress — save scores but do not touch classifications
+            db.session.commit()
+            remaining = sum(1 for g in current_round_games if g.gm_result_A is None or g.gm_result_B is None)
+            flash(translate('{} score(s) saved. {} game(s) still pending in this round.').format(games_updated, remaining), 'success')
+            access_code = session.get(f'event_{event_id}_access_code', '')
+            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+
+        # Round is fully complete — recalculate classifications
+        calculate_event_classifications(event_id)
+
+        # Check if next round should be created (no incomplete games left anywhere)
         incomplete_games = [g for g in all_event_games if g.gm_result_A is None or g.gm_result_B is None]
-        
-        # If no incomplete games, check if we need to create next round
+
         if not incomplete_games:
             # Get classifications for next round
             classifications = EventClassification.query.filter_by(ec_event_id=event_id).order_by(
@@ -4158,11 +4317,24 @@ def create_next_round_games(event_id, classifications, round_number):
         c.player.us_name.lower()  # Alphabetical by name (A before C)
     ))
     
-    if len(sorted_classifications) != 16:
-        raise Exception(translate('Need exactly 16 players for Mexicano tournament'))
-    
+    if len(sorted_classifications) not in (8, 12, 16):
+        raise Exception(translate('Mexicano tournament requires 8, 12, or 16 players'))
+
+    num_players = len(sorted_classifications)
+
+    # Mexicano pairing rules: on each court, (rank1 & rank4) vs (rank2 & rank3)
+    # within each group of 4 consecutive players in the ranking.
+    # 8 players  → 2 courts
+    # 12 players → 3 courts
+    # 16 players → 4 courts
+    pairings = []
+    for group in range(num_players // 4):
+        base = group * 4
+        pairings.append((base + 0, base + 3, base + 1, base + 2))
+
     # Get the start time for new games (14 minutes after the last round)
-    last_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart.desc()).limit(4).all()
+    courts_per_round = num_players // 4
+    last_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart.desc()).limit(courts_per_round).all()
     if last_games:
         last_start_time = last_games[0].gm_timeStart
         # Convert to datetime, add 14 minutes, convert back to time
@@ -4187,19 +4359,6 @@ def create_next_round_games(event_id, classifications, round_number):
     gameday = GameDay.query.get(existing_game.gm_idGameDay)
     if not gameday:
         raise Exception(translate('No gameday found for this event'))
-    
-    # Create pairings according to Mexicano rules:
-    # Court 1: 1st & 4th vs 2nd & 3rd
-    # Court 2: 5th & 8th vs 6th & 7th  
-    # Court 3: 9th & 12th vs 10th & 11th
-    # Court 4: 13th & 16th vs 14th & 15th
-    
-    pairings = [
-        (0, 3, 1, 2),  # Court 1: 1st & 4th vs 2nd & 3rd (0-based indices)
-        (4, 7, 5, 6),  # Court 2: 5th & 8th vs 6th & 7th
-        (8, 11, 9, 10),  # Court 3: 9th & 12th vs 10th & 11th
-        (12, 15, 13, 14)  # Court 4: 13th & 16th vs 14th & 15th
-    ]
     
     games_created = 0
     
@@ -5221,6 +5380,10 @@ def gameday_detail(gameday_id):
     else:
         registration_end = gameday.gd_registration_end
 
+    # Build nickname map: {user_id: nickname} for this club
+    nicknames = PlayerClubNickname.query.filter_by(pcn_club_id=club.cl_id).all()
+    nickname_map = {n.pcn_user_id: n.pcn_nickname for n in nicknames}
+
     return render_template('gameday_detail.html', 
                          user=current_user, 
                          gameday=gameday,
@@ -5230,7 +5393,8 @@ def gameday_detail(gameday_id):
                          is_league_player=is_league_player,
                          registration_start=registration_start,
                          registration_end=registration_end,
-                         now=lambda: datetime.now(timezone.utc))
+                         now=lambda: datetime.now(timezone.utc),
+                         nickname_map=nickname_map)
 
 @views.route('/search_users', methods=['GET'])
 def search_users():
@@ -5786,6 +5950,36 @@ def player_info(user_id):
                          rankingELO_histShort=rankingELO_histShort)
 
 
+@views.route('/elo_ranking', methods=['GET'])
+@login_required
+def elo_ranking():
+    """Show clubs that have at least one completed event game with rankings."""
+    clubs_with_games = (
+        db.session.query(Club)
+        .join(Event, Event.ev_club_id == Club.cl_id)
+        .join(Game, Game.gm_idEvent == Event.ev_id)
+        .filter(
+            Event.ev_exclude_from_elo != True,
+            Game.gm_result_A != None,
+            Game.gm_idPlayer_A1 != None,
+        )
+        .distinct()
+        .all()
+    )
+    return render_template('elo_ranking.html', user=current_user, clubs=clubs_with_games)
+
+
+@views.route('/elo_ranking/<int:club_id>', methods=['GET'])
+@login_required
+def elo_club_ranking(club_id):
+    """ELO ranking for a specific club, computed from all scored games at that club."""
+    club = Club.query.get_or_404(club_id)
+    rankings = func_calculate_ELO_by_club(club_id)
+    nicknames = PlayerClubNickname.query.filter_by(pcn_club_id=club_id).all()
+    nickname_map = {n.pcn_user_id: n.pcn_nickname for n in nicknames}
+    return render_template('elo_club_ranking.html', user=current_user, club=club, rankings=rankings, nickname_map=nickname_map)
+
+
 @views.route('/recalculate_ELO_full', methods=['GET', 'POST'])
 @login_required
 def recalculate_ELO_full():
@@ -5822,12 +6016,18 @@ def create_event_step2(event_id):
     
     # Calculate number of courts needed (max_players / 4)
     courts_needed = event.ev_max_players // 4
+
+    # Fetch the club's existing courts to pre-fill court names
+    club_courts = []
+    if event.ev_club_id:
+        club_courts = Court.query.filter_by(ct_club_id=event.ev_club_id).order_by(Court.ct_id).all()
     
     return render_template('create_event_step2.html', 
                            user=current_user, 
                            event=event, 
                            courts_needed=courts_needed,
-                           club_name=club_name)
+                           club_name=club_name,
+                           club_courts=club_courts)
 
 @views.route('/create_event_step2/<int:event_id>', methods=['POST'])
 @login_required
@@ -6070,6 +6270,14 @@ def complete_event_creation(event_id):
                 
             # Try to find existing user by name (case insensitive)
             user = Users.query.filter(Users.us_name.ilike(player_name.strip())).first()
+            if not user:
+                # Try word-by-word match (e.g. "Luciano Oliveira" matches "Luciano \"Fugi\" Oliveira")
+                words = [w for w in player_name.strip().split() if w]
+                if words:
+                    q = Users.query
+                    for word in words:
+                        q = q.filter(Users.us_name.ilike(f'%{word}%'))
+                    user = q.first()
             
             if not user:
                 # Create new user as player
