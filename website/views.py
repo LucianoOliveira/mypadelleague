@@ -5975,7 +5975,9 @@ def elo_club_ranking(club_id):
     """ELO ranking for a specific club, computed from all scored games at that club."""
     club = Club.query.get_or_404(club_id)
     rankings = func_calculate_ELO_by_club(club_id)
-    return render_template('elo_club_ranking.html', user=current_user, club=club, rankings=rankings)
+    nicknames = PlayerClubNickname.query.filter_by(pcn_club_id=club_id).all()
+    nickname_map = {n.pcn_user_id: n.pcn_nickname for n in nicknames}
+    return render_template('elo_club_ranking.html', user=current_user, club=club, rankings=rankings, nickname_map=nickname_map)
 
 
 @views.route('/recalculate_ELO_full', methods=['GET', 'POST'])

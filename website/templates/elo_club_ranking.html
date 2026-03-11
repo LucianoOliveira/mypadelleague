@@ -66,7 +66,7 @@
                                          onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
                                          class="rounded-circle mr-2" width="30" height="30" style="object-fit:cover; flex-shrink:0;">
                                     <a href="{{ url_for('views.player_profile', user_id=r.player.us_id) }}">
-                                        {{ r.player.us_name }}
+                                        {{ nickname_map.get(r.player.us_id) or r.player.us_name }}
                                     </a>
                                 </div>
                             </td>

@@ -425,7 +425,7 @@ def func_calculate_ELO_parcial():
         # Select every game if league as K higher than 0 and is not on ranking yet
         r1 = db.session.execute(
             text(f"SELECT gm_id, gm_idPlayer_A1, gm_idPlayer_A2, gm_idPlayer_B1, gm_idPlayer_B2, gm_result_A, gm_result_B, gm_idLeague, gm_date, gm_timeStart FROM tb_game WHERE gm_idLeague IN ( SELECT lg_id FROM tb_league WHERE lg_eloK > 0 AND lg_startDate >= :start_date ) AND gm_id not in (select el_gm_id from tb_ELO_ranking_hist GROUP BY el_gm_id) AND gm_idPlayer_A1 IS NOT NULL ORDER BY gm_date ASC, gm_timeStart ASC"),
-            {"start_date": datetime(2024, 1, 1)},
+            {"start_date": datetime(2020, 1, 1)},
         ).fetchall()
         
 
@@ -1542,7 +1542,7 @@ def func_calculate_ELO_full():
             League, Game.gm_idLeague == League.lg_id
         ).filter(
             League.lg_eloK > 0,
-            League.lg_startDate >= datetime(2024, 1, 1),
+            League.lg_startDate >= datetime(2020, 1, 1),
             Game.gm_idPlayer_A1.isnot(None)
         ).order_by(
             Game.gm_date.asc(), 

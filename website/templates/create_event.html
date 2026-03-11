@@ -125,19 +125,17 @@ document.getElementById('eventForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // TODO: Re-enable before going live — prevents creating events in the past
-    // const eventDate = document.getElementById('event_date').value;
-    // const eventTime = document.getElementById('event_time').value;
-    // const eventDateTime = new Date(eventDate + 'T' + eventTime);
-    // const now = new Date();
-    // if (eventDateTime <= now) {
-    //     e.preventDefault();
-    //     alert('{{ translate("Event date and time must be in the future") }}');
-    //     return false;
-    // }
+    const eventDate = document.getElementById('event_date').value;
+    const eventTime = document.getElementById('event_time').value;
+    const eventDateTime = new Date(eventDate + 'T' + eventTime);
+    const now = new Date();
+    if (eventDateTime <= now) {
+        e.preventDefault();
+        alert('{{ translate("Event date and time must be in the future") }}');
+        return false;
+    }
 });
 
-// TODO: Re-enable before going live — prevents selecting past dates
-// document.getElementById('event_date').min = new Date().toISOString().split('T')[0];
+document.getElementById('event_date').min = new Date().toISOString().split('T')[0];
 </script>
 {% endblock %}
