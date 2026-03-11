@@ -5951,7 +5951,6 @@ def player_info(user_id):
 
 
 @views.route('/elo_ranking', methods=['GET'])
-@login_required
 def elo_ranking():
     """Show clubs that have at least one completed event game with rankings."""
     clubs_with_games = (
@@ -5970,7 +5969,6 @@ def elo_ranking():
 
 
 @views.route('/elo_ranking/<int:club_id>', methods=['GET'])
-@login_required
 def elo_club_ranking(club_id):
     """ELO ranking for a specific club, computed from all scored games at that club."""
     club = Club.query.get_or_404(club_id)

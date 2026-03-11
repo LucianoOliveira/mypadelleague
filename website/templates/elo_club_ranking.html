@@ -53,9 +53,7 @@
                     <tbody>
                         {% for r in rankings %}
                         {% set pos = loop.index %}
-                        <tr {% if current_user.us_is_superuser == 1 %}
-                            onclick="window.location='{{ url_for('views.editUser', user_id=r.player.us_id) }}';"
-                            {% endif %}>
+                        <tr style="cursor:pointer;" onclick="window.location='{{ url_for('views.player_profile', user_id=r.player.us_id) }}'">
                             <td class="text-center align-middle">
                                 {{ pos }}
                             </td>
