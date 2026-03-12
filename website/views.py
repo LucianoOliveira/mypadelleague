@@ -1321,16 +1321,18 @@ def detail_event_tv(slug):
     ).all()
     
     # Re-sort with tiebreaker logic
-    # For Mexican events with Ranking pairing: use ELO as tiebreaker, then alphabetical
+    # For Mexicano events with Ranking pairing: use club ELO as tiebreaker, then alphabetical
     is_mexican_ranking = (
-        event.event_type and event.event_type.et_name == 'Mexican'
+        event.event_type and event.event_type.et_name == 'Mexicano'
         and event.ev_pairing_type == 'Ranking'
     )
     if is_mexican_ranking:
+        club_elo = func_calculate_ELO_by_club(event.ev_club_id) if event.ev_club_id else []
+        elo_map = {entry['player'].us_id: entry['rankingNow'] for entry in club_elo}
         classifications = sorted(classifications, key=lambda c: (
             -c.ec_points,
             -c.ec_games_diff,
-            -(c.player.elo_ranking.pl_rankingNow if c.player.elo_ranking else 0),
+            -(elo_map.get(c.ec_player_id, 0)),
             c.player.us_name.lower()
         ))
     else:
@@ -1558,16 +1560,18 @@ def detail_event(slug):
     ).all()
     
     # Re-sort with tiebreaker logic
-    # For Mexican events with Ranking pairing: use ELO as tiebreaker, then alphabetical
+    # For Mexicano events with Ranking pairing: use club ELO as tiebreaker, then alphabetical
     is_mexican_ranking = (
-        event.event_type and event.event_type.et_name == 'Mexican'
+        event.event_type and event.event_type.et_name == 'Mexicano'
         and event.ev_pairing_type == 'Ranking'
     )
     if is_mexican_ranking:
+        club_elo = func_calculate_ELO_by_club(event.ev_club_id) if event.ev_club_id else []
+        elo_map = {entry['player'].us_id: entry['rankingNow'] for entry in club_elo}
         classifications = sorted(classifications, key=lambda c: (
             -c.ec_points,
             -c.ec_games_diff,
-            -(c.player.elo_ranking.pl_rankingNow if c.player.elo_ranking else 0),
+            -(elo_map.get(c.ec_player_id, 0)),
             c.player.us_name.lower()
         ))
     else:
@@ -4250,11 +4254,10 @@ def update_all_game_scores(event_id):
         incomplete_games = [g for g in all_event_games if g.gm_result_A is None or g.gm_result_B is None]
 
         if not incomplete_games:
-            # Get classifications for next round
+            # Get classifications for next round (final sort happens inside create_next_round_games)
             classifications = EventClassification.query.filter_by(ec_event_id=event_id).order_by(
                 EventClassification.ec_points.desc(),
-                EventClassification.ec_games_diff.desc(),
-                EventClassification.player.has(Users.us_name)
+                EventClassification.ec_games_diff.desc()
             ).all()
             
             # Calculate current round number
@@ -4417,12 +4420,26 @@ def create_next_round_games(event_id, classifications, round_number):
     if not event_courts:
         raise Exception(translate('No courts configured for this event'))
     
-    # Sort classifications by points, games difference, and finally by player name
-    sorted_classifications = sorted(classifications, key=lambda c: (
-        -c.ec_points,  # Higher points first
-        -c.ec_games_diff,  # Higher games difference first
-        c.player.us_name.lower()  # Alphabetical by name (A before C)
-    ))
+    # Sort classifications: for Mexicano+Ranking events use club ELO as tiebreaker
+    is_mexican_ranking = (
+        event.event_type and event.event_type.et_name == 'Mexicano'
+        and event.ev_pairing_type == 'Ranking'
+    )
+    if is_mexican_ranking:
+        club_elo = func_calculate_ELO_by_club(event.ev_club_id) if event.ev_club_id else []
+        elo_map = {entry['player'].us_id: entry['rankingNow'] for entry in club_elo}
+        sorted_classifications = sorted(classifications, key=lambda c: (
+            -c.ec_points,
+            -c.ec_games_diff,
+            -(elo_map.get(c.ec_player_id, 0)),
+            c.player.us_name.lower()
+        ))
+    else:
+        sorted_classifications = sorted(classifications, key=lambda c: (
+            -c.ec_points,
+            -c.ec_games_diff,
+            c.player.us_name.lower()
+        ))
     
     if len(sorted_classifications) not in (8, 12, 16):
         raise Exception(translate('Mexicano tournament requires 8, 12, or 16 players'))
