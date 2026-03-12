@@ -1905,7 +1905,7 @@ def create_event_step_pairing():
     if request.method == 'POST':
         pairing_method = request.form.get('pairing_method')
         
-        if pairing_method not in ['Random', 'Manual', 'Random L&R']:
+        if pairing_method not in ['Random', 'Manual', 'Ranking']:
             flash(translate('Please select a valid pairing method!'), 'error')
             return render_template("create_event_step_pairing.html", event_type=event_type, user=current_user)
         
@@ -2237,7 +2237,7 @@ def edit_event_public_step_pairing(slug):
     if request.method == 'POST':
         try:
             pairing_type = request.form.get('pairing_type')
-            if pairing_type in ['Random', 'Manual', 'L&R Random']:
+            if pairing_type in ['Random', 'Manual', 'L&R Random', 'Ranking']:
                 event.ev_pairing_type = pairing_type
                 db.session.commit()
                 return redirect(url_for('views.edit_event_public_step_courts', slug=event.ev_slug, code=access_code))
@@ -3629,6 +3629,35 @@ def create_games_for_event(event_id):
         for i in range(min(len(left_ids), len(right_ids))):
             player_ids.extend([left_ids[i], right_ids[i]])
     
+    elif pairing_type == 'Ranking':
+        # Sort players by ELO ranking for this club (desc), then alphabetically for ties.
+        # Players not found in club rankings start at 1000.
+        club_id = event.ev_club_id
+        elo_map = {}
+        if club_id:
+            club_elo = func_calculate_ELO_by_club(club_id)
+            elo_map = {entry['player'].us_id: entry['rankingNow'] for entry in club_elo}
+
+        players_with_elo = []
+        for reg in registrations:
+            pid = reg.er_player_id
+            elo = elo_map.get(pid, 1000.0)
+            name = reg.player.us_name.lower()
+            players_with_elo.append((pid, elo, name))
+
+        # Sort: highest ELO first, alphabetical on tie
+        players_with_elo.sort(key=lambda x: (-x[1], x[2]))
+        sorted_ids = [p[0] for p in players_with_elo]
+
+        # Reorder into game groups so A=[rank0+rank3] vs B=[rank1+rank2] per court.
+        # player_ids positions map to: A1=[0], A2=[1], B1=[2], B2=[3]
+        # To get A=[rank0,rank3] we interleave as [rank0, rank3, rank1, rank2] per group.
+        player_ids = []
+        for i in range(0, len(sorted_ids), 4):
+            group = sorted_ids[i:i+4]
+            if len(group) == 4:
+                player_ids.extend([group[0], group[3], group[1], group[2]])
+
     else:  # 'Random' or default
         # For Random pairing, shuffle all players
         player_ids = [reg.player.us_id for reg in registrations]
@@ -6118,7 +6147,7 @@ def process_event_step2(event_id):
             court_names.append(court_name.strip())
         
         # Validate pairing type
-        valid_pairing_types = ['Random', 'Manual', 'L&R Random']
+        valid_pairing_types = ['Random', 'Manual', 'L&R Random', 'Ranking']
         if pairing_type not in valid_pairing_types:
             flash(translate('Invalid pairing type selected!'), 'error')
             return redirect(url_for('views.create_event_step2', event_id=event_id))
@@ -6211,7 +6240,7 @@ def create_event_step3(event_id):
     
     # Organize existing player data by type and position for easy template access
     player_data = {}
-    if pairing_type == 'Random':
+    if pairing_type in ('Random', 'Ranking'):
         player_data = {f'player_{p.epn_position_index}': p.epn_player_name 
                       for p in existing_players if p.epn_position_type == 'random'}
     elif pairing_type == 'Manual':
@@ -6270,7 +6299,7 @@ def complete_event_creation(event_id):
         max_players = event.ev_max_players
         
         # Collect names based on pairing type
-        if pairing_type == 'Random':
+        if pairing_type in ('Random', 'Ranking'):
             for i in range(max_players):
                 player_name = request.form.get(f'player_{i}')
                 if player_name and player_name.strip():
@@ -6302,16 +6331,13 @@ def complete_event_creation(event_id):
                 if right_player and right_player.strip():
                     all_player_names.append(right_player.strip())
         
-        # Validation: Check if we have the expected number of players
-        if len(all_player_names) != max_players:
-            flash(translate('Please enter all {} player names').format(max_players), 'error')
-            return redirect(url_for('views.create_event_step3', event_id=event_id))
-        
         # Validation: Check for duplicate names (case insensitive)
         names_lower = [name.lower() for name in all_player_names]
         if len(names_lower) != len(set(names_lower)):
             flash(translate('Duplicate player names found. Each player must have a unique name.'), 'error')
             return redirect(url_for('views.create_event_step3', event_id=event_id))
+        
+        all_players_complete = (len(all_player_names) == max_players)
         
         # Helper function to get or create user
         def get_or_create_user(player_name):
@@ -6347,7 +6373,7 @@ def complete_event_creation(event_id):
         # Process players based on pairing type
         players_registered = 0
         
-        if pairing_type == 'Random':
+        if pairing_type in ('Random', 'Ranking'):
             for i in range(max_players):
                 player_name = request.form.get(f'player_{i}')
                 if player_name and player_name.strip():
@@ -6484,11 +6510,13 @@ def complete_event_creation(event_id):
         # Commit player registrations
         db.session.commit()
         
-        # Now create the games
-        num_games = create_games_for_event(event_id)
-        db.session.commit()
-        
-        flash(translate('Event created successfully with {} players and {} games!').format(players_registered, num_games), 'success')
+        # Only create games if all players are registered
+        if all_players_complete:
+            num_games = create_games_for_event(event_id)
+            db.session.commit()
+            flash(translate('Event created successfully with {} players and {} games!').format(players_registered, num_games), 'success')
+        else:
+            flash(translate('Saved {} of {} players. Add remaining players to complete the event.').format(players_registered, max_players), 'warning')
         return redirect(url_for('views.detail_event', slug=event.ev_slug))
         
     except Exception as e:

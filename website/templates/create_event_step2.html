@@ -73,12 +73,19 @@
                         <select class="form-control" id="pairing_type" name="pairing_type" required>
                             <option value="Random" selected>{{ translate('Random') }}</option>
                             <option value="Manual">{{ translate('Manual') }}</option>
+                            {% if event.ev_type_id == 1 %}
                             <option value="L&R Random">{{ translate('L&R Random') }}</option>
+                            {% endif %}
+                            {% if event.ev_type_id == 3 %}
+                            <option value="Ranking">{{ translate('Ranking') }}</option>
+                            {% endif %}
                         </select>
                         <small class="form-text text-muted">
                             <strong>{{ translate('Random') }}:</strong> {{ translate('Players are paired completely randomly') }}<br>
-                            <strong>{{ translate('Manual') }}:</strong> {{ translate('Organizer manually assigns all pairs for the first round') }}<br>
+                            <strong>{{ translate('Manual') }}:</strong> {{ translate('Organizer manually assigns all pairs for the first round') }}
+                            {% if event.ev_type_id == 1 %}<br>
                             <strong>{{ translate('L&R Random') }}:</strong> {{ translate('Players choose left/right side, then random pairing within each side for the first round') }}
+                            {% endif %}
                         </small>
                     </div>
                 </div>

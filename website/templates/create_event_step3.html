@@ -48,11 +48,15 @@
                 </div>
                 <div class="card-body">
                     
-                    {% if pairing_type == 'Random' %}
-                        <!-- Random Pairing - Single column of players -->
+                    {% if pairing_type == 'Random' or pairing_type == 'Ranking' %}
+                        <!-- Random / Ranking Pairing - Single column of players -->
                         <div class="alert alert-info">
-                            <i class="fas fa-random"></i> 
+                            <i class="fas fa-random"></i>
+                            {% if pairing_type == 'Ranking' %}
+                            {{ translate('Ranking pairing: Players will be sorted by their current ELO ranking for this club once all names are registered. New players start at 1000 points.') }}
+                            {% else %}
                             {{ translate('Random pairing: Players will be randomly assigned to teams during the event.') }}
+                            {% endif %}
                         </div>
                         
                         <div class="row">
