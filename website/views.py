@@ -1320,12 +1320,25 @@ def detail_event_tv(slug):
         EventClassification.ec_games_diff.desc()
     ).all()
     
-    # Re-sort with player name as final tiebreaker (Python sort for complex logic)
-    classifications = sorted(classifications, key=lambda c: (
-        -c.ec_points,  # Higher points first
-        -c.ec_games_diff,  # Higher games difference first  
-        c.player.us_name.lower()  # Alphabetical by name (A before C)
-    ))
+    # Re-sort with tiebreaker logic
+    # For Mexican events with Ranking pairing: use ELO as tiebreaker, then alphabetical
+    is_mexican_ranking = (
+        event.event_type and event.event_type.et_name == 'Mexican'
+        and event.ev_pairing_type == 'Ranking'
+    )
+    if is_mexican_ranking:
+        classifications = sorted(classifications, key=lambda c: (
+            -c.ec_points,
+            -c.ec_games_diff,
+            -(c.player.elo_ranking.pl_rankingNow if c.player.elo_ranking else 0),
+            c.player.us_name.lower()
+        ))
+    else:
+        classifications = sorted(classifications, key=lambda c: (
+            -c.ec_points,
+            -c.ec_games_diff,
+            c.player.us_name.lower()
+        ))
     
     return render_template('event_detail_tv.html', 
                          event=event, 
@@ -1544,12 +1557,25 @@ def detail_event(slug):
         EventClassification.ec_games_diff.desc()
     ).all()
     
-    # Re-sort with player name as final tiebreaker (Python sort for complex logic)
-    classifications = sorted(classifications, key=lambda c: (
-        -c.ec_points,  # Higher points first
-        -c.ec_games_diff,  # Higher games difference first  
-        c.player.us_name.lower()  # Alphabetical by name (A before C)
-    ))
+    # Re-sort with tiebreaker logic
+    # For Mexican events with Ranking pairing: use ELO as tiebreaker, then alphabetical
+    is_mexican_ranking = (
+        event.event_type and event.event_type.et_name == 'Mexican'
+        and event.ev_pairing_type == 'Ranking'
+    )
+    if is_mexican_ranking:
+        classifications = sorted(classifications, key=lambda c: (
+            -c.ec_points,
+            -c.ec_games_diff,
+            -(c.player.elo_ranking.pl_rankingNow if c.player.elo_ranking else 0),
+            c.player.us_name.lower()
+        ))
+    else:
+        classifications = sorted(classifications, key=lambda c: (
+            -c.ec_points,
+            -c.ec_games_diff,
+            c.player.us_name.lower()
+        ))
     
     # Check if user is registered
     user_registration = None

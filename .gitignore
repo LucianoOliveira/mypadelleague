@@ -67,4 +67,8 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Keep photos directory tracked in Git (don't ignore)
+# User-uploaded photos (managed on server, not tracked in git)
+# nophoto.jpg placeholders are kept tracked as they are static UI assets
+website/static/photos/clubs/[0-9]*/
+website/static/photos/users/[0-9]*/
+website/static/photos/leagues/[0-9]*/
