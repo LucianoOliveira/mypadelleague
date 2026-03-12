@@ -109,7 +109,7 @@
 
                 <!-- Navigation buttons -->
                 <div class="d-flex justify-content-between">
-                    <a href="{{ url_for('views.detail_event', event_id=event.ev_id) }}" class="btn btn-secondary">
+                    <a href="{{ url_for('views.detail_event', slug=event.ev_slug) }}" class="btn btn-secondary">
                         <i class="fa fa-arrow-left"></i> {{ translate('Back to Event') }}
                     </a>
                     <button type="submit" class="btn btn-danger" onclick="return confirm('{{ translate('Are you sure you want to update the player list? This will delete all existing games and recreate them.') }}')">

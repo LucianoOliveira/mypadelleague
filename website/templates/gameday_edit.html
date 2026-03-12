@@ -398,7 +398,7 @@
                     </div>
 
                     <button type="submit" class="btn btn-light px-5"><i class="icon-save"></i> {{ translate('Save Changes') }}</button>
-                    <a href="{{ url_for('views.edit_league', league_id=league.lg_id) }}#gamedays" class="btn btn-outline-light px-5">{{ translate('No') }}</a>
+                    <a href="{{ url_for('views.edit_league', slug=league.lg_slug) }}#gamedays" class="btn btn-outline-light px-5">{{ translate('No') }}</a>
                 </form>
             </div>
         </div>

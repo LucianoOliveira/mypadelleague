@@ -16,7 +16,7 @@
         </div>
         <div class="card-body">
             {% if is_edit %}
-            <form action="{{ url_for('views.edit_event_public_step_players', event_id=event_id, code=access_code) }}" method="post" id="playersForm">
+            <form action="{{ url_for('views.edit_event_public_step_players', slug=event_slug, code=access_code) }}" method="post" id="playersForm">
             {% else %}
             <form action="{{ url_for('views.create_event_step_players') }}" method="post" id="playersForm">
             {% endif %}
@@ -77,7 +77,7 @@
                 <div class="row mt-4">
                     <div class="col-md-6 mb-3">
                         {% if is_edit %}
-                        <a href="{{ url_for('views.edit_event_public_step_basic', event_id=event_id, code=access_code) }}" class="btn btn-secondary btn-block">
+                        <a href="{{ url_for('views.edit_event_public_step_basic', slug=event_slug, code=access_code) }}" class="btn btn-secondary btn-block">
                             <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Basic Info') }}
                         </a>
                         {% else %}

@@ -46,7 +46,7 @@
             {% if events_data %}
                 {% for event in events_data %}
         <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
-            <a href="{% if event.ev_club_id %}{{ url_for('views.detail_event', event_id=event.ev_id) }}{% else %}{{ url_for('views.public_event_detail', event_id=event.ev_id) }}{% endif %}" class="card h-100">
+            <a href="{% if event.ev_club_id %}{{ url_for('views.detail_event', slug=event.ev_slug) }}{% else %}{{ url_for('views.public_event_detail', slug=event.ev_slug) }}{% endif %}" class="card h-100">
                 <div class="card-img-top position-relative bg-primary d-flex align-items-center justify-content-center" style="height: 200px;">
                     <!-- Event type badge instead of image -->
                     {% if event.event_type and event.event_type.et_name == 'NonStop' %}
@@ -136,7 +136,7 @@
             {% if past_events %}
                 {% for event in past_events %}
                     <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
-                        <a href="{% if event.ev_club_id %}{{ url_for('views.detail_event', event_id=event.ev_id) }}{% else %}{{ url_for('views.public_event_detail', event_id=event.ev_id) }}{% endif %}" class="card h-100 opacity-75">
+                        <a href="{% if event.ev_club_id %}{{ url_for('views.detail_event', slug=event.ev_slug) }}{% else %}{{ url_for('views.public_event_detail', slug=event.ev_slug) }}{% endif %}" class="card h-100 opacity-75">
                             <div class="card-img-top position-relative bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
                                 <!-- Event type badge -->
                                 {% if event.event_type and event.event_type.et_name == 'NonStop' %}

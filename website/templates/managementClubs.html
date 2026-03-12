@@ -24,7 +24,7 @@
                     </thead>
                     <tbody>
                         {% for club in authorized_clubs %}
-                        <tr onclick="window.location.href='{{ url_for('views.edit_club', club_id=club.cl_id) }}';" style="cursor: pointer;">
+                        <tr onclick="window.location.href='{{ url_for('views.edit_club', club_slug=club.cl_slug) }}';" style="cursor: pointer;">
                             <td>{{ club.cl_name }}</td>
                             <td>{{ club.cl_address }}</td>
                             <td>{{ club.cl_phone }}</td>

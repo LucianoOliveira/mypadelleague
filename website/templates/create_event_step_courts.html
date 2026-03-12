@@ -23,7 +23,7 @@
             </div>
             
             {% if is_edit %}
-            <form action="{{ url_for('views.edit_event_public_step_courts', event_id=event_id, code=access_code) }}" method="post" id="courtsForm">
+            <form action="{{ url_for('views.edit_event_public_step_courts', slug=event_slug, code=access_code) }}" method="post" id="courtsForm">
             {% else %}
             <form action="{{ url_for('views.create_event_step_courts') }}" method="post" id="courtsForm">
             {% endif %}
@@ -101,7 +101,7 @@
                 <div class="row mt-4">
                     <div class="col-md-6 mb-3">
                         {% if is_edit %}
-                        <a href="{{ url_for('views.edit_event_public_step_pairing', event_id=event_id, code=access_code) }}" class="btn btn-secondary btn-block">
+                        <a href="{{ url_for('views.edit_event_public_step_pairing', slug=event_slug, code=access_code) }}" class="btn btn-secondary btn-block">
                             <i class="zmdi zmdi-arrow-left"></i> {{ translate('Back to Pairing Method') }}
                         </a>
                         {% else %}

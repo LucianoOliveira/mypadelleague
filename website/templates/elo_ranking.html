@@ -12,7 +12,7 @@
             <div class="row">
                 {% for club in clubs %}
                 <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
-                    <a href="{{ url_for('views.elo_club_ranking', club_id=club.cl_id) }}" class="text-decoration-none">
+                    <a href="{{ url_for('views.elo_club_ranking', club_slug=club.cl_slug) }}" class="text-decoration-none">
                         <div class="card h-100 text-center" style="transition: box-shadow 0.2s; cursor: pointer;"
                              onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.18)'"
                              onmouseout="this.style.boxShadow=''">

@@ -53,7 +53,7 @@
                                         </a>
                                     {% endif %}
                                     {% if event.ev_status != 'event_ended' %}
-                                    <a href="{{ url_for('views.detail_event_tv', event_id=event.ev_id) }}" class="btn btn-outline-info d-none d-md-inline-block" title="{{ translate('TV View') }}">
+                                    <a href="{{ url_for('views.detail_event_tv', slug=event.ev_slug) }}" class="btn btn-outline-info d-none d-md-inline-block" title="{{ translate('TV View') }}">
                                         <i class="fa fa-tv"></i> <span class="d-none d-lg-inline">{{ translate('TV View') }}</span>
                                     </a>
                                     {% endif %}
@@ -757,7 +757,7 @@
                     <p class="card-text text-muted">
                         {{ translate('View this event optimized for large TV screens with live updates') }}
                     </p>
-                    <a href="{{ url_for('views.detail_event_tv', event_id=event.ev_id) }}" class="btn btn-info btn-lg">
+                    <a href="{{ url_for('views.detail_event_tv', slug=event.ev_slug) }}" class="btn btn-info btn-lg">
                         <i class="fa fa-tv mr-2"></i>
                         {{ translate('Open TV View') }}
                     </a>

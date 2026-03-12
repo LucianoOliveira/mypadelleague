@@ -124,7 +124,7 @@
         
         <div class="card-footer">
             {% if can_edit %}
-            <a href="{{ url_for('views.edit_event_public', event_id=event.ev_id, code=access_code) }}" class="btn btn-primary">
+            <a href="{{ url_for('views.edit_event_public', slug=event.ev_slug, code=access_code) }}" class="btn btn-primary">
                 <i class="zmdi zmdi-edit"></i> {{ translate('Edit Event') }}
             </a>
             {% endif %}

@@ -53,7 +53,7 @@
                 <div class="row mt-5">
                     <div class="col-6">
                         {% if is_edit %}
-                        <a href="{{ url_for('views.public_event_detail', event_id=event_id, code=access_code) }}" class="btn btn-secondary btn-lg w-100">
+                        <a href="{{ url_for('views.public_event_detail', slug=event_slug, code=access_code) }}" class="btn btn-secondary btn-lg w-100">
                             <i class="zmdi zmdi-close"></i> {{ translate('Cancel') }}
                         </a>
                         {% else %}

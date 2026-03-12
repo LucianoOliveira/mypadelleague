@@ -100,7 +100,7 @@
                 
                 <div class="row mt-4">
                     <div class="col-md-6">
-                        <a href="{{ url_for('views.detail_event', event_id=event.ev_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event.ev_id) }}" class="btn btn-secondary">
+                        <a href="{{ url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug) }}" class="btn btn-secondary">
                             <i class="fa fa-arrow-left"></i> {{ translate('Cancel') }}
                         </a>
                         

@@ -22,7 +22,7 @@
                     </thead>
                     <tbody>
                         {% for league in result %}
-                        <tr onclick="window.location.href='{{ url_for('views.edit_league', league_id=league.lg_id) }}';" style="cursor: pointer;">
+                        <tr onclick="window.location.href='{{ url_for('views.edit_league', slug=league.lg_slug) }}';" style="cursor: pointer;">
                             <td><img src="{{ url_for('views.display_league_main_image', leagueID=league.lg_id ) }}" 
                                 alt="{{ league.lg_name }}" class="rounded-circle" width="40">                 
                                 {{ league.lg_name }}</td>

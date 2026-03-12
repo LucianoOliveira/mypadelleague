@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for, Flask, session, send_file
+from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for, Flask, session, send_file, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -6,7 +6,7 @@ from .models import (Users, UserRequests, Messages, League, Club, ClubAuthorizat
                     Court, GameDay, LeagueCourts, Game, GameDayPlayer, GameDayClassification,
                     LeagueClassification, ELOranking, ELOrankingHist, LeaguePlayers, GameDayRegistration,
                     Event, EventRegistration, EventClassification, EventCourts, EventPlayerNames,
-                    EventType, MexicanConfig, PlayerClubNickname)
+                    EventType, MexicanConfig, PlayerClubNickname, slugify)
 from . import db
 import json, os, threading, hashlib
 from datetime import datetime, date, timedelta, timezone
@@ -33,19 +33,49 @@ def translate(text):
         return translations[text][lang]
     return text
 
+def _slug_to_id(slug):
+    """Extract trailing numeric ID from a name-ID slug like 'Title-5' → 5."""
+    try:
+        return int(slug.rsplit('-', 1)[1])
+    except (ValueError, IndexError, AttributeError):
+        abort(404)
+
+
+def _generate_unique_club_slug(name, exclude_id=None):
+    """Generate a unique slug for a club, appending a counter on collisions."""
+    base = slugify(name)
+    slug = base
+    counter = 2
+    while True:
+        q = Club.query.filter_by(cl_slug=slug)
+        if exclude_id:
+            q = q.filter(Club.cl_id != exclude_id)
+        if not q.first():
+            return slug
+        slug = f"{base}_{counter}"
+        counter += 1
+
+
 def login_or_access_code_required(f):
     """Decorator that allows access either with login OR with valid access code for public events"""
     @wraps(f)
-    def decorated_function(event_id, *args, **kwargs):
+    def decorated_function(*args, **kwargs):
+        # Support both new slug-based routes and legacy int routes
+        slug_or_id = kwargs.get('slug') or kwargs.get('event_id')
+        if isinstance(slug_or_id, str):
+            event_id = _slug_to_id(slug_or_id)
+        else:
+            event_id = slug_or_id
+
         # Check if user is logged in
         if current_user.is_authenticated:
-            return f(event_id, *args, **kwargs)
-        
+            return f(*args, **kwargs)
+
         # Check for access code in query params or session
         provided_code = request.args.get('code', '').strip()
         if not provided_code:
             provided_code = session.get(f'event_{event_id}_access_code', '').strip()
-        
+
         if provided_code:
             # Verify access code
             event = Event.query.get(event_id)
@@ -53,16 +83,19 @@ def login_or_access_code_required(f):
                 date_str = event.ev_date.strftime('%Y%m%d')
                 access_code_data = f"{event_id}-{event.ev_created_by_id}-{date_str}"
                 expected_code = hashlib.md5(access_code_data.encode()).hexdigest()[:6].upper()
-                
+
                 if provided_code.upper() == expected_code:
                     # Store in session for subsequent requests
                     session[f'event_{event_id}_access_code'] = provided_code.upper()
-                    return f(event_id, *args, **kwargs)
-        
+                    return f(*args, **kwargs)
+
         # No valid authentication
         flash(translate('Please log in or provide a valid access code to edit this event'), 'error')
-        return redirect(url_for('views.public_event_detail', event_id=event_id))
-    
+        event = Event.query.get(event_id)
+        if event:
+            return redirect(url_for('views.public_event_detail', slug=event.ev_slug))
+        return redirect(url_for('views.home'))
+
     return decorated_function
 
 views =  Blueprint('views', __name__)
@@ -183,7 +216,7 @@ def unregister_gameday(gameday_id):
 @login_required
 def add_league_player(league_id):
     league = League.query.get_or_404(league_id)
-    return_url = request.args.get('return_url') or url_for('views.edit_league', league_id=league_id)
+    return_url = request.args.get('return_url') or url_for('views.edit_league', slug=league.lg_slug)
     
     # Check if user is authorized for this club
     is_authorized = db.session.query(ClubAuthorization).filter(
@@ -797,6 +830,8 @@ def create_club():
         )
         db.session.add(new_club)
         db.session.commit()
+        new_club.cl_slug = _generate_unique_club_slug(name)
+        db.session.commit()
         cl_id = new_club.cl_id
         
         # Create authorization for the current user
@@ -840,11 +875,11 @@ def create_club():
     
     return render_template('create_club.html', user=current_user)
 
-@views.route('/edit_club/<int:club_id>', methods=['GET', 'POST'])
+@views.route('/edit_club/<club_slug>', methods=['GET', 'POST'])
 @login_required
-def edit_club(club_id):
+def edit_club(club_slug):
     club = Club.query.join(ClubAuthorization).filter(
-        Club.cl_id == club_id,
+        Club.cl_slug == club_slug,
         ClubAuthorization.ca_user_id == current_user.us_id
     ).first()
     
@@ -857,6 +892,8 @@ def edit_club(club_id):
         club.cl_email = request.form.get('club_email')
         club.cl_phone = request.form.get('club_phone')
         club.cl_address = request.form.get('club_address')
+        # Regenerate slug when name changes
+        club.cl_slug = _generate_unique_club_slug(club.cl_name, exclude_id=club.cl_id)
         
         db.session.commit()
 
@@ -899,51 +936,51 @@ def edit_club(club_id):
                     photo.save(photo_path)
 
         flash(translate('Club updated successfully.'), 'success')
-        return redirect(url_for('views.edit_club', club_id=club_id))
+        return redirect(url_for('views.edit_club', club_slug=club.cl_slug))
     
     return render_template('edit_club.html', club=club, user=current_user)
 
 @views.route('/club/<int:club_id>/activate', methods=['POST'])
 @login_required
 def activate_club(club_id):
-    if not (current_user.us_is_manager or current_user.us_is_admin or current_user.us_is_superuser):
-        flash(translate('Unauthorized'), 'error')
-        return redirect(url_for('views.edit_club', club_id=club_id))
-    
     club = Club.query.join(ClubAuthorization).filter(
         Club.cl_id == club_id,
         ClubAuthorization.ca_user_id == current_user.us_id
     ).first()
+
+    if not current_user.us_is_manager and not current_user.us_is_admin and not current_user.us_is_superuser:
+        flash(translate('Unauthorized'), 'error')
+        return redirect(url_for('views.edit_club', club_slug=club.cl_slug) if club else url_for('views.management_clubs'))
     
     if not club:
         flash(translate('Club not found'), 'error')
-        return redirect(url_for('views.edit_club', club_id=club_id))
+        return redirect(url_for('views.management_clubs'))
     
     club.cl_active = True
     db.session.commit()
     flash(translate('Club activated successfully'), 'success')
-    return redirect(url_for('views.edit_club', club_id=club_id))
+    return redirect(url_for('views.edit_club', club_slug=club.cl_slug))
 
 @views.route('/club/<int:club_id>/deactivate', methods=['POST'])
 @login_required
 def deactivate_club(club_id):
-    if not (current_user.us_is_manager or current_user.us_is_admin or current_user.us_is_superuser):
-        flash(translate('Unauthorized'), 'error')
-        return redirect(url_for('views.edit_club', club_id=club_id))
-    
     club = Club.query.join(ClubAuthorization).filter(
         Club.cl_id == club_id,
         ClubAuthorization.ca_user_id == current_user.us_id
     ).first()
+
+    if not current_user.us_is_manager and not current_user.us_is_admin and not current_user.us_is_superuser:
+        flash(translate('Unauthorized'), 'error')
+        return redirect(url_for('views.edit_club', club_slug=club.cl_slug) if club else url_for('views.management_clubs'))
     
     if not club:
         flash(translate('Club not found'), 'error')
-        return redirect(url_for('views.edit_club', club_id=club_id))
+        return redirect(url_for('views.management_clubs'))
     
     club.cl_active = False
     db.session.commit()
     flash(translate('Club deactivated successfully'), 'success')
-    return redirect(url_for('views.edit_club', club_id=club_id))
+    return redirect(url_for('views.edit_club', club_slug=club.cl_slug))
 
 @views.route('/club/<int:club_id>/courts/add', methods=['POST'])
 @login_required
@@ -971,7 +1008,7 @@ def add_court(club_id):
     db.session.commit()
     
     flash(translate('Court added successfully'), 'success')
-    return redirect(url_for('views.edit_club', club_id=club_id))
+    return redirect(url_for('views.edit_club', club_slug=club.cl_slug))
 
 @views.route('/court/<int:court_id>/delete', methods=['POST'])
 @login_required
@@ -984,12 +1021,12 @@ def delete_court(court_id):
     if not court:
         return jsonify({'error': translate('Unauthorized')}), 403
     
-    club_id = court.ct_club_id  # Save club_id before deleting the court
+    club_slug = court.club.cl_slug  # Use relationship to get slug
     db.session.delete(court)
     db.session.commit()
     
     flash(translate('Court deleted successfully'), 'success')
-    return redirect(url_for('views.edit_club', club_id=club_id))
+    return redirect(url_for('views.edit_club', club_slug=club_slug))
 
 @views.route('/club/<int:club_id>/users/add', methods=['POST'])
 @login_required
@@ -1012,7 +1049,7 @@ def add_club_user(club_id):
     user = Users.query.filter_by(us_email=email).first()
     if not user:
         flash(translate('User not found'), 'error')
-        return redirect(url_for('views.edit_club', club_id=club_id))
+        return redirect(url_for('views.edit_club', club_slug=club.cl_slug))
     
     existing_auth = ClubAuthorization.query.filter_by(
         ca_user_id=user.us_id,
@@ -1021,7 +1058,7 @@ def add_club_user(club_id):
     
     if existing_auth:
         flash(translate('User already has access to this club'), 'error')
-        return redirect(url_for('views.edit_club', club_id=club_id))
+        return redirect(url_for('views.edit_club', club_slug=club.cl_slug))
     
     auth = ClubAuthorization(
         ca_user_id=user.us_id,
@@ -1031,7 +1068,7 @@ def add_club_user(club_id):
     db.session.commit()
     
     flash(translate('User added successfully'), 'success')
-    return redirect(url_for('views.edit_club', club_id=club_id))
+    return redirect(url_for('views.edit_club', club_slug=club.cl_slug))
 
 @views.route('/club_authorization/<int:auth_id>/delete', methods=['POST'])
 @login_required
@@ -1047,7 +1084,8 @@ def delete_club_authorization(auth_id):
         (current_user.us_is_manager and not user_to_delete.us_is_admin and not user_to_delete.us_is_superuser and not user_to_delete.us_is_manager)
     ):
         flash(translate('You do not have permission to remove this user'), 'error')
-        return redirect(url_for('views.edit_club', club_id=auth_to_delete.ca_club_id))
+        club_err = Club.query.get(auth_to_delete.ca_club_id)
+        return redirect(url_for('views.edit_club', club_slug=club_err.cl_slug) if club_err else url_for('views.management_clubs'))
     
     # Check if current user has authorization for the same club
     user_has_auth = ClubAuthorization.query.filter(
@@ -1060,18 +1098,19 @@ def delete_club_authorization(auth_id):
         flash(translate('Unauthorized'), 'error')
         return redirect(url_for('views.home'))
     
-    club_id = auth_to_delete.ca_club_id  # Save the club_id before deleting the authorization
+    club_to_redirect = Club.query.get(auth_to_delete.ca_club_id)  # Save before deleting
     
     db.session.delete(auth_to_delete)
     db.session.commit()
     
     flash(translate('User authorization removed successfully'), 'success')
-    return redirect(url_for('views.edit_club', club_id=club_id))
+    return redirect(url_for('views.edit_club', club_slug=club_to_redirect.cl_slug) if club_to_redirect else url_for('views.management_clubs'))
 
 
-@views.route('/edit_league/<int:league_id>', methods=['GET', 'POST'])
+@views.route('/edit_league/<slug>', methods=['GET', 'POST'])
 @login_required
-def edit_league(league_id):
+def edit_league(slug):
+    league_id = _slug_to_id(slug)
     league = League.query.get_or_404(league_id)
     
     # Check if user is authorized for this club through ClubAuthorization
@@ -1158,7 +1197,7 @@ def edit_league(league_id):
                     photo.save(photo_path)
 
         flash(translate('League updated successfully!'), 'success')
-        return redirect(url_for('views.edit_league', league_id=league_id) + '#court-details')
+        return redirect(url_for('views.edit_league', slug=league.lg_slug) + '#court-details')
 
     return render_template('edit_league.html', 
                            user=current_user, 
@@ -1188,9 +1227,10 @@ def verify_event_access_code(event_id, provided_code):
     
     return provided_code.upper() == expected_code
 
-@views.route('/event/<int:event_id>', methods=['GET'])
-def public_event_detail(event_id):
+@views.route('/event/<slug>', methods=['GET'])
+def public_event_detail(slug):
     """Public event detail page"""
+    event_id = _slug_to_id(slug)
     event = Event.query.get_or_404(event_id)
     
     # Check if access code is provided for editing
@@ -1237,10 +1277,11 @@ def public_event_detail(event_id):
                          registrations=registrations,
                          access_code=provided_code if can_edit else None)
 
-@views.route('/detail_event_tv/<int:event_id>', methods=['GET'])  
-def detail_event_tv(event_id):
+@views.route('/detail_event_tv/<slug>', methods=['GET'])  
+def detail_event_tv(slug):
     """TV-optimized view for event details"""
     from .models import EventClassification
+    event_id = _slug_to_id(slug)
     event = Event.query.get_or_404(event_id)
     
     # Check if user is authorized to manage this event
@@ -1301,15 +1342,15 @@ def detail_event_tv(event_id):
 @login_required
 def toggle_event_elo(event_id):
     """Superuser-only: toggle whether an event is excluded from ELO calculations."""
+    event = Event.query.get_or_404(event_id)
     if current_user.us_is_superuser != 1:
         flash(translate('Not authorized'), 'error')
-        return redirect(url_for('views.detail_event', event_id=event_id))
-    event = Event.query.get_or_404(event_id)
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
     event.ev_exclude_from_elo = not bool(event.ev_exclude_from_elo)
     db.session.commit()
     state = translate('excluded from') if event.ev_exclude_from_elo else translate('included in')
     flash(translate('Event {} ELO ranking.').format(state), 'success')
-    return redirect(url_for('views.detail_event', event_id=event_id))
+    return redirect(url_for('views.detail_event', slug=event.ev_slug))
 
 
 @views.route('/close_event/<int:event_id>', methods=['POST'])
@@ -1333,7 +1374,7 @@ def close_event(event_id):
     
     if not user_is_authorized:
         flash(translate('You are not authorized to close this event'), 'error')
-        return redirect(url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
     
     try:
         # Get all games for this event
@@ -1341,7 +1382,7 @@ def close_event(event_id):
         
         if not all_games:
             flash(translate('No games found for this event'), 'warning')
-            return redirect(url_for('views.detail_event', event_id=event_id))
+            return redirect(url_for('views.detail_event', slug=event.ev_slug))
         
         # Find and delete rounds where ALL games are 0-0
         deleted_rounds = 0
@@ -1394,7 +1435,7 @@ def close_event(event_id):
         traceback.print_exc()
         flash(translate('Error closing event: {}').format(str(e)), 'error')
     
-    return redirect(url_for('views.detail_event', event_id=event_id))
+    return redirect(url_for('views.detail_event', slug=event.ev_slug))
 
 @views.route('/close_mexicano/<int:event_id>', methods=['POST'])
 @login_required
@@ -1417,7 +1458,7 @@ def close_mexicano(event_id):
     
     if not user_is_authorized:
         flash(translate('You are not authorized to close this event'), 'error')
-        return redirect(url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
     
     try:
         # Delete all games without results (either score is null)
@@ -1449,11 +1490,12 @@ def close_mexicano(event_id):
         traceback.print_exc()
         flash(translate('Error closing Mexicano: {}').format(str(e)), 'error')
     
-    return redirect(url_for('views.detail_event', event_id=event_id))
+    return redirect(url_for('views.detail_event', slug=event.ev_slug))
 
-@views.route('/detail_event/<int:event_id>', methods=['GET'])  
-def detail_event(event_id):
+@views.route('/detail_event/<slug>', methods=['GET'])  
+def detail_event(slug):
     """Event detail page with full functionality for authenticated users"""
+    event_id = _slug_to_id(slug)
     event = Event.query.get_or_404(event_id)
     
     # Check if user is authorized to manage this event
@@ -2079,13 +2121,13 @@ def create_event_final():
             session.pop('public_event', None)
             
             flash(translate('Event created successfully! Access Code: {}. Save this code to manage your event.').format(access_code), 'success')
-            return redirect(url_for('views.public_event_detail', event_id=new_event.ev_id, code=access_code))
+            return redirect(url_for('views.public_event_detail', slug=new_event.ev_slug, code=access_code))
         
         else:
             # For other event types, just create the basic event
             session.pop('public_event', None)
             flash(translate('Event created successfully! Access Code: {}').format(access_code), 'success')
-            return redirect(url_for('views.public_event_detail', event_id=new_event.ev_id))
+            return redirect(url_for('views.public_event_detail', slug=new_event.ev_slug))
     
     except Exception as e:
         db.session.rollback()
@@ -2096,10 +2138,11 @@ def create_event_final():
 # PUBLIC EVENT EDITING ROUTES (mirrors creation flow)
 # ============================================
 
-@views.route('/edit_event_public/<int:event_id>', methods=['GET'])
+@views.route('/edit_event_public/<slug>', methods=['GET'])
 @login_or_access_code_required
-def edit_event_public(event_id):
+def edit_event_public(slug):
     """Entry point for editing public events - redirects to first step"""
+    event_id = _slug_to_id(slug)
     event = Event.query.get_or_404(event_id)
     
     # Only allow for public events
@@ -2111,12 +2154,13 @@ def edit_event_public(event_id):
     access_code = session.get(f'event_{event_id}_access_code', '')
     
     # Redirect to first edit step
-    return redirect(url_for('views.edit_event_public_step_basic', event_id=event_id, code=access_code))
+    return redirect(url_for('views.edit_event_public_step_basic', slug=event.ev_slug, code=access_code))
 
-@views.route('/edit_event_public_step_basic/<int:event_id>', methods=['GET', 'POST'])
+@views.route('/edit_event_public_step_basic/<slug>', methods=['GET', 'POST'])
 @login_or_access_code_required
-def edit_event_public_step_basic(event_id):
+def edit_event_public_step_basic(slug):
     """Step 1: Edit basic info (date, time, name)"""
+    event_id = _slug_to_id(slug)
     event = Event.query.get_or_404(event_id)
     access_code = session.get(f'event_{event_id}_access_code', '')
     
@@ -2129,7 +2173,7 @@ def edit_event_public_step_basic(event_id):
             event.ev_title = event_title if event_title else f"Mexicano {event.ev_date.strftime('%B %d')}"
             
             db.session.commit()
-            return redirect(url_for('views.edit_event_public_step_players', event_id=event_id, code=access_code))
+            return redirect(url_for('views.edit_event_public_step_players', slug=event.ev_slug, code=access_code))
         except Exception as e:
             db.session.rollback()
             flash(translate('Error updating event: {}').format(str(e)), 'error')
@@ -2147,12 +2191,14 @@ def edit_event_public_step_basic(event_id):
                          event_data=event_data,
                          is_edit=True,
                          event_id=event_id,
+                         event_slug=event.ev_slug,
                          access_code=access_code)
 
-@views.route('/edit_event_public_step_players/<int:event_id>', methods=['GET', 'POST'])
+@views.route('/edit_event_public_step_players/<slug>', methods=['GET', 'POST'])
 @login_or_access_code_required
-def edit_event_public_step_players(event_id):
+def edit_event_public_step_players(slug):
     """Step 2: Edit number of players"""
+    event_id = _slug_to_id(slug)
     event = Event.query.get_or_404(event_id)
     access_code = session.get(f'event_{event_id}_access_code', '')
     
@@ -2166,7 +2212,7 @@ def edit_event_public_step_players(event_id):
             else:
                 event.ev_max_players = max_players
                 db.session.commit()
-                return redirect(url_for('views.edit_event_public_step_pairing', event_id=event_id, code=access_code))
+                return redirect(url_for('views.edit_event_public_step_pairing', slug=event.ev_slug, code=access_code))
         except Exception as e:
             db.session.rollback()
             flash(translate('Error updating players: {}').format(str(e)), 'error')
@@ -2177,12 +2223,14 @@ def edit_event_public_step_players(event_id):
                          current_max_players=event.ev_max_players,
                          is_edit=True,
                          event_id=event_id,
+                         event_slug=event.ev_slug,
                          access_code=access_code)
 
-@views.route('/edit_event_public_step_pairing/<int:event_id>', methods=['GET', 'POST'])
+@views.route('/edit_event_public_step_pairing/<slug>', methods=['GET', 'POST'])
 @login_or_access_code_required
-def edit_event_public_step_pairing(event_id):
+def edit_event_public_step_pairing(slug):
     """Step 3: Edit pairing method"""
+    event_id = _slug_to_id(slug)
     event = Event.query.get_or_404(event_id)
     access_code = session.get(f'event_{event_id}_access_code', '')
     
@@ -2192,7 +2240,7 @@ def edit_event_public_step_pairing(event_id):
             if pairing_type in ['Random', 'Manual', 'L&R Random']:
                 event.ev_pairing_type = pairing_type
                 db.session.commit()
-                return redirect(url_for('views.edit_event_public_step_courts', event_id=event_id, code=access_code))
+                return redirect(url_for('views.edit_event_public_step_courts', slug=event.ev_slug, code=access_code))
             else:
                 flash(translate('Invalid pairing type'), 'error')
         except Exception as e:
@@ -2206,12 +2254,14 @@ def edit_event_public_step_pairing(event_id):
                          current_pairing=event.ev_pairing_type,
                          is_edit=True,
                          event_id=event_id,
+                         event_slug=event.ev_slug,
                          access_code=access_code)
 
-@views.route('/edit_event_public_step_courts/<int:event_id>', methods=['GET', 'POST'])
+@views.route('/edit_event_public_step_courts/<slug>', methods=['GET', 'POST'])
 @login_or_access_code_required
-def edit_event_public_step_courts(event_id):
+def edit_event_public_step_courts(slug):
     """Step 4: Edit courts"""
+    event_id = _slug_to_id(slug)
     event = Event.query.get_or_404(event_id)
     access_code = session.get(f'event_{event_id}_access_code', '')
     
@@ -2238,7 +2288,7 @@ def edit_event_public_step_courts(event_id):
                     db.session.add(event_court)
             
             db.session.commit()
-            return redirect(url_for('views.edit_event_public_step_register', event_id=event_id, code=access_code))
+            return redirect(url_for('views.edit_event_public_step_register', slug=event.ev_slug, code=access_code))
         except Exception as e:
             db.session.rollback()
             flash(translate('Error updating courts: {}').format(str(e)), 'error')
@@ -2250,12 +2300,14 @@ def edit_event_public_step_courts(event_id):
                          current_courts=current_court_ids,
                          is_edit=True,
                          event_id=event_id,
+                         event_slug=event.ev_slug,
                          access_code=access_code)
 
-@views.route('/edit_event_public_step_register/<int:event_id>', methods=['GET', 'POST'])
+@views.route('/edit_event_public_step_register/<slug>', methods=['GET', 'POST'])
 @login_or_access_code_required
-def edit_event_public_step_register(event_id):
+def edit_event_public_step_register(slug):
     """Step 5: Edit player names"""
+    event_id = _slug_to_id(slug)
     event = Event.query.get_or_404(event_id)
     access_code = session.get(f'event_{event_id}_access_code', '')
     
@@ -2437,7 +2489,7 @@ def edit_event_public_step_register(event_id):
             
             db.session.commit()
             flash(translate('Event updated successfully!'), 'success')
-            return redirect(url_for('views.public_event_detail', event_id=event_id, code=access_code))
+            return redirect(url_for('views.public_event_detail', slug=event.ev_slug, code=access_code))
             
         except Exception as e:
             db.session.rollback()
@@ -2451,6 +2503,7 @@ def edit_event_public_step_register(event_id):
                          player_data=player_data,
                          is_edit=True,
                          event_id=event_id,
+                         event_slug=event.ev_slug,
                          access_code=access_code)
 
 # ============================================
@@ -2466,7 +2519,7 @@ def edit_event(event_id):
     # Prevent editing closed events
     if event.ev_status == 'event_ended':
         flash(translate('Cannot edit a closed event'), 'error')
-        return redirect(url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
     
     # Check authorization (superuser or club authorization)
     if current_user.us_is_superuser != 1:
@@ -2822,7 +2875,7 @@ def edit_event_step1(event_id):
     # Prevent editing closed events
     if event.ev_status == 'event_ended':
         flash(translate('Cannot edit a closed event'), 'error')
-        return redirect(url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
     
     # Check authorization (superuser, club authorization, or public event with access code)
     is_public_event = event.ev_club_id == 2  # Public Events club ID
@@ -2901,13 +2954,12 @@ def edit_event_step1(event_id):
 @login_or_access_code_required
 def delete_event(event_id):
     """Delete an event and all its related data (admin/superuser only)"""
+    event = Event.query.get_or_404(event_id)
     
     # Check if user is authenticated and has admin/superuser permissions
     if not current_user.is_authenticated or (not current_user.us_is_superuser and not current_user.us_is_admin):
         flash(translate('You do not have permission to delete events.'), 'error')
-        return redirect(url_for('views.detail_event', event_id=event_id))
-    
-    event = Event.query.get_or_404(event_id)
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
     
     # Double-check authorization for regular admins if event is not from public club
     if not current_user.us_is_superuser and event.ev_club_id != 2:  # Not superuser and not public event
@@ -2918,7 +2970,7 @@ def delete_event(event_id):
         
         if not authorization:
             flash(translate('You are not authorized to delete this event'), 'error')
-            return redirect(url_for('views.detail_event', event_id=event_id))
+            return redirect(url_for('views.detail_event', slug=event.ev_slug))
     
     event_title = event.ev_title
     
@@ -2972,7 +3024,7 @@ def edit_event_step2(event_id):
     # Prevent editing closed events
     if event.ev_status == 'event_ended':
         flash(translate('Cannot edit a closed event'), 'error')
-        return redirect(url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
     
     # Check authorization (superuser, club authorization, or public event with access code)
     is_public_event = event.ev_club_id == 2  # Public Events club ID
@@ -3414,7 +3466,7 @@ def update_event_players(event_id):
                     flash(translate('Players saved but could not create games: {}').format(str(e)), 'warning')
         
         access_code = session.get(f'event_{event_id}_access_code', '')
-        return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
         
     except Exception as e:
         db.session.rollback()
@@ -3775,7 +3827,7 @@ def clear_event_round(event_id, start_time):
                 print(f"DEBUG clear_event_round: Not authorized")
                 flash(translate('You are not authorized to delete rounds for this event'), 'error')
                 access_code = session.get(f'event_{event_id}_access_code', '')
-                return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+                return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
 
         print(f"DEBUG clear_event_round: Authorization passed, parsing time")
         from datetime import datetime, time
@@ -3794,7 +3846,7 @@ def clear_event_round(event_id, start_time):
         if not all_games:
             flash(translate('No games found for this event'), 'warning')
             access_code = session.get(f'event_{event_id}_access_code', '')
-            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+            return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
         
         # For NonStop events, validate sequential clearing
         if is_nonstop:
@@ -3820,7 +3872,7 @@ def clear_event_round(event_id, start_time):
                 flash(translate('For NonStop events, you can only clear the latest round with results. Please clear round {}:{:02d} first.').format(
                     latest_round_with_results[0], latest_round_with_results[1]), 'error')
                 access_code = session.get(f'event_{event_id}_access_code', '')
-                return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+                return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
         
         # Find games in the target round and all games that start after it
         target_round_games = []
@@ -3852,7 +3904,7 @@ def clear_event_round(event_id, start_time):
         if not target_round_games:
             flash(translate('No games found for the specified round time'), 'warning')
             access_code = session.get(f'event_{event_id}_access_code', '')
-            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+            return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
         
         # Reset scores for the target round
         for game in target_round_games:
@@ -3887,7 +3939,7 @@ def clear_event_round(event_id, start_time):
         flash(translate('Error clearing round: {}').format(str(e)), 'error')
     
     access_code = session.get(f'event_{event_id}_access_code', '')
-    return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+    return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
 
 @views.route('/get_round_deletion_info/<int:event_id>/<start_time>', methods=['GET'])
 @login_or_access_code_required
@@ -4023,7 +4075,7 @@ def create_event_games(event_id):
     
     # Redirect to event detail page to show games and allow result entry
     access_code = session.get(f'event_{event_id}_access_code', '')
-    return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+    return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
 
 @views.route('/update_all_game_scores/<int:event_id>', methods=['POST'])
 @login_or_access_code_required
@@ -4071,7 +4123,7 @@ def update_all_game_scores(event_id):
         if not any_scores_submitted:
             flash(translate('No scores were submitted'), 'warning')
             access_code = session.get(f'event_{event_id}_access_code', '')
-            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+            return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
         
         # Check if all submitted scores are 0-0 (special case - delete round and recalculate)
         if all_zero_scores:
@@ -4091,7 +4143,7 @@ def update_all_game_scores(event_id):
         if games_updated == 0:
             flash(translate('No valid game scores were updated'), 'warning')
             access_code = session.get(f'event_{event_id}_access_code', '')
-            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+            return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
 
         # Flush so the updates are visible in queries below
         db.session.flush()
@@ -4120,7 +4172,7 @@ def update_all_game_scores(event_id):
             db.session.commit()
             flash(translate('{} game score(s) saved.').format(games_updated), 'success')
             access_code = session.get(f'event_{event_id}_access_code', '')
-            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+            return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
 
         current_round_games = rounds_by_time[latest_round_time]
         round_complete = all(
@@ -4134,7 +4186,7 @@ def update_all_game_scores(event_id):
             remaining = sum(1 for g in current_round_games if g.gm_result_A is None or g.gm_result_B is None)
             flash(translate('{} score(s) saved. {} game(s) still pending in this round.').format(games_updated, remaining), 'success')
             access_code = session.get(f'event_{event_id}_access_code', '')
-            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+            return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
 
         # Round is fully complete — recalculate classifications
         calculate_event_classifications(event_id)
@@ -4183,7 +4235,7 @@ def update_all_game_scores(event_id):
         flash(translate('Error updating scores: {}').format(str(e)), 'error')
     
     access_code = session.get(f'event_{event_id}_access_code', '')
-    return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+    return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
 
 def handle_zero_scores_case(event_id):
     """Handle the special case where all scores are 0-0 - delete round and recalculate"""
@@ -4194,7 +4246,7 @@ def handle_zero_scores_case(event_id):
         if not all_games:
             flash(translate('No games found to reset'), 'warning')
             access_code = session.get(f'event_{event_id}_access_code', '')
-            return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+            return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
         
         # Find the latest round (games with same start time)
         latest_start_time = all_games[0].gm_timeStart
@@ -4229,7 +4281,7 @@ def handle_zero_scores_case(event_id):
         flash(translate('Error resetting round: {}').format(str(e)), 'error')
     
     access_code = session.get(f'event_{event_id}_access_code', '')
-    return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+    return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
 
 def calculate_event_classifications(event_id):
     """Calculate classifications for all players in an event"""
@@ -4402,7 +4454,7 @@ def edit_event_step3(event_id):
     # Prevent editing closed events
     if event.ev_status == 'event_ended':
         flash(translate('Cannot edit a closed event'), 'error')
-        return redirect(url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
     
     # Check authorization (superuser, club authorization, or public event with access code)
     is_public_event = event.ev_club_id == 2  # Public Events club ID
@@ -4553,13 +4605,13 @@ def edit_event_players(event_id):
     event_games = Game.query.filter_by(gm_idEvent=event_id).all()
     if not event_games:
         flash(translate('No games exist for this event yet'), 'error')
-        return redirect(url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
     
     # Check if any games have been played (have scores)
     games_played = any(game.gm_result_A is not None or game.gm_result_B is not None for game in event_games)
     if games_played:
         flash(translate('Cannot substitute players - some games have already been played'), 'error')
-        return redirect(url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
     
     # Get current registered players
     current_registrations = EventRegistration.query.filter_by(er_event_id=event_id, er_is_substitute=False).all()
@@ -4568,7 +4620,7 @@ def edit_event_players(event_id):
         # Handle player substitution logic
         flash(translate('Player substitution functionality will be implemented'), 'info')
         access_code = session.get(f'event_{event_id}_access_code', '')
-        return redirect(url_for('views.detail_event', event_id=event_id, code=access_code) if access_code else url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
     
     # Get access code from session if editing public event
     access_code = session.get(f'event_{event_id}_access_code', '')
@@ -4916,7 +4968,7 @@ def update_league_basic(league_id):
                 photo_path = os.path.join(secondary_dir, f'{idx}.jpg')
                 photo.save(photo_path)
 
-    return redirect(url_for('views.edit_league', league_id=league_id) + '#basic-info')
+    return redirect(url_for('views.edit_league', slug=league.lg_slug) + '#basic-info')
 
 @views.route('/update_league_details/<int:league_id>', methods=['POST'])
 @login_required
@@ -4937,7 +4989,7 @@ def update_league_details(league_id):
     # Check if league settings can be modified
     if not league.can_modify_league_settings():
         flash(translate('League settings cannot be modified after the first gameday date'), 'error')
-        return redirect(url_for('views.edit_league', league_id=league_id) + '#court-details')
+        return redirect(url_for('views.edit_league', slug=league.lg_slug) + '#court-details')
     
     # Validate selected courts
     selected_courts = request.form.getlist('selected_courts')
@@ -4945,7 +4997,7 @@ def update_league_details(league_id):
     
     if len(selected_courts) != required_courts:
         flash(translate(f'You must select exactly {required_courts} courts for {league.lg_nbrTeams} teams.'), 'error')
-        return redirect(url_for('views.edit_league', league_id=league_id) + '#court-details')
+        return redirect(url_for('views.edit_league', slug=league.lg_slug) + '#court-details')
     
     # Update league details
     league.lg_startTime = datetime.strptime(request.form.get('start_time'), '%H:%M').time()
@@ -4966,7 +5018,7 @@ def update_league_details(league_id):
         league.validate_substitutes()
     except ValueError as e:
         flash(translate(str(e)), 'error')
-        return redirect(url_for('views.edit_league', league_id=league_id) + '#court-details')
+        return redirect(url_for('views.edit_league', slug=league.lg_slug) + '#court-details')
     
     # Update court selections - first remove existing relationships
     LeagueCourts.query.filter_by(lc_league_id=league_id).delete()
@@ -5013,13 +5065,13 @@ def update_league_details(league_id):
                 photo.save(photo_path)
 
     flash(translate('League details updated successfully!'), 'success')
-    return redirect(url_for('views.edit_league', league_id=league_id) + '#court-details')
+    return redirect(url_for('views.edit_league', slug=league.lg_slug) + '#court-details')
 
 @views.route('/create_and_add_league_player/<int:league_id>', methods=['GET', 'POST'])
 @login_required
 def create_and_add_league_player(league_id):
     league = League.query.get_or_404(league_id)
-    return_url = request.args.get('return_url') or url_for('views.edit_league', league_id=league_id)
+    return_url = request.args.get('return_url') or url_for('views.edit_league', slug=league.lg_slug)
     
     # Check if user is authorized for this club
     is_authorized = db.session.query(ClubAuthorization).filter(
@@ -5173,7 +5225,7 @@ def remove_league_player(league_id, user_id):
     
     if not is_authorized:
         flash(translate('You do not have permission to remove players from this league.'), 'error')
-        return redirect(url_for('views.edit_league', league_id=league_id))
+        return redirect(url_for('views.edit_league', slug=league.lg_slug))
     
     league_player = LeaguePlayers.query.filter_by(lp_league_id=league_id, lp_player_id=user_id).first()
     if league_player:
@@ -5183,7 +5235,7 @@ def remove_league_player(league_id, user_id):
     else:
         flash(translate('Player not found in this league.'), 'error')
     
-    return redirect(url_for('views.edit_league', league_id=league_id))
+    return redirect(url_for('views.edit_league', slug=league.lg_slug))
 
 # Other routes
 @views.route('/display_user_image/<userID>')
@@ -5483,7 +5535,7 @@ def search():
     is_superuser = current_user.is_authenticated and current_user.us_is_superuser
 
     if best_type == 'event':
-        return redirect(url_for('views.detail_event', event_id=best_obj.ev_id))
+        return redirect(url_for('views.detail_event', slug=best_obj.ev_slug))
 
     if best_type == 'user':
         if is_superuser:
@@ -5492,16 +5544,16 @@ def search():
 
     if best_type == 'club':
         if is_superuser:
-            return redirect(url_for('views.edit_club', club_id=best_obj.cl_id))
-        return redirect(url_for('views.club_detail', club_id=best_obj.cl_id))
+            return redirect(url_for('views.edit_club', club_slug=best_obj.cl_slug))
+        return redirect(url_for('views.club_detail', club_slug=best_obj.cl_slug))
 
     return redirect(referrer)
 
 
-@views.route('/club_detail/<int:club_id>', methods=['GET'])
-def club_detail(club_id):
+@views.route('/club_detail/<club_slug>', methods=['GET'])
+def club_detail(club_slug):
     """Public read-only view of a club's information."""
-    club = Club.query.get_or_404(club_id)
+    club = Club.query.filter_by(cl_slug=club_slug).first_or_404()
     active_events = Event.query.filter_by(ev_club_id=club_id).filter(
         Event.ev_status.notin_(['canceled', 'event_ended'])
     ).order_by(Event.ev_date.desc()).all()
@@ -5556,6 +5608,7 @@ def player_profile(user_id):
             'time_start': g.gm_timeStart,
             'time_end': g.gm_timeEnd,
             'event_id': g.gm_idEvent,
+            'event_slug': g.event.ev_slug if g.event else None,
             'court': g.court.ct_name if g.court else None,
             'won': won,
             'draw': draw,
@@ -5968,12 +6021,12 @@ def elo_ranking():
     return render_template('elo_ranking.html', user=current_user, clubs=clubs_with_games)
 
 
-@views.route('/elo_ranking/<int:club_id>', methods=['GET'])
-def elo_club_ranking(club_id):
+@views.route('/elo_ranking/<club_slug>', methods=['GET'])
+def elo_club_ranking(club_slug):
     """ELO ranking for a specific club, computed from all scored games at that club."""
-    club = Club.query.get_or_404(club_id)
-    rankings = func_calculate_ELO_by_club(club_id)
-    nicknames = PlayerClubNickname.query.filter_by(pcn_club_id=club_id).all()
+    club = Club.query.filter_by(cl_slug=club_slug).first_or_404()
+    rankings = func_calculate_ELO_by_club(club.cl_id)
+    nicknames = PlayerClubNickname.query.filter_by(pcn_club_id=club.cl_id).all()
     nickname_map = {n.pcn_user_id: n.pcn_nickname for n in nicknames}
     return render_template('elo_club_ranking.html', user=current_user, club=club, rankings=rankings, nickname_map=nickname_map)
 
@@ -6436,7 +6489,7 @@ def complete_event_creation(event_id):
         db.session.commit()
         
         flash(translate('Event created successfully with {} players and {} games!').format(players_registered, num_games), 'success')
-        return redirect(url_for('views.detail_event', event_id=event_id))
+        return redirect(url_for('views.detail_event', slug=event.ev_slug))
         
     except Exception as e:
         db.session.rollback()

@@ -2,6 +2,17 @@ from . import db
 from flask_login import UserMixin
 from sqlalchemy.sql import func
 from datetime import datetime, timezone, timedelta, time
+import re
+
+
+def slugify(text):
+    """Convert text to URL-safe slug: spaces→underscores, strip special chars."""
+    if not text:
+        return ''
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = text.strip().replace(' ', '_')
+    text = re.sub(r'_+', '_', text)
+    return text
 
 class Users(db.Model, UserMixin):
     __tablename__ = 'tb_users'
@@ -53,6 +64,7 @@ class Club(db.Model):
     __tablename__ = 'tb_club'
     cl_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     cl_name = db.Column(db.String(100), nullable=False)
+    cl_slug = db.Column(db.String(150), unique=True, index=True, nullable=True)
     cl_email = db.Column(db.String(200))
     cl_phone = db.Column(db.String(20))
     cl_address = db.Column(db.String(200))
@@ -180,6 +192,10 @@ class League(db.Model):
     def max_substitutes(self):
         """Maximum number of substitutes allowed based on number of teams"""
         return self.lg_nbrTeams * 2 if self.lg_nbrTeams else 0
+
+    @property
+    def lg_slug(self):
+        return f"{slugify(self.lg_name or '')}-{self.lg_id}"
 
     def validate_substitutes(self):
         """Validate substitute numbers are within allowed range"""
@@ -486,6 +502,10 @@ class Event(db.Model):
     @property
     def current_substitute_count(self):
         return EventRegistration.query.filter_by(er_event_id=self.ev_id, er_is_substitute=True).count()
+
+    @property
+    def ev_slug(self):
+        return f"{slugify(self.ev_title)}-{self.ev_id}"
 
     @property
     def event_datetime(self):

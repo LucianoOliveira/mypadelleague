@@ -93,7 +93,7 @@
                     <button type="submit" class="btn btn-success px-5">
                         <i class="fa fa-save"></i> {{ translate('Update Event') }}
                     </button>
-                    <a href="{{ url_for('views.detail_event', event_id=event.ev_id) }}" class="btn btn-secondary ml-3 px-5">
+                    <a href="{{ url_for('views.detail_event', slug=event.ev_slug) }}" class="btn btn-secondary ml-3 px-5">
                         <i class="fa fa-arrow-left"></i> {{ translate('Cancel') }}
                     </a>
                 </div>

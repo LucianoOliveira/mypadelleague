@@ -328,7 +328,7 @@
                                     <td></td>
                                     <td></td>
                                     <td>
-                                        <a href="{{ url_for('views.create_and_add_league_player', league_id=league.lg_id) }}?return_url={{ url_for('views.edit_league', league_id=league.lg_id)|urlencode }}" class="btn btn-success btn-sm">
+                                        <a href="{{ url_for('views.create_and_add_league_player', league_id=league.lg_id) }}?return_url={{ url_for('views.edit_league', slug=league.lg_slug)|urlencode }}" class="btn btn-success btn-sm">
                                             <i class="icon-plus"></i> {{ translate('Add Player') }}
                                         </a>
                                     </td>

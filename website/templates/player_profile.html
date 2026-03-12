@@ -88,7 +88,7 @@
                                     <span class="badge badge-danger">{{ translate('Loss') }}</span>
                                 {% endif %}
                                 {% if g.event_id %}
-                                    <a href="{{ url_for('views.detail_event', event_id=g.event_id) }}" class="btn btn-xs btn-outline-info btn-sm ml-1" title="{{ translate('View Event') }}">
+                                    <a href="{{ url_for('views.detail_event', slug=g.event_slug) }}" class="btn btn-xs btn-outline-info btn-sm ml-1" title="{{ translate('View Event') }}">
                                         <i class="zmdi zmdi-open-in-new"></i>
                                     </a>
                                 {% endif %}
