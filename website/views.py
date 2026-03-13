@@ -2420,7 +2420,7 @@ def edit_event_public_step_register(slug):
                 return user
             
             # Process based on pairing type (same logic as create_event_final)
-            if pairing_type == 'Random':
+            if pairing_type in ('Random', 'Ranking'):
                 for i in range(max_players):
                     player_name = request.form.get(f'player_{i}')
                     if player_name and player_name.strip():
@@ -2780,7 +2780,7 @@ def update_event_players_with_locking(event_id):
             
             return user
         
-        if pairing_type == 'Random' or pairing_type == 'Manual':
+        if pairing_type in ('Random', 'Ranking', 'Manual'):
             # Handle pair-based input
             max_pairs = max_players // 2
             for pair_idx in range(max_pairs):
@@ -3197,7 +3197,7 @@ def update_event_players(event_id):
         all_player_names = []
         pairing_type = event.ev_pairing_type or 'Random'
         max_players = event.ev_max_players
-        if pairing_type == 'Random':
+        if pairing_type in ('Random', 'Ranking'):
             for i in range(max_players):
                 player_name = request.form.get(f'player_{i}')
                 if player_name and player_name.strip():
@@ -3257,35 +3257,18 @@ def update_event_players(event_id):
             # All players are present for a Mexicano tournament - validate completeness
             pass  # Validation passed, proceed with saving
         
-        # Store form data in session before any database operations (in case of error)
-        session[f'event_{event_id}_form_data'] = dict(request.form)
-        
-        # Clear existing player names and registrations for this event
+        # Step 1: Always update player registrations first (delete old, insert new).
+        # Games/classification logic comes AFTER.
         EventPlayerNames.query.filter_by(epn_event_id=event.ev_id).delete()
         EventRegistration.query.filter_by(er_event_id=event.ev_id).delete()
-        
-        # Check if games exist for this event
+
+        # Determine game state for post-save logic
         existing_games = Game.query.filter_by(gm_idEvent=event.ev_id).all()
-        if existing_games:
-            # Check if all games are unplayed (null scores or 0-0)
-            all_unplayed = all(
-                (game.gm_result_A is None or game.gm_result_A == 0) and 
-                (game.gm_result_B is None or game.gm_result_B == 0)
-                for game in existing_games
-            )
-            
-            if all_unplayed:
-                # All games are unplayed, safe to delete and recreate with new pairings
-                for game in existing_games:
-                    db.session.delete(game)
-                flash(translate('Existing games deleted. New games will be created with updated pairings.'), 'info')
-            else:
-                # Some games have been played, don't allow re-pairing
-                db.session.rollback()
-                session.pop(f'event_{event_id}_form_data', None)
-                flash(translate('Cannot change players - some games have already been played.'), 'error')
-                access_code = session.get(f'event_{event_id}_access_code', '')
-                return redirect(url_for('views.edit_event_step3', event_id=event_id, code=access_code) if access_code else url_for('views.edit_event_step3', event_id=event_id))
+        games_with_results = [
+            g for g in existing_games
+            if not ((g.gm_result_A is None or g.gm_result_A == 0) and
+                    (g.gm_result_B is None or g.gm_result_B == 0))
+        ] if existing_games else []
 
         players_registered = 0
         
@@ -3319,7 +3302,7 @@ def update_event_players(event_id):
             
             return user
         
-        if pairing_type == 'Random':
+        if pairing_type in ('Random', 'Ranking'):
             for i in range(max_players):
                 player_name = request.form.get(f'player_{i}')
                 if player_name and player_name.strip():
@@ -3427,83 +3410,47 @@ def update_event_players(event_id):
                         db.session.add(registration)
                         players_registered += 1
         
+        # PHASE 1 COMMIT: persist player registrations immediately.
+        # This is committed before any game logic so a failure in game management
+        # never rolls back the player data.
         db.session.commit()
-        
-        # Clear any cached form data since we successfully saved
         session.pop(f'event_{event_id}_form_data', None)
-        
         flash(translate('Event players updated successfully! {} players registered.').format(players_registered), 'success')
-        
-        # Automatically create games if we have all players for Mexicano or NonStop events
-        if players_registered == event.ev_max_players and event.event_type and event.event_type.et_name in ['Mexicano', 'NonStop']:
-            # Check if games already exist
-            existing_games = Game.query.filter_by(gm_idEvent=event_id).all()
-            
-            if existing_games:
-                # Games exist - check if any have results
-                games_with_results = [g for g in existing_games if g.gm_result_A is not None or g.gm_result_B is not None]
-                
-                if games_with_results:
-                    # Some games have results - cannot recreate
-                    flash(translate('Player names updated but games were not recreated because some games already have results.'), 'warning')
-                else:
-                    # No games have results - safe to recreate with new player names
-                    try:
-                        # Delete existing games and related records
-                        print(f"Deleting {len(existing_games)} existing games to recreate with updated player names")
-                        
-                        # Get the gameday associated with these games
-                        if existing_games:
-                            gameday_id = existing_games[0].gm_idGameDay
-                            
-                            # Delete games first
-                            Game.query.filter_by(gm_idEvent=event_id).delete()
-                            
-                            # Delete gameday players for this event's gameday
-                            GameDayPlayer.query.filter_by(gp_idGameDay=gameday_id).delete()
-                            
-                            # Delete gameday classifications for this event's gameday  
-                            GameDayClassification.query.filter_by(gc_idGameDay=gameday_id).delete()
-                            
-                            # Delete event classifications
-                            EventClassification.query.filter_by(ec_event_id=event_id).delete()
-                            
-                            # Delete the gameday itself
-                            GameDay.query.filter_by(gd_id=gameday_id).delete()
-                        
-                        # Create new games with updated player names
-                        num_games = create_games_for_event(event_id)
-                        db.session.commit()  # Commit the cleanup and new games
-                        flash(translate('Player names updated and {} games have been recreated with new pairings!').format(num_games), 'success')
-                    except Exception as e:
-                        print(f"ERROR recreating games: {str(e)}")
-                        import traceback
-                        traceback.print_exc()
-                        db.session.rollback()  # Rollback if game recreation fails
-                        flash(translate('Player names updated but could not recreate games: {}').format(str(e)), 'warning')
-            else:
-                # No existing games - create them normally
-                try:
-                    # Automatically create first round games
-                    num_games = create_games_for_event(event_id)
-                    db.session.commit()  # Commit the games and classifications
-                    flash(translate('All players registered! {} games have been automatically created.').format(num_games), 'success')
-                except Exception as e:
-                    print(f"ERROR creating games: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    db.session.rollback()  # Rollback if game creation fails
-                    flash(translate('Players saved but could not create games: {}').format(str(e)), 'warning')
-        
-        access_code = session.get(f'event_{event_id}_access_code', '')
-        return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
-        
+
     except Exception as e:
         db.session.rollback()
-        # Keep form data in session so user doesn't lose their input
-        flash(translate('Error updating event players: {}').format(str(e)), 'error')
+        import traceback; traceback.print_exc()
+        # Preserve form data so the user doesn't lose their input
+        session[f'event_{event_id}_form_data'] = dict(request.form)
+        flash(translate('Error saving players: {}').format(str(e)), 'error')
         access_code = session.get(f'event_{event_id}_access_code', '')
         return redirect(url_for('views.edit_event_step3', event_id=event_id, code=access_code) if access_code else url_for('views.edit_event_step3', event_id=event_id))
+
+    # ---- PHASE 2: Handle games (separate transaction – players already saved) ----
+    access_code = session.get(f'event_{event_id}_access_code', '')
+    if players_registered == event.ev_max_players and event.event_type and event.event_type.et_name in ['Mexicano', 'NonStop', 'Americano']:
+        try:
+            if games_with_results:
+                flash(translate('Player names updated. Existing played games were kept unchanged.'), 'info')
+            else:
+                if existing_games:
+                    gameday_id = existing_games[0].gm_idGameDay
+                    Game.query.filter_by(gm_idEvent=event_id).delete()
+                    GameDayPlayer.query.filter_by(gp_idGameDay=gameday_id).delete()
+                    GameDayClassification.query.filter_by(gc_idGameDay=gameday_id).delete()
+                    EventClassification.query.filter_by(ec_event_id=event_id).delete()
+                    GameDay.query.filter_by(gd_id=gameday_id).delete()
+                    db.session.commit()
+                    existing_games = []
+                num_games = create_games_for_event(event_id)
+                db.session.commit()
+                flash(translate('All players registered! {} games have been automatically created.').format(num_games), 'success')
+        except Exception as e:
+            db.session.rollback()
+            import traceback; traceback.print_exc()
+            flash(translate('Players saved but could not manage games: {}').format(str(e)), 'warning')
+
+    return redirect(url_for('views.detail_event', slug=event.ev_slug, code=access_code) if access_code else url_for('views.detail_event', slug=event.ev_slug))
 
 def generate_round_robin_schedule(num_teams):
     """Generate a round-robin schedule where each team plays every other team exactly once.
@@ -4650,9 +4597,146 @@ def edit_event_step3(event_id):
     
     # Get access code from session if editing public event
     access_code = session.get(f'event_{event_id}_access_code', '')
-    
-    return render_template("edit_event_step3.html", user=current_user, event=event, 
-                          player_data=player_data, access_code=access_code)
+
+    # Build display data: a flat ordered list of (name, user_object) tuples, one per slot.
+    from .models import EventPlayerNames as EPNModel, EventRegistration as ERModel, Users as UsersModel
+
+    max_players = event.ev_max_players
+    pairing_type = event.ev_pairing_type or 'Random'
+    player_slots = []
+
+    # Priority 1: if redirected after a failed save, restore from the submitted form values.
+    if form_data is not None:
+        def _get_fd(key):
+            val = form_data.get(key)
+            if isinstance(val, list):
+                return val[0].strip() if val else ''
+            return (val or '').strip()
+
+        if pairing_type == 'Manual':
+            half = max_players // 2
+            for ti in range(half):
+                tl = chr(65 + ti)
+                for pos, suffix in enumerate(('player1', 'player2'), 1):
+                    nm = _get_fd(f'team_{tl}_{suffix}')
+                    player_slots.append({'slot': len(player_slots), 'name': nm, 'player': None,
+                                         'field': f'team_{tl}_{suffix}', 'label': f'Team {tl} – P{pos}',
+                                         'team_letter': tl, 'team_pos': pos})
+        elif pairing_type == 'L&R Random':
+            half = max_players // 2
+            for i in range(half):
+                nm = _get_fd(f'left_player_{i}')
+                player_slots.append({'slot': i, 'name': nm, 'player': None,
+                                     'field': f'left_player_{i}', 'label': f'Left {i+1}', 'side': 'left'})
+            for i in range(half):
+                nm = _get_fd(f'right_player_{i}')
+                player_slots.append({'slot': half + i, 'name': nm, 'player': None,
+                                     'field': f'right_player_{i}', 'label': f'Right {i+1}', 'side': 'right'})
+        else:
+            for i in range(max_players):
+                nm = _get_fd(f'player_{i}')
+                player_slots.append({'slot': i, 'name': nm, 'player': None,
+                                     'field': f'player_{i}', 'label': f'Player {i+1}'})
+
+    # Priority 2: load from DB (normal page load, or when form_data produced nothing).
+    if not player_slots:
+        epn_records = EPNModel.query.filter_by(epn_event_id=event.ev_id).all()
+        er_records  = ERModel.query.filter_by(
+            er_event_id=event.ev_id, er_is_substitute=False
+        ).order_by(ERModel.er_id).all()
+
+        random_names = {}
+        team_names   = {}
+        left_names   = {}
+        right_names  = {}
+
+        for p in epn_records:
+            if p.epn_position_type == 'random':
+                random_names[p.epn_position_index] = p.epn_player_name
+            elif p.epn_position_type == 'team' and p.epn_team_identifier:
+                tl = p.epn_team_identifier
+                if tl not in team_names:
+                    team_names[tl] = {}
+                team_names[tl][p.epn_team_position] = p.epn_player_name
+            elif p.epn_position_type == 'left':
+                left_names[p.epn_position_index] = p.epn_player_name
+            elif p.epn_position_type == 'right':
+                right_names[p.epn_position_index] = p.epn_player_name
+
+        if pairing_type == 'Random' and not random_names:
+            for idx, reg in enumerate(er_records):
+                u = UsersModel.query.get(reg.er_player_id)
+                if u:
+                    random_names[idx] = u.us_name
+
+        reg_by_name = {}
+        for reg in er_records:
+            u = UsersModel.query.get(reg.er_player_id)
+            if u:
+                reg_by_name[u.us_name.lower()] = u
+
+        if pairing_type == 'Manual':
+            half = max_players // 2
+            for ti in range(half):
+                tl = chr(65 + ti)
+                td = team_names.get(tl, {})
+                for pos in (1, 2):
+                    nm = td.get(pos, '')
+                    player_slots.append({
+                        'slot': len(player_slots),
+                        'name': nm,
+                        'player': reg_by_name.get(nm.lower()) if nm else None,
+                        'field': f'team_{tl}_player{pos}',
+                        'label': f'Team {tl} – P{pos}',
+                        'team_letter': tl,
+                        'team_pos': pos,
+                    })
+        elif pairing_type == 'L&R Random':
+            half = max_players // 2
+            for i in range(half):
+                nm = left_names.get(i, '')
+                player_slots.append({
+                    'slot': i,
+                    'name': nm,
+                    'player': reg_by_name.get(nm.lower()) if nm else None,
+                    'field': f'left_player_{i}',
+                    'label': f'Left {i+1}',
+                    'side': 'left',
+                })
+            for i in range(half):
+                nm = right_names.get(i, '')
+                player_slots.append({
+                    'slot': half + i,
+                    'name': nm,
+                    'player': reg_by_name.get(nm.lower()) if nm else None,
+                    'field': f'right_player_{i}',
+                    'label': f'Right {i+1}',
+                    'side': 'right',
+                })
+        else:  # Random (default)
+            for i in range(max_players):
+                nm = random_names.get(i, '')
+                player_slots.append({
+                    'slot': i,
+                    'name': nm,
+                    'player': reg_by_name.get(nm.lower()) if nm else None,
+                    'field': f'player_{i}',
+                    'label': f'Player {i+1}',
+                })
+
+    # Determine if any game for this event already has a result recorded
+    has_results = db.session.query(Game).filter(
+        Game.gm_idEvent == event.ev_id,
+        db.or_(
+            db.and_(Game.gm_result_A != None, Game.gm_result_A != 0),
+            db.and_(Game.gm_result_B != None, Game.gm_result_B != 0),
+        )
+    ).first() is not None
+
+    return render_template("edit_event_step3.html", user=current_user, event=event,
+                          player_data=player_data, access_code=access_code,
+                          player_slots=player_slots, pairing_type=pairing_type,
+                          has_results=has_results)
 
 @views.route('/edit_event_players/<int:event_id>', methods=['GET', 'POST'])
 @login_or_access_code_required

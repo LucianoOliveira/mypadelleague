@@ -72,8 +72,7 @@
                                                name="player_{{ i }}" 
                                                placeholder="{{ translate('Enter player name') }}"
                                                value="{{ player_data.get('player_' + i|string, '') }}"
-                                               autocomplete="off"
-                                               {% if i < 4 %}required{% endif %}>
+                                               autocomplete="off">
                                         <div id="suggestions_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
                                              style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
                                         </div>
@@ -87,7 +86,7 @@
                                         <li><strong>{{ translate('NonStop') }}:</strong> {{ translate('Players randomly assigned to fixed teams for entire event') }}</li>
                                         <li><strong>{{ translate('Americano') }}:</strong> {{ translate('Teams shuffle randomly each round to maximize player interactions') }}</li>
                                         <li><strong>{{ translate('Mexicano') }}:</strong> {{ translate('Random initial pairing, then ranking-based re-pairing each round') }}</li>
-                                        <li>{{ translate('First 4 players are required, others optional') }}</li>
+                                        <li>{{ translate('All players are optional - you can add them now or later') }}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -118,8 +117,7 @@
                                                            name="team_{{ team_letter }}_player1" 
                                                            placeholder="{{ translate('Player 1') }}"
                                                            value="{{ player_data.get('team_' + team_letter + '_player1', '') }}"
-                                                           autocomplete="off"
-                                                           {% if loop.index0 < 2 %}required{% endif %}>
+                                                           autocomplete="off">
                                                     <div id="suggestions_team_{{ team_letter }}_player1" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
                                                          style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
                                                     </div>
@@ -134,8 +132,7 @@
                                                            name="team_{{ team_letter }}_player2" 
                                                            placeholder="{{ translate('Player 2') }}"
                                                            value="{{ player_data.get('team_' + team_letter + '_player2', '') }}"
-                                                           autocomplete="off"
-                                                           {% if loop.index0 < 2 %}required{% endif %}>
+                                                           autocomplete="off">
                                                     <div id="suggestions_team_{{ team_letter }}_player2" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
                                                          style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
                                                     </div>
@@ -186,8 +183,7 @@
                                                        name="left_player_{{ i }}" 
                                                        placeholder="{{ translate('Enter left player name') }}"
                                                        value="{{ player_data.get('left_player_' + i|string, '') }}"
-                                                       autocomplete="off"
-                                                       {% if i < 2 %}required{% endif %}>
+                                                       autocomplete="off">
                                                 <div id="suggestions_left_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
                                                      style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
                                                 </div>
@@ -216,8 +212,7 @@
                                                        name="right_player_{{ i }}" 
                                                        placeholder="{{ translate('Enter right player name') }}"
                                                        value="{{ player_data.get('right_player_' + i|string, '') }}"
-                                                       autocomplete="off"
-                                                       {% if i < 2 %}required{% endif %}>
+                                                       autocomplete="off">
                                                 <div id="suggestions_right_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
                                                      style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
                                                 </div>
@@ -234,7 +229,7 @@
                                 <li><strong>{{ translate('NonStop') }}:</strong> {{ translate('Left/right players randomly paired once and stay together for entire event') }}</li>
                                 <li><strong>{{ translate('Americano') }}:</strong> {{ translate('Random left-right pairing changes each round to maximize interactions') }}</li>
                                 <li><strong>{{ translate('Mexicano') }}:</strong> {{ translate('Left-right pools maintained, but pairings based on rankings each round') }}</li>
-                                <li>{{ translate('First 2 players in each column are required') }}</li>
+                                <li>{{ translate('All players are optional - you can add them now or later') }}</li>
                             </ul>
                         </div>
                     {% endif %}
@@ -275,25 +270,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Form validation
+    // Form validation - only check for duplicate names
     const form = document.getElementById('playerRegistrationForm');
     if (form) {
         form.addEventListener('submit', function(e) {
-            const requiredInputs = form.querySelectorAll('input[required]');
-            let hasError = false;
-            
-            requiredInputs.forEach(function(input) {
-                if (!input.value.trim()) {
-                    input.classList.add('is-invalid');
-                    hasError = true;
+            const allInputs = form.querySelectorAll('input[type="text"].player-search');
+            const names = [];
+            let hasDuplicate = false;
+
+            allInputs.forEach(function(input) {
+                const val = input.value.trim().toLowerCase();
+                if (val) {
+                    if (names.includes(val)) {
+                        hasDuplicate = true;
+                        input.classList.add('is-invalid');
+                    } else {
+                        names.push(val);
+                        input.classList.remove('is-invalid');
+                    }
                 } else {
                     input.classList.remove('is-invalid');
                 }
             });
-            
-            if (hasError) {
+
+            if (hasDuplicate) {
                 e.preventDefault();
-                alert('{{ translate("Please fill in all required player names.") }}');
+                alert('{{ translate("Duplicate player names found. Each player must have a unique name.") }}');
             }
         });
         

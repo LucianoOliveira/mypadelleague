@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% set pairing_type = event.ev_pairing_type if event.ev_pairing_type else 'Random' %}
 {% block content %}
 <div class="card">
     <div class="card-header">
@@ -18,7 +19,18 @@
         </div>
 
         <form action="{{ url_for('views.edit_event_step3', event_id=event.ev_id, code=access_code) if access_code else url_for('views.edit_event_step3', event_id=event.ev_id) }}" method="post" id="editPlayersForm">
-            
+
+            <!-- Locked banner when games already have results -->
+            {% if has_results %}
+            <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+                <i class="fa fa-lock mr-2" style="font-size:1.3em;"></i>
+                <div>
+                    <strong>{{ translate('Players cannot be changed') }}</strong> —
+                    {{ translate('Some games for this event already have results recorded. The player list is read-only.') }}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Pairing Type Description -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -26,11 +38,11 @@
                 </div>
                 <div class="card-body">
                     {% if event.event_type and event.event_type.et_name == 'NonStop' %}
-                        {% if event.ev_pairing_type == 'Random' %}
+                        {% if pairing_type == 'Random' %}
                             <p class="mb-0">{{ translate('Teams will be formed randomly and stay fixed throughout the event. Players will maintain the same partner for all games.') }}</p>
-                        {% elif event.ev_pairing_type == 'Manual' %}
+                        {% elif pairing_type == 'Manual' %}
                             <p class="mb-0">{{ translate('You assign fixed teams manually. Each team will play together for the entire event with no partner changes.') }}</p>
-                        {% elif event.ev_pairing_type == 'L&R Random' %}
+                        {% elif pairing_type == 'L&R Random' %}
                             <p class="mb-0">{{ translate('Players choose their preferred side (left/right), then teams are formed randomly within each side and stay fixed.') }}</p>
                         {% endif %}
                     {% elif event.event_type and event.event_type.et_name == 'Americano' %}
@@ -48,65 +60,51 @@
                     <p class="mb-0 text-muted">{{ translate('Enter player names. If a name doesn\'t exist in the system, a new player account will be created.') }}</p>
                 </div>
                 <div class="card-body">
-                    {% if event.ev_pairing_type == 'Random' %}
-                        <!-- Random Pairing: Single column of players -->
-                        <div class="row">
-                            {% for i in range(event.ev_max_players) %}
-                                <div class="col-md-6 col-lg-4 mb-3 position-relative">
-                                    <label for="player_{{ i }}" class="form-label">{{ translate('Player') }} {{ i + 1 }}</label>
-                                    {% set player_name = player_data.random[i] if i < player_data.random|length else '' %}
-                                    <input type="text" 
-                                           class="form-control player-input player-search" 
-                                           id="player_{{ i }}" 
-                                           name="player_{{ i }}" 
-                                           value="{{ player_name }}"
-                                           autocomplete="off"
-                                           placeholder="{{ translate('Enter player name') }}">
-                                    <div id="suggestions_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
-                                         style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-
-                    {% elif event.ev_pairing_type == 'Manual' %}
+                    {% if pairing_type == 'Manual' %}
                         <!-- Manual Pairing: Team-based registration -->
                         {% set teams_needed = (event.ev_max_players / 2) | int %}
                         <div class="row">
                             {% for team_idx in range(teams_needed) %}
                                 {% set team_letter = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[team_idx] %}
+                                {% set p1 = player_slots[team_idx * 2] if (team_idx * 2) < player_slots|length else None %}
+                                {% set p2 = player_slots[team_idx * 2 + 1] if (team_idx * 2 + 1) < player_slots|length else None %}
                                 <div class="col-md-6 col-lg-4 mb-4">
                                     <div class="card">
                                         <div class="card-header bg-primary text-white text-center">
                                             <h6 class="mb-0">{{ translate('Team') }} {{ team_letter }}</h6>
                                         </div>
                                         <div class="card-body">
-                                            {% set team_data = player_data.team[team_letter] if team_letter in player_data.team else {'player1': '', 'player2': ''} %}
                                             <div class="form-group position-relative">
                                                 <label for="team_{{ team_letter }}_player1">{{ translate('Player') }} 1</label>
-                                                <input type="text" 
-                                                       class="form-control player-input player-search" 
-                                                       id="team_{{ team_letter }}_player1" 
-                                                       name="team_{{ team_letter }}_player1" 
-                                                       value="{{ team_data.player1 }}"
-                                                       autocomplete="off"
-                                                       placeholder="{{ translate('Enter player name') }}">
-                                                <div id="suggestions_team_{{ team_letter }}_player1" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
-                                                     style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
-                                                </div>
+                                                {% if has_results %}
+                                                    <p class="form-control-plaintext font-weight-bold">{{ p1.name if p1 else '—' }}</p>
+                                                {% else %}
+                                                    <input type="text"
+                                                           class="form-control player-input player-search"
+                                                           id="team_{{ team_letter }}_player1"
+                                                           name="team_{{ team_letter }}_player1"
+                                                           value="{{ p1.name if p1 else '' }}"
+                                                           autocomplete="off"
+                                                           placeholder="{{ translate('Enter player name') }}">
+                                                    <div id="suggestions_team_{{ team_letter }}_player1" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow"
+                                                         style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;"></div>
+                                                {% endif %}
                                             </div>
                                             <div class="form-group mb-0 position-relative">
                                                 <label for="team_{{ team_letter }}_player2">{{ translate('Player') }} 2</label>
-                                                <input type="text" 
-                                                       class="form-control player-input player-search" 
-                                                       id="team_{{ team_letter }}_player2" 
-                                                       name="team_{{ team_letter }}_player2" 
-                                                       value="{{ team_data.player2 }}"
-                                                       autocomplete="off"
-                                                       placeholder="{{ translate('Enter player name') }}">
-                                                <div id="suggestions_team_{{ team_letter }}_player2" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
-                                                     style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
-                                                </div>
+                                                {% if has_results %}
+                                                    <p class="form-control-plaintext font-weight-bold">{{ p2.name if p2 else '—' }}</p>
+                                                {% else %}
+                                                    <input type="text"
+                                                           class="form-control player-input player-search"
+                                                           id="team_{{ team_letter }}_player2"
+                                                           name="team_{{ team_letter }}_player2"
+                                                           value="{{ p2.name if p2 else '' }}"
+                                                           autocomplete="off"
+                                                           placeholder="{{ translate('Enter player name') }}">
+                                                    <div id="suggestions_team_{{ team_letter }}_player2" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow"
+                                                         style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;"></div>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
@@ -114,10 +112,9 @@
                             {% endfor %}
                         </div>
 
-                    {% elif event.ev_pairing_type == 'L&R Random' %}
+                    {% elif pairing_type == 'L&R Random' %}
                         <!-- L&R Random: Left and Right columns -->
-                        {% set left_players = (event.ev_max_players / 2) | int %}
-                        {% set right_players = (event.ev_max_players / 2) | int %}
+                        {% set half = (event.ev_max_players / 2) | int %}
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="card">
@@ -125,20 +122,23 @@
                                         <h6 class="mb-0">{{ translate('Left Side Players') }}</h6>
                                     </div>
                                     <div class="card-body">
-                                        {% for i in range(left_players) %}
+                                        {% for i in range(half) %}
+                                            {% set p_slot = player_slots[i] if i < player_slots|length else None %}
                                             <div class="form-group position-relative">
                                                 <label for="left_player_{{ i }}">{{ translate('Left Player') }} {{ i + 1 }}</label>
-                                                {% set left_name = player_data.left[i] if i < player_data.left|length else '' %}
-                                                <input type="text" 
-                                                       class="form-control player-input player-search" 
-                                                       id="left_player_{{ i }}" 
-                                                       name="left_player_{{ i }}" 
-                                                       value="{{ left_name }}"
-                                                       autocomplete="off"
-                                                       placeholder="{{ translate('Enter player name') }}">
-                                                <div id="suggestions_left_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
-                                                     style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
-                                                </div>
+                                                {% if has_results %}
+                                                    <p class="form-control-plaintext font-weight-bold">{{ p_slot.name if p_slot and p_slot.name else '—' }}</p>
+                                                {% else %}
+                                                    <input type="text"
+                                                           class="form-control player-input player-search"
+                                                           id="left_player_{{ i }}"
+                                                           name="left_player_{{ i }}"
+                                                           value="{{ p_slot.name if p_slot else '' }}"
+                                                           autocomplete="off"
+                                                           placeholder="{{ translate('Enter player name') }}">
+                                                    <div id="suggestions_left_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow"
+                                                         style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;"></div>
+                                                {% endif %}
                                             </div>
                                         {% endfor %}
                                     </div>
@@ -150,25 +150,52 @@
                                         <h6 class="mb-0">{{ translate('Right Side Players') }}</h6>
                                     </div>
                                     <div class="card-body">
-                                        {% for i in range(right_players) %}
+                                        {% for i in range(half) %}
+                                            {% set ri = i + half %}
+                                            {% set p_slot = player_slots[ri] if ri < player_slots|length else None %}
                                             <div class="form-group position-relative">
                                                 <label for="right_player_{{ i }}">{{ translate('Right Player') }} {{ i + 1 }}</label>
-                                                {% set right_name = player_data.right[i] if i < player_data.right|length else '' %}
-                                                <input type="text" 
-                                                       class="form-control player-input player-search" 
-                                                       id="right_player_{{ i }}" 
-                                                       name="right_player_{{ i }}" 
-                                                       value="{{ right_name }}"
-                                                       autocomplete="off"
-                                                       placeholder="{{ translate('Enter player name') }}">
-                                                <div id="suggestions_right_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow" 
-                                                     style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
-                                                </div>
+                                                {% if has_results %}
+                                                    <p class="form-control-plaintext font-weight-bold">{{ p_slot.name if p_slot and p_slot.name else '—' }}</p>
+                                                {% else %}
+                                                    <input type="text"
+                                                           class="form-control player-input player-search"
+                                                           id="right_player_{{ i }}"
+                                                           name="right_player_{{ i }}"
+                                                           value="{{ p_slot.name if p_slot else '' }}"
+                                                           autocomplete="off"
+                                                           placeholder="{{ translate('Enter player name') }}">
+                                                    <div id="suggestions_right_player_{{ i }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow"
+                                                         style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;"></div>
+                                                {% endif %}
                                             </div>
                                         {% endfor %}
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                    {% else %}
+                        <!-- Random Pairing (default): Simple grid -->
+                        <div class="row">
+                            {% for p_slot in player_slots %}
+                                <div class="col-md-6 col-lg-4 mb-3 position-relative">
+                                    <label for="player_{{ p_slot.slot }}" class="form-label">{{ translate('Player') }} {{ loop.index }}</label>
+                                    {% if has_results %}
+                                        <p class="form-control-plaintext font-weight-bold">{{ p_slot.name if p_slot.name else '—' }}</p>
+                                    {% else %}
+                                        <input type="text"
+                                               class="form-control player-input player-search"
+                                               id="player_{{ p_slot.slot }}"
+                                               name="player_{{ p_slot.slot }}"
+                                               value="{{ p_slot.name }}"
+                                               autocomplete="off"
+                                               placeholder="{{ translate('Enter player name') }}">
+                                        <div id="suggestions_player_{{ p_slot.slot }}" class="player-suggestions position-absolute w-100 bg-white border rounded-bottom shadow"
+                                             style="display:none; max-height: 200px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;"></div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
                         </div>
                     {% endif %}
                 </div>
@@ -179,45 +206,40 @@
                 <a href="{{ url_for('views.edit_event_step2', event_id=event.ev_id, code=access_code) if access_code else url_for('views.edit_event_step2', event_id=event.ev_id) }}" class="btn btn-secondary">
                     <i class="fa fa-arrow-left"></i> {{ translate('Previous') }}: {{ translate('Courts & Settings') }}
                 </a>
+                {% if not has_results %}
                 <button type="submit" class="btn btn-success">
                     <i class="fa fa-save"></i> {{ translate('Update Event & Players') }}
                 </button>
+                {% endif %}
             </div>
         </form>
     </div>
 </div>
 
 <script>
+{% if not has_results %}
 document.getElementById('editPlayersForm').addEventListener('submit', function(e) {
-    // Count how many players are entered
     const playerInputs = document.querySelectorAll('.player-input');
     let playersEntered = 0;
-    
-    playerInputs.forEach(input => {
-        if (input.value.trim()) {
-            playersEntered++;
-        }
-    });
-    
-    // Confirm the update with appropriate message
+    playerInputs.forEach(input => { if (input.value.trim()) playersEntered++; });
+
     let confirmMessage;
     if (playersEntered === 0) {
         confirmMessage = '{{ translate("No players entered. This will remove all players from the event. Continue?") }}';
     } else {
         confirmMessage = '{{ translate("Update event with these players? This will replace all existing registrations.") }}';
     }
-    
+
     if (!confirm(confirmMessage)) {
         e.preventDefault();
         return false;
     }
 });
 
-// Player search autocomplete functionality
+// Player search autocomplete
 const playerInputs = document.querySelectorAll('.player-search');
 let debounceTimers = {};
 
-// Helper function to highlight matching text
 function highlightMatch(text, query) {
     if (!query) return text;
     const regex = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
@@ -227,24 +249,13 @@ function highlightMatch(text, query) {
 playerInputs.forEach(function(input) {
     const inputId = input.id;
     const suggestionsDiv = document.getElementById('suggestions_' + inputId);
-    
     if (!suggestionsDiv) return;
-    
-    // Handle input for searching
+
     input.addEventListener('input', function(e) {
         const query = this.value.trim();
-        
-        // Clear existing timer
-        if (debounceTimers[inputId]) {
-            clearTimeout(debounceTimers[inputId]);
-        }
-        
-        if (query.length < 3) {
-            suggestionsDiv.style.display = 'none';
-            return;
-        }
-        
-        // Debounce search requests
+        if (debounceTimers[inputId]) clearTimeout(debounceTimers[inputId]);
+        if (query.length < 2) { suggestionsDiv.style.display = 'none'; return; }
+
         debounceTimers[inputId] = setTimeout(function() {
             fetch('/search_users?query=' + encodeURIComponent(query))
                 .then(response => response.json())
@@ -253,46 +264,33 @@ playerInputs.forEach(function(input) {
                         let html = '';
                         users.forEach(function(user) {
                             html += `
-                                <div class="suggestion-item p-2 text-white d-flex align-items-center" 
+                                <div class="suggestion-item p-2 text-white d-flex align-items-center"
                                      data-name="${user.name}"
                                      style="cursor: pointer; background-color: #2d3245; white-space: nowrap; overflow: hidden;">
-                                    <img src="/display_user_image/${user.id}" 
-                                         alt="${user.name}" 
-                                         class="rounded-circle mr-2" 
-                                         width="32" 
-                                         height="32" 
+                                    <img src="/display_user_image/${user.id}"
+                                         alt="${user.name}"
+                                         class="rounded-circle mr-2"
+                                         width="32" height="32"
                                          style="object-fit: cover;">
                                     <span style="display: inline-block; min-width: 200px;">${highlightMatch(user.name, query)}</span>
                                     <span style="display: inline-block; margin: 0 8px; color: rgba(255,255,255,0.5);">-</span>
                                     <span style="display: inline-block; color: rgba(255,255,255,0.7);">${user.telephone || ''}</span>
                                     <span style="display: inline-block; margin: 0 8px; color: rgba(255,255,255,0.5);">-</span>
                                     <span style="display: inline-block; color: rgba(255,255,255,0.7);">${user.email || ''}</span>
-                                </div>
-                            `;
+                                </div>`;
                         });
-                        
                         suggestionsDiv.innerHTML = html;
                         suggestionsDiv.style.display = 'block';
                         suggestionsDiv.style.backgroundColor = '#2d3245';
                         suggestionsDiv.style.border = '1px solid rgba(255, 255, 255, 0.15)';
                         suggestionsDiv.style.borderTop = 'none';
-                        
-                        // Add hover effects
-                        const suggestionItems = suggestionsDiv.querySelectorAll('.suggestion-item');
-                        suggestionItems.forEach(function(item) {
-                            item.addEventListener('mouseenter', function() {
-                                this.style.backgroundColor = '#3d4255';
-                            });
-                            item.addEventListener('mouseleave', function() {
-                                this.style.backgroundColor = '#2d3245';
-                            });
-                            
-                            // Handle click on suggestion
+
+                        suggestionsDiv.querySelectorAll('.suggestion-item').forEach(function(item) {
+                            item.addEventListener('mouseenter', function() { this.style.backgroundColor = '#3d4255'; });
+                            item.addEventListener('mouseleave', function() { this.style.backgroundColor = '#2d3245'; });
                             item.addEventListener('click', function(e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                const name = this.getAttribute('data-name');
-                                input.value = name;
+                                e.preventDefault(); e.stopPropagation();
+                                input.value = this.getAttribute('data-name');
                                 suggestionsDiv.style.display = 'none';
                             });
                         });
@@ -300,19 +298,15 @@ playerInputs.forEach(function(input) {
                         suggestionsDiv.style.display = 'none';
                     }
                 })
-                .catch(err => {
-                    console.error('Error fetching user suggestions:', err);
-                    suggestionsDiv.style.display = 'none';
-                });
+                .catch(() => { suggestionsDiv.style.display = 'none'; });
         }, 300);
     });
-    
-    // Hide suggestions when clicking outside
+
     document.addEventListener('click', function(e) {
-        if (!input.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+        if (!input.contains(e.target) && !suggestionsDiv.contains(e.target))
             suggestionsDiv.style.display = 'none';
-        }
     });
 });
+{% endif %}
 </script>
 {% endblock %}
