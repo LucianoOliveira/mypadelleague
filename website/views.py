@@ -1353,6 +1353,62 @@ def detail_event_tv(slug):
                          user=current_user,
                          nickname_map=nickname_map)
 
+
+@views.route('/event_tv_data/<int:event_id>')
+def event_tv_data(event_id):
+    """Lightweight endpoint for the TV view's silent live-update polling.
+    Returns a short fingerprint of the current data plus the rendered HTML fragment.
+    """
+    from .models import EventClassification
+    event = Event.query.get_or_404(event_id)
+
+    event_games = Game.query.filter_by(gm_idEvent=event_id).order_by(Game.gm_timeStart, Game.gm_id).all()
+
+    game_player_names = {}
+
+    nickname_map = {}
+    if event.ev_club_id:
+        nicknames = PlayerClubNickname.query.filter_by(pcn_club_id=event.ev_club_id).all()
+        nickname_map = {n.pcn_user_id: n.pcn_nickname for n in nicknames}
+
+    classifications = EventClassification.query.filter_by(ec_event_id=event_id).order_by(
+        EventClassification.ec_points.desc(),
+        EventClassification.ec_games_diff.desc()
+    ).all()
+
+    is_mexican_ranking = (
+        event.event_type and event.event_type.et_name == 'Mexicano'
+        and event.ev_pairing_type == 'Ranking'
+    )
+    if is_mexican_ranking:
+        club_elo = func_calculate_ELO_by_club(event.ev_club_id) if event.ev_club_id else []
+        elo_map = {entry['player'].us_id: entry['rankingNow'] for entry in club_elo}
+        classifications = sorted(classifications, key=lambda c: (
+            -c.ec_points, -c.ec_games_diff, -(elo_map.get(c.ec_player_id, 0)), c.player.us_name.lower()
+        ))
+    else:
+        classifications = sorted(classifications, key=lambda c: (
+            -c.ec_points, -c.ec_games_diff, c.player.us_name.lower()
+        ))
+
+    # Build a short fingerprint from scores + classification standings
+    parts = []
+    for g in event_games:
+        parts.append(f"{g.gm_id}:{g.gm_result_A}:{g.gm_result_B}")
+    for c in classifications:
+        parts.append(f"{c.ec_player_id}:{c.ec_points}:{c.ec_games_diff}")
+    fingerprint = hashlib.md5('|'.join(parts).encode()).hexdigest()[:8]
+
+    html = render_template('event_detail_tv_partial.html',
+                           event=event,
+                           event_games=event_games,
+                           game_player_names=game_player_names,
+                           classifications=classifications,
+                           nickname_map=nickname_map)
+
+    return jsonify(fingerprint=fingerprint, html=html)
+
+
 @views.route('/toggle_event_elo/<int:event_id>', methods=['POST'])
 @login_required
 def toggle_event_elo(event_id):

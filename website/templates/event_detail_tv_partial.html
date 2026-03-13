@@ -1,0 +1,378 @@
+{# Fragment template — rendered by /event_tv_data/<event_id> for silent live-update.
+   No {% extends %}: this is returned as an HTML string inside JSON. #}
+
+<!-- TV Main Content -->
+<div class="row tv-main-content">
+    <!-- Left Column: Classification Table -->
+    <div class="col-6">
+        {% if classifications %}
+        <div class="card">
+            <div class="card-header">
+                <h4>{{ translate('Classification') }}</h4>
+            </div>
+            <div class="card-body tv-classification">
+                <!-- Desktop version -->
+                <div class="table-responsive d-none d-md-block">
+                    <table class="table desktop-classification">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ translate('Position') }}</th>
+                                <th scope="col" class="player-col">{{ translate('Player') }}</th>
+                                <th scope="col" class="points-col">{{ translate('Pts') }}</th>
+                                <th scope="col">{{ translate('W') }}</th>
+                                <th scope="col">{{ translate('L') }}</th>
+                                <th scope="col">{{ translate('GF') }}</th>
+                                <th scope="col">{{ translate('GA') }}</th>
+                                <th scope="col" class="diff-col">{{ translate('GD') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for classification in classifications %}
+                            <tr>
+                                <td>
+                                    {% if loop.index == 1 %}
+                                        <i class="fa fa-trophy text-warning"></i>
+                                    {% endif %}
+                                    {{ loop.index }}
+                                </td>
+                                <td class="player-col">
+                                    <div class="player-info">
+                                        <img src="{{ url_for('views.display_user_image', userID=classification.ec_player_id) }}"
+                                             onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                             alt="{{ classification.player.us_name }}"
+                                             class="rounded-circle">
+                                        <span>{{ classification.player.us_name }}</span>
+                                    </div>
+                                </td>
+                                <td class="points-col"><strong>{{ classification.ec_points }}</strong></td>
+                                <td>{{ classification.ec_wins }}</td>
+                                <td>{{ classification.ec_losses }}</td>
+                                <td>{{ classification.ec_games_favor }}</td>
+                                <td>{{ classification.ec_games_against }}</td>
+                                <td class="diff-col"><strong>{{ classification.ec_games_diff }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Mobile version -->
+                <div class="d-md-none">
+                    <div class="mobile-classification">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="player-info">
+                                <span class="text-muted">{{ translate('Player') }}</span>
+                            </div>
+                            <div class="d-flex stats-container">
+                                <div class="text-center mx-2">
+                                    <span class="text-muted">{{ translate('Pts') }}</span>
+                                </div>
+                                <div class="text-center mx-2">
+                                    <span class="text-muted">{{ translate('GD') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% for classification in classifications %}
+                        <div class="player-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex player-info">
+                                    {% if loop.index == 1 %}
+                                        <i class="fa fa-trophy text-warning mr-2"></i>
+                                    {% endif %}
+                                    <img src="{{ url_for('views.display_user_image', userID=classification.ec_player_id) }}"
+                                         onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                         alt="{{ classification.player.us_name }}"
+                                         class="rounded-circle">
+                                    <span class="text-truncate">{{ classification.player.us_name }}</span>
+                                </div>
+                                <div class="d-flex align-items-center stats-container">
+                                    <div class="text-center mx-2">
+                                        <strong>{{ classification.ec_points }}</strong>
+                                    </div>
+                                    <div class="text-center mx-2">
+                                        <strong>{{ classification.ec_games_diff }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-header">
+                <h4>{{ translate('Classification') }}</h4>
+            </div>
+            <div class="card-body text-center">
+                <p class="text-muted">{{ translate('No games played yet') }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Current Round -->
+    <div class="col-6">
+        {% if event_games %}
+            {% set current_round_time = none %}
+            {% set rounds = {} %}
+            {% for game in event_games %}
+                {% set round_time = game.gm_timeStart.strftime('%H:%M') %}
+                {% if round_time not in rounds %}
+                    {% set _ = rounds.update({round_time: []}) %}
+                {% endif %}
+                {% set _ = rounds[round_time].append(game) %}
+            {% endfor %}
+
+            {% for round_time, round_games in rounds.items() %}
+                {% if current_round_time is none %}
+                    {% set has_pending = round_games | selectattr('gm_result_A', 'none') | list | length > 0 %}
+                    {% if has_pending %}
+                        {% set current_round_time = round_time %}
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% if current_round_time is none %}
+                {% set current_round_time = rounds.keys() | list | last %}
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header">
+                    <h5>{{ translate('Current Round') }} - {{ current_round_time }}</h5>
+                    <small class="text-muted">{{ translate('Playing') }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for game in rounds[current_round_time] %}
+                        <div class="col-6 mb-3">
+                            <div class="game-card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <strong>{{ game.court.ct_name if game.court else 'Court ' + loop.index|string }}</strong>
+                                    {% if game.gm_result_A is not none and game.gm_result_B is not none %}
+                                        <span class="badge badge-success">{{ translate('Finished') }}</span>
+                                    {% else %}
+                                        <span class="badge badge-warning">{{ translate('Playing') }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="game-content p-3">
+                                    <div class="game-time mb-3">
+                                        {{ game.gm_timeStart.strftime('%H:%M') }} - {{ game.gm_timeEnd.strftime('%H:%M') if game.gm_timeEnd else '??:??' }}
+                                    </div>
+                                    <!-- Team A -->
+                                    <div class="team-row mb-2">
+                                        <div class="team-players d-flex align-items-center">
+                                            <div class="player-photos mr-1">
+                                                {% if game.player_A1 and game.player_A2 %}
+                                                    <img src="{{ url_for('views.display_user_image', userID=game.player_A1.us_id) }}"
+                                                         onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                                         class="rounded-circle" style="width:16px;height:16px;" alt="">
+                                                    <img src="{{ url_for('views.display_user_image', userID=game.player_A2.us_id) }}"
+                                                         onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                                         class="rounded-circle ml-1" style="width:16px;height:16px;" alt="">
+                                                {% else %}
+                                                    <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" class="rounded-circle" style="width:16px;height:16px;" alt="">
+                                                    <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" class="rounded-circle ml-1" style="width:16px;height:16px;" alt="">
+                                                {% endif %}
+                                            </div>
+                                            <div class="player-names flex-grow-1">
+                                                {% if game.player_A1 and game.player_A2 %}
+                                                    {{ (nickname_map.get(game.player_A1.us_id) or game.player_A1.us_name) }} / {{ (nickname_map.get(game.player_A2.us_id) or game.player_A2.us_name) }}
+                                                {% else %}
+                                                    {% set player_names = game_player_names.get(game.gm_id, {}) %}
+                                                    {% if player_names.get('A1') and player_names.get('A2') %}
+                                                        {{ player_names.get('A1') }} / {{ player_names.get('A2') }}
+                                                    {% else %}
+                                                        <span class="text-muted">{{ translate('TBD') }}</span>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                            <div class="score-display ml-2">
+                                                {% if game.gm_result_A is not none %}
+                                                    <strong>{{ game.gm_result_A }}</strong>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-center mb-2"><small class="text-muted">VS</small></div>
+                                    <!-- Team B -->
+                                    <div class="team-row">
+                                        <div class="team-players d-flex align-items-center">
+                                            <div class="player-photos mr-1">
+                                                {% if game.player_B1 and game.player_B2 %}
+                                                    <img src="{{ url_for('views.display_user_image', userID=game.player_B1.us_id) }}"
+                                                         onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                                         class="rounded-circle" style="width:16px;height:16px;" alt="">
+                                                    <img src="{{ url_for('views.display_user_image', userID=game.player_B2.us_id) }}"
+                                                         onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                                         class="rounded-circle ml-1" style="width:16px;height:16px;" alt="">
+                                                {% else %}
+                                                    <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" class="rounded-circle" style="width:16px;height:16px;" alt="">
+                                                    <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" class="rounded-circle ml-1" style="width:16px;height:16px;" alt="">
+                                                {% endif %}
+                                            </div>
+                                            <div class="player-names flex-grow-1">
+                                                {% if game.player_B1 and game.player_B2 %}
+                                                    {{ (nickname_map.get(game.player_B1.us_id) or game.player_B1.us_name) }} / {{ (nickname_map.get(game.player_B2.us_id) or game.player_B2.us_name) }}
+                                                {% else %}
+                                                    {% set player_names = game_player_names.get(game.gm_id, {}) %}
+                                                    {% if player_names.get('B1') and player_names.get('B2') %}
+                                                        {{ player_names.get('B1') }} / {{ player_names.get('B2') }}
+                                                    {% else %}
+                                                        <span class="text-muted">{{ translate('TBD') }}</span>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                            <div class="score-display ml-2">
+                                                {% if game.gm_result_B is not none %}
+                                                    <strong>{{ game.gm_result_B }}</strong>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Bottom Section: Completed Rounds -->
+{% if event_games %}
+    {% set completed_rounds = {} %}
+    {% for round_time, round_games in rounds.items() %}
+        {% if round_time != current_round_time %}
+            {% set has_completed = round_games | selectattr('gm_result_A', 'ne', none) | selectattr('gm_result_B', 'ne', none) | list | length > 0 %}
+            {% if has_completed %}
+                {% set _ = completed_rounds.update({round_time: round_games}) %}
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+
+    {% if completed_rounds %}
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>{{ translate('Completed Rounds') }}</h5>
+                </div>
+                <div class="card-body">
+                    {% for round_time, round_games in completed_rounds.items() %}
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">
+                                    <i class="fas fa-clock mr-2"></i>
+                                    {{ translate('Round') }} - {{ round_time }}
+                                    <span class="badge badge-info ml-2">{{ round_games|length }} {{ translate('Games') }}</span>
+                                </h6>
+                                <small class="text-muted">
+                                    {{ round_time }} - {{ round_games[0].gm_timeEnd.strftime('%H:%M') if round_games[0].gm_timeEnd else '??:??' }}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% for game in round_games %}
+                                <div class="col-3 mb-3">
+                                    <div class="game-card" {% if game.gm_result_A is not none and game.gm_result_B is not none %}style="background-color:rgba(255,255,255,0.1);"{% endif %}>
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <strong>{{ game.court.ct_name if game.court else 'Court ' + loop.index|string }}</strong>
+                                            {% if game.gm_result_A is not none and game.gm_result_B is not none %}
+                                                <span class="badge badge-success">{{ translate('Finished') }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="game-content p-3">
+                                            <div class="game-time mb-3">
+                                                {{ game.gm_timeStart.strftime('%H:%M') }} - {{ game.gm_timeEnd.strftime('%H:%M') if game.gm_timeEnd else '??:??' }}
+                                            </div>
+                                            <!-- Team A -->
+                                            <div class="team-row mb-2">
+                                                <div class="team-players d-flex align-items-center">
+                                                    <div class="player-photos mr-1">
+                                                        {% if game.player_A1 and game.player_A2 %}
+                                                            <img src="{{ url_for('views.display_user_image', userID=game.player_A1.us_id) }}"
+                                                                 onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                                                 class="rounded-circle" style="width:16px;height:16px;" alt="">
+                                                            <img src="{{ url_for('views.display_user_image', userID=game.player_A2.us_id) }}"
+                                                                 onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                                                 class="rounded-circle ml-1" style="width:16px;height:16px;" alt="">
+                                                        {% else %}
+                                                            <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" class="rounded-circle" style="width:16px;height:16px;" alt="">
+                                                            <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" class="rounded-circle ml-1" style="width:16px;height:16px;" alt="">
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="player-names flex-grow-1">
+                                                        {% if game.player_A1 and game.player_A2 %}
+                                                            {{ (nickname_map.get(game.player_A1.us_id) or game.player_A1.us_name) }} / {{ (nickname_map.get(game.player_A2.us_id) or game.player_A2.us_name) }}
+                                                        {% else %}
+                                                            {% set player_names = game_player_names.get(game.gm_id, {}) %}
+                                                            {% if player_names.get('A1') and player_names.get('A2') %}
+                                                                {{ player_names.get('A1') }} / {{ player_names.get('A2') }}
+                                                            {% else %}
+                                                                <span class="text-muted">{{ translate('TBD') }}</span>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="score-display ml-2">
+                                                        {% if game.gm_result_A is not none %}<strong>{{ game.gm_result_A }}</strong>{% else %}<span class="text-muted">-</span>{% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-center mb-2"><small class="text-muted">VS</small></div>
+                                            <!-- Team B -->
+                                            <div class="team-row">
+                                                <div class="team-players d-flex align-items-center">
+                                                    <div class="player-photos mr-1">
+                                                        {% if game.player_B1 and game.player_B2 %}
+                                                            <img src="{{ url_for('views.display_user_image', userID=game.player_B1.us_id) }}"
+                                                                 onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                                                 class="rounded-circle" style="width:16px;height:16px;" alt="">
+                                                            <img src="{{ url_for('views.display_user_image', userID=game.player_B2.us_id) }}"
+                                                                 onerror="this.src='{{ url_for('static', filename='photos/users/nophoto.jpg') }}'"
+                                                                 class="rounded-circle ml-1" style="width:16px;height:16px;" alt="">
+                                                        {% else %}
+                                                            <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" class="rounded-circle" style="width:16px;height:16px;" alt="">
+                                                            <img src="{{ url_for('static', filename='photos/users/nophoto.jpg') }}" class="rounded-circle ml-1" style="width:16px;height:16px;" alt="">
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="player-names flex-grow-1">
+                                                        {% if game.player_B1 and game.player_B2 %}
+                                                            {{ (nickname_map.get(game.player_B1.us_id) or game.player_B1.us_name) }} / {{ (nickname_map.get(game.player_B2.us_id) or game.player_B2.us_name) }}
+                                                        {% else %}
+                                                            {% set player_names = game_player_names.get(game.gm_id, {}) %}
+                                                            {% if player_names.get('B1') and player_names.get('B2') %}
+                                                                {{ player_names.get('B1') }} / {{ player_names.get('B2') }}
+                                                            {% else %}
+                                                                <span class="text-muted">{{ translate('TBD') }}</span>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="score-display ml-2">
+                                                        {% if game.gm_result_B is not none %}<strong>{{ game.gm_result_B }}</strong>{% else %}<span class="text-muted">-</span>{% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endif %}

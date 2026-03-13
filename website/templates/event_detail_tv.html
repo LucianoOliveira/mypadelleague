@@ -33,6 +33,7 @@
         </div>
     </div>
 
+    <div id="tv-dynamic-content">
     <!-- TV Main Content -->
     <div class="row tv-main-content">
         <!-- Left Column: Classification Table -->
@@ -440,7 +441,9 @@
         </div>
         {% endif %}
     {% endif %}
-</div>
+</div><!-- /tv-dynamic-content -->
+
+</div><!-- /tv-layout -->
 
 <script>
 // Update current time
@@ -457,19 +460,54 @@ function updateTime() {
     }
 }
 
-// Auto refresh page every 60 seconds (1 minute)
-function autoRefresh() {
-    setTimeout(() => {
-        location.reload();
-    }, 60000);
-}
+// Silent live-update: poll every 10s, only swap DOM when data actually changed
+(function () {
+    const EVENT_ID = {{ event.ev_id }};
+    const API_URL = '/event_tv_data/' + EVENT_ID;
+    let lastFingerprint = null;
+    let updatePending = false;
 
-// Initialize
-document.addEventListener('DOMContentLoaded', function() {
-    updateTime();
-    setInterval(updateTime, 1000);
-    autoRefresh();
-});
+    async function poll() {
+        if (updatePending) return;
+        try {
+            const resp = await fetch(API_URL, {cache: 'no-store'});
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (lastFingerprint === null) {
+                // First load — just record the fingerprint, don't re-render
+                lastFingerprint = data.fingerprint;
+                return;
+            }
+            if (data.fingerprint !== lastFingerprint) {
+                lastFingerprint = data.fingerprint;
+                updatePending = true;
+                const container = document.getElementById('tv-dynamic-content');
+                if (container) {
+                    container.style.transition = 'opacity 0.3s';
+                    container.style.opacity = '0';
+                    setTimeout(() => {
+                        container.innerHTML = data.html;
+                        container.style.opacity = '1';
+                        updatePending = false;
+                    }, 300);
+                } else {
+                    updatePending = false;
+                }
+            }
+        } catch (e) {
+            // Network hiccup — silently ignore, will retry next interval
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function () {
+        updateTime();
+        setInterval(updateTime, 1000);
+        // First fingerprint capture after a short delay
+        setTimeout(poll, 2000);
+        setInterval(poll, 10000);
+    });
+}());
 </script>
 
 <style>
